@@ -1,0 +1,25 @@
+name: FootCube
+version: '1.0.0'
+main: io.github.divinerealms.footcube.FootCube
+authors:
+  - SmileyCraft
+  - neonsh
+description: Soccer/Football in MineCraft
+depend: [Vault, LuckPerms]
+softdepend: [PlaceholderAPI]
+
+commands:
+  footcube:
+    description: Main FootCube command
+    usage: /<command> <subcommand>
+    aliases: [fc]
+
+  fcadmin:
+    description: Admin command
+    aliases: [fca]
+    permission: footcube.admin
+
+  matches:
+    description: Matches command
+    default: true
+    permission: footcube.matches

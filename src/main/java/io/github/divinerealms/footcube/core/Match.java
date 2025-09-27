@@ -38,7 +38,6 @@ public class Match {
   private final boolean x;
   private final boolean redAboveBlue;
 
-  // refactor
   public ArrayList<Player> redPlayers = new ArrayList<>();
   public ArrayList<Player> bluePlayers = new ArrayList<>();
 

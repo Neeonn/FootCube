@@ -314,7 +314,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
           for (Player p : plugin.getServer().getOnlinePlayers()) {
             if (match.isInMatch(p)) {
-              org.clearInventory(p);
+              MatchHelper.leaveMatch(org, p, match, logger, false);
               p.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation());
               p.setScoreboard(plugin.getServer().getScoreboardManager().getNewScoreboard());
             }

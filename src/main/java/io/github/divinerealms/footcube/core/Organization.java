@@ -30,7 +30,6 @@ public class Organization {
   @Getter private final Logger logger;
   private final PlayerDataManager playerDataManager;
   @Getter private HighScores highscores;
-  public String pluginString;
   @Getter private String setupGuy;
   @Getter private int setupType;
   @Getter private Location setupLoc;
@@ -58,7 +57,6 @@ public class Organization {
 
   public Organization(FCManager fcManager) {
     this.fcManager = fcManager;
-    this.pluginString = Lang.PLUGIN_STRING.replace(null);
     this.setupGuy = null;
     this.setupType = 0;
     this.setupLoc = null;
@@ -91,7 +89,6 @@ public class Organization {
     arenas.addDefault("arenas.4v4.amount", 0);
     arenas.options().copyDefaults(true);
     configManager.saveConfig("arenas.yml");
-//    this.loadArenas();
 
     if (arenas.contains("arenas.world")) {
       for(Entity e : plugin.getServer().getWorld(arenas.getString("arenas.world")).getEntities()) {
@@ -101,19 +98,19 @@ public class Organization {
       }
     }
 
-    this.updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, Organization.this::update, 1L, 1L);
+    this.updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, this::update, 1L, 1L);
   }
 
   public void matchStart(int type) {
     if (type == 2) {
-      for(int i = 0; i < this.matches2v2.length; ++i) {
+      for (int i = 0; i < this.matches2v2.length; ++i) {
         if (this.matches2v2[i].phase == 1) {
           this.lobby2v2 = i;
           break;
         }
       }
 
-      for(int i = 0; i < this.waitingTeams.length; ++i) {
+      for (int i = 0; i < this.waitingTeams.length; ++i) {
         if (this.waitingTeams[i].length > 1 && this.matches2v2[this.lobby2v2].team(this.waitingTeams[i][0], this.waitingTeams[i][1])) {
           this.waitingTeamPlayers.remove(this.waitingTeams[i][0]);
           this.waitingTeamPlayers.remove(this.waitingTeams[i][1]);
@@ -121,14 +118,14 @@ public class Organization {
         }
       }
     } else if (type == 3) {
-      for(int i = 0; i < this.matches3v3.length; ++i) {
+      for (int i = 0; i < this.matches3v3.length; ++i) {
         if (this.matches3v3[i].phase == 1) {
           this.lobby3v3 = i;
           break;
         }
       }
 
-      for(int i = 0; i < this.waitingTeams.length; ++i) {
+      for (int i = 0; i < this.waitingTeams.length; ++i) {
         if (this.waitingTeams[i].length > 2 && this.matches3v3[this.lobby3v3].team(this.waitingTeams[i][0], this.waitingTeams[i][1])) {
           this.waitingTeamPlayers.remove(this.waitingTeams[i][0]);
           this.waitingTeamPlayers.remove(this.waitingTeams[i][1]);
@@ -136,14 +133,14 @@ public class Organization {
         }
       }
     } else {
-      for(int i = 0; i < this.matches4v4.length; ++i) {
+      for (int i = 0; i < this.matches4v4.length; ++i) {
         if (this.matches4v4[i].phase == 1) {
           this.lobby4v4 = i;
           break;
         }
       }
 
-      for(int i = 0; i < this.waitingTeams.length; ++i) {
+      for (int i = 0; i < this.waitingTeams.length; ++i) {
         if (this.waitingTeams[i].length > 3 && this.matches4v4[this.lobby4v4].team(this.waitingTeams[i][0], this.waitingTeams[i][1])) {
           this.waitingTeamPlayers.remove(this.waitingTeams[i][0]);
           this.waitingTeamPlayers.remove(this.waitingTeams[i][1]);
@@ -249,15 +246,15 @@ public class Organization {
   }
 
   public void ballTouch(Player p) {
-    for(Match m : this.matches2v2) {
+    for (Match m : this.matches2v2) {
       m.kick(p);
     }
 
-    for(Match m : this.matches3v3) {
+    for (Match m : this.matches3v3) {
       m.kick(p);
     }
 
-    for(Match m : this.matches4v4) {
+    for (Match m : this.matches4v4) {
       m.kick(p);
     }
   }
@@ -356,7 +353,7 @@ public class Organization {
   }
 
   void loadArenas() {
-    for(int i = 1; i <= arenas.getInt("arenas.2v2.amount"); ++i) {
+    for (int i = 1; i <= arenas.getInt("arenas.2v2.amount"); ++i) {
       World world = this.plugin.getServer().getWorld(arenas.getString("arenas.world"));
       String blue = "arenas.2v2." + i + ".blue.";
       String red = "arenas.2v2." + i + ".red.";
@@ -369,7 +366,7 @@ public class Organization {
       this.addArena(2, b, r);
     }
 
-    for(int i = 1; i <= arenas.getInt("arenas.3v3.amount"); ++i) {
+    for (int i = 1; i <= arenas.getInt("arenas.3v3.amount"); ++i) {
       World world = this.plugin.getServer().getWorld(arenas.getString("arenas.world"));
       String blue = "arenas.3v3." + i + ".blue.";
       String red = "arenas.3v3." + i + ".red.";
@@ -382,7 +379,7 @@ public class Organization {
       this.addArena(3, b, r);
     }
 
-    for(int i = 1; i <= arenas.getInt("arenas.4v4.amount"); ++i) {
+    for (int i = 1; i <= arenas.getInt("arenas.4v4.amount"); ++i) {
       World world = this.plugin.getServer().getWorld(arenas.getString("arenas.world"));
       String blue = "arenas.4v4." + i + ".blue.";
       String red = "arenas.4v4." + i + ".red.";
@@ -415,7 +412,6 @@ public class Organization {
     double goalsPerMatch = (matches > 0) ? (double) goals / matches : 0;
 
     double multiplier = 1.0 - Math.pow(0.9, matches);
-//    double goalBonus = (matches > 0) ? 1.0 - multiplier * Math.pow(0.2, (double) goals / matches) - 0.5 - Math.pow(1.1111111111111112, matches) : 0.5;
     double goalBonus = matches > 0
         ? (goals == matches ? 1.0 : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
         : 0.5;
@@ -428,8 +424,6 @@ public class Organization {
     }
 
     double skillLevel = Math.min(5.0 + goalBonus + addition * multiplier, 10.0);
-//    double skillLevel = Math.max(0.0, Math.min(Math.round(rawSkill * 100.0) / 100.0, 100.0));
-//    double skillLevel = Math.max(0.0, Math.min((int) (100.0 * (5.0 + goalBonus + addition * multiplier)) / 100.0, 100.0));
     int rank = (int) (skillLevel * 2.0 - 0.5);
     String rang;
 
@@ -513,7 +507,7 @@ public class Organization {
         }
       }
 
-      for(Player p : this.plugin.getServer().getOnlinePlayers()) {
+      for (Player p : this.plugin.getServer().getOnlinePlayers()) {
         if (!this.playingPlayers.contains(p.getName()) && !this.waitingPlayers.containsKey(p.getName())) {
           if (m.time.getScore() < 0) {
             logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT.replace(new String[]{String.valueOf(m.type)}));

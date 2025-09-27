@@ -104,7 +104,7 @@ public class PlayerEvents implements Listener {
     physics.getVelocities().remove(uuid);
 
     Match match = MatchHelper.getMatch(org, player);
-    if (match != null && match.phase != 1) MatchHelper.leaveMatch(org, player, match, logger, true);
+    if (match != null) MatchHelper.leaveMatch(org, player, match, logger, true);
   }
 
   @EventHandler

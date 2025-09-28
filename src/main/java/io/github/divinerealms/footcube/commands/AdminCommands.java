@@ -25,6 +25,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class AdminCommands implements CommandExecutor, TabCompleter {
@@ -37,6 +38,20 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
   private final FileConfiguration arenas, config, practice;
+
+  private static final String PERM_MAIN = "footcube.admin";
+  private static final String PERM_TOGGLE = PERM_MAIN + ".toggle";
+  private static final String PERM_BAN = PERM_MAIN + ".ban";
+  private static final String PERM_UNBAN = PERM_MAIN + ".unban";
+  private static final String PERM_STAT_SET = PERM_MAIN + ".statset";
+  private static final String PERM_SETUP_ARENA = PERM_MAIN + ".setuparena";
+  private static final String PERM_CLEAR_ARENAS = PERM_MAIN + ".cleararenas";
+  private static final String PERM_SET_LOBBY = PERM_MAIN + ".setlobby";
+  private static final String PERM_SET_PRACTICE_AREA = PERM_MAIN + ".setpracticearea";
+  private static final String PERM_HIT_DEBUG = PERM_MAIN + ".hitdebug";
+  private static final String PERM_COMMAND_DISABLER = PERM_MAIN + ".commanddisabler";
+  private static final String PERM_MATCHMAN = PERM_MAIN + ".matchman";
+  private static final String PERM_FORCE_LEAVE = PERM_MAIN + ".forceleave";
 
   public AdminCommands(FCManager fcManager, DisableCommands disableCommands) {
     this.fcManager = fcManager;
@@ -55,13 +70,15 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) { sendHelp(sender); return true; }
-    if (args[0].equalsIgnoreCase("reload")) {
-      if (!sender.hasPermission("footcube.admin")) return noPerm(sender);
+
+    String sub = args[0].toLowerCase();
+    if (sub.equalsIgnoreCase("reload")) {
+      if (!sender.hasPermission(PERM_MAIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MAIN, label + " " + sub})); return true; }
       fcManager.reload();
       logger.send(sender, Lang.RELOAD.replace(null));
       return true;
-    } else if (args[0].equalsIgnoreCase("toggle")) {
-      if (!sender.hasPermission("footcube.admin.toggle")) return noPerm(sender);
+    } else if (sub.equalsIgnoreCase("toggle")) {
+      if (!sender.hasPermission(PERM_TOGGLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_TOGGLE, label + " " + sub})); return true; }
       boolean state = physics.isMatchesEnabled();
       physics.setMatchesEnabled(!state);
       fcManager.getLuckPerms().getGroupManager().modifyGroup("vip", group -> {
@@ -75,9 +92,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       });
       logger.send(sender, Lang.FC_TOGGLE.replace(new String[]{state ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
       return true;
-    } else if (args[0].equalsIgnoreCase("ban")) {
-      if (!sender.hasPermission("footcube.admin.ban")) return noPerm(sender);
-      if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " ban <player> <time>"})); return true; }
+    } else if (sub.equalsIgnoreCase("ban")) {
+      if (!sender.hasPermission(PERM_BAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_BAN, label + " " + sub})); return true; }
+      if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player> <time>"})); return true; }
 
       Player target = plugin.getServer().getPlayer(args[1]);
       if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
@@ -86,7 +103,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       try {
         seconds = Utilities.parseTime(args[2]);
       } catch (NumberFormatException exception) {
-        logger.send(sender, Lang.USAGE.replace(new String[]{label + " ban <player> <time>"}));
+        logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player> <time>"}));
         return true;
       }
 
@@ -96,9 +113,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       logger.send(sender, Lang.ADMIN_STRING.replace(null) + target.getDisplayName() + "&c je banovan iz FC na " + seconds + "s.");
       return true;
-    } else if (args[0].equalsIgnoreCase("unban")) {
-      if (!sender.hasPermission("footcube.admin.unban")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " unban <player>"})); return true; }
+    } else if (sub.equalsIgnoreCase("unban")) {
+      if (!sender.hasPermission(PERM_UNBAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_UNBAN, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player>"})); return true; }
 
       Player target = plugin.getServer().getPlayer(args[1]);
       if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
@@ -109,10 +126,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         logger.send(sender, Lang.ADMIN_STRING.replace(null) + target.getDisplayName() + "&c nije banovan.");
       }
       return true;
-    } else if (args[0].equalsIgnoreCase("statset")) {
+    } else if (sub.equalsIgnoreCase("statset")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.statset")) return noPerm(sender);
-      if (args.length < 4) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " statset <player> <stat> <amount|clear>"})); return true; }
+      if (!sender.hasPermission(PERM_STAT_SET)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_STAT_SET, label + " " + sub})); return true; }
+      if (args.length < 4) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player> <stat> <amount|clear>"})); return true; }
 
       Player target = plugin.getServer().getPlayer(args[1]);
       if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
@@ -152,14 +169,14 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       dataManager.savePlayerData(target.getName());
       logger.send(sender, Lang.ADMIN_STATSET.replace(new String[]{stat, target.getName(), String.valueOf(amount)}));
       return true;
-    } else if (args[0].equalsIgnoreCase("setuparena")) {
+    } else if (sub.equalsIgnoreCase("setuparena")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.setuparena")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " setuparena <2v2|3v3|4v4>"})); return true; }
+      if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
 
       Player player = (Player) sender;
       String type = args[1].toLowerCase();
-      if (!Arrays.asList("2v2","3v3","4v4").contains(type)) { logger.send(sender, "&cInvalid type. Use 2v2, 3v3, or 4v4."); return true; }
+      if (!Arrays.asList("2v2", "3v3", "4v4").contains(type)) { logger.send(sender, "&cInvalid type. Use 2v2, 3v3, or 4v4."); return true; }
       if (org.getSetupGuy() != null) { logger.send(sender, Lang.SETUP_ARENA_ALREADY_SOMEONE.replace(new String[]{org.getSetupGuy()})); return true; }
 
       MatchHelper.ArenaData setup = MatchHelper.getArenaData(org, type);
@@ -169,8 +186,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       org.setSetupGuy(player.getName());
       logger.send(sender, Lang.SETUP_ARENA_START.replace(null));
       return true;
-    } else if (args[0].equalsIgnoreCase("set")) {
+    } else if (sub.equalsIgnoreCase("set")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
+      if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
       Player player = (Player) sender;
 
       if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.ADMIN_STRING.replace(null) + "Not setting up an arena"); return true; }
@@ -205,8 +223,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       logger.send(sender, Lang.SETUP_ARENA_SUCCESS.replace(null));
       return true;
-    } else if (args[0].equalsIgnoreCase("undo")) {
+    } else if (sub.equalsIgnoreCase("undo")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
+      if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
       Player player = (Player) sender;
 
       if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.ADMIN_STRING.replace(null) + "Not setting up an arena"); return true; }
@@ -216,10 +235,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       return true;
     } else if (args[0].equalsIgnoreCase("cleararenas")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.cleararenas")) return noPerm(sender);
+      if (!sender.hasPermission(PERM_CLEAR_ARENAS)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_ARENAS, label + " " + sub})); return true; }
 
       arenas.set("arenas", null);
-      for (String t : Arrays.asList("2v2","3v3","4v4")) {
+      for (String t : Arrays.asList("2v2", "3v3", "4v4")) {
         arenas.addDefault("arenas." + t + ".amount", 0);
         MatchHelper.ArenaData arenaData = MatchHelper.getArenaData(org, t);
         if (arenaData != null) arenaData.matches = new Match[0];
@@ -228,9 +247,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       configManager.saveConfig("arenas.yml");
       logger.send(sender, Lang.CLEAR_ARENAS_SUCCESS.replace(null));
       return true;
-    } else if (args[0].equalsIgnoreCase("setlobby")) {
+    } else if (sub.equalsIgnoreCase("setlobby")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.setlobby")) return noPerm(sender);
+      if (!sender.hasPermission(PERM_SET_LOBBY)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_LOBBY, label + " " + sub})); return true; }
 
       Player player = (Player) sender;
       config.set("lobby", player.getLocation());
@@ -241,10 +260,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           String.valueOf(player.getLocation().getZ())}));
 
       return true;
-    } else if (args[0].equalsIgnoreCase("setpracticearea") || args[0].equalsIgnoreCase("spa")) {
+    } else if (sub.equalsIgnoreCase("setpracticearea") || sub.equalsIgnoreCase("spa")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.setpracticearea")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, "&cUsage: /fcadmin setpracticearea <name>"); return true; }
+      if (!sender.hasPermission(PERM_SET_PRACTICE_AREA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_PRACTICE_AREA, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <name>"})); return true; }
 
       Player player = (Player) sender;
       String name = args[1];
@@ -257,26 +276,26 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           String.valueOf(player.getLocation().getZ())}));
 
       return true;
-    } else if (args[0].equalsIgnoreCase("hitdebug") || args[0].equalsIgnoreCase("hits")) {
-      if (!sender.hasPermission("footcube.admin.hitdebug")) return noPerm(sender);
+    } else if (sub.equalsIgnoreCase("hitdebug") || sub.equalsIgnoreCase("hits")) {
+      if (!sender.hasPermission(PERM_HIT_DEBUG)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_HIT_DEBUG, label + " " + sub})); return true; }
       boolean status = physics.isHitDebug();
       physics.hitDebug = !status;
       logger.send(sender, Lang.BETA_FEATURE.replace(null) + (status ? "§cDisabled §9" : "§aEnabled §9") + "cube hit debug.");
       return true;
-    } else if (args[0].equalsIgnoreCase("commanddisabler") || args[0].equalsIgnoreCase("cd")) {
-      if (!sender.hasPermission("footcube.admin.commanddisabler")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, "&cUsage: /fcadmin cd <add|remove|list> [command]"); return true; }
+    } else if (sub.equalsIgnoreCase("commanddisabler") || sub.equalsIgnoreCase("cd")) {
+      if (!sender.hasPermission(PERM_COMMAND_DISABLER)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_COMMAND_DISABLER, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <add|remove|list> [command]"})); return true; }
 
       String action = args[1].toLowerCase();
       switch (action) {
         case "add":
-          if (args.length < 3) { logger.send(sender, "&cUsage: /fcadmin cd add <command>"); return true; }
+          if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " add <command>"})); return true; }
           if (disableCommands.addCommand(args[2])) logger.send(sender, Lang.COMMAND_DISABLER_SUCCESS.replace(new String[]{args[2]}));
           else logger.send(sender, Lang.COMMAND_DISABLER_ALREADY_ADDED.replace(null));
           break;
 
         case "remove":
-          if (args.length < 3) { logger.send(sender, "&cUsage: /fcadmin cd remove <command>"); return true; }
+          if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " remove <command>"})); return true; }
           if (disableCommands.removeCommand(args[2])) logger.send(sender, Lang.COMMAND_DISABLER_SUCCESS_REMOVE.replace(new String[]{args[2]}));
           else logger.send(sender, "&cThis command wasn't even added");
           break;
@@ -291,10 +310,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           break;
       }
       return true;
-    } else if (args[0].equalsIgnoreCase("matchman") || args[0].equalsIgnoreCase("mm")) {
+    } else if (sub.equalsIgnoreCase("matchman") || sub.equalsIgnoreCase("mm")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
-      if (!sender.hasPermission("footcube.admin.matchman")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, "&cUsage: /fcadmin matchman <start|end|speed>"); return true; }
+      if (!sender.hasPermission(PERM_MATCHMAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MATCHMAN, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end|speed>"})); return true; }
 
       Player player = (Player) sender;
       Match match = MatchHelper.getMatch(org, player);
@@ -351,9 +370,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       }
 
       return true;
-    } else if (args[0].equalsIgnoreCase("forceleave")) {
-      if (!sender.hasPermission("footcube.admin.forceleave")) return noPerm(sender);
-      if (args.length < 2) { logger.send(sender, "&cUsage: /fcadmin forceleave <player>"); return true; }
+    } else if (sub.equalsIgnoreCase("forceleave")) {
+      if (!sender.hasPermission(PERM_FORCE_LEAVE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_FORCE_LEAVE, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player>"})); return true; }
 
       Player target = plugin.getServer().getPlayer(args[1]);
       if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
@@ -378,14 +397,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     return true;
   }
 
-  private boolean noPerm(CommandSender sender) {
-    logger.send(sender, ChatColor.RED + "You don't have permission.");
-    return true;
-  }
-
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    if (!sender.hasPermission(PERM_MAIN)) return Collections.emptyList();
+
     List<String> completions = new ArrayList<>();
+
     if (args.length == 1) {
       completions.addAll(Arrays.asList("reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby", "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "help"));
     } else if (args.length == 2) {
@@ -397,16 +414,20 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           plugin.getServer().getOnlinePlayers().forEach(p -> completions.add(p.getName()));
           break;
         case "setuparena":
-        case "set": completions.addAll(Arrays.asList("2v2","3v3","4v4")); break;
-        case "matchman": completions.addAll(Arrays.asList("start","end","speed")); break;
-        case "cd": completions.addAll(Arrays.asList("add","remove","list")); break;
+        case "set": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;
+        case "matchman": completions.addAll(Arrays.asList("start", "end", "speed")); break;
+        case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
     }
 
-    String lastWord = args[args.length-1].toLowerCase();
-    completions.removeIf(s -> !s.toLowerCase().startsWith(lastWord));
+    if (!completions.isEmpty()) {
+      String lastWord = args[args.length - 1].toLowerCase();
+      completions.removeIf(s -> !s.toLowerCase().startsWith(lastWord));
+      completions.sort(String.CASE_INSENSITIVE_ORDER);
+    }
+
     return completions;
   }
 }

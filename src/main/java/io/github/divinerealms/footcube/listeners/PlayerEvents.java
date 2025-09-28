@@ -13,7 +13,6 @@ import io.github.divinerealms.footcube.utils.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -26,7 +25,6 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
@@ -37,6 +35,10 @@ public class PlayerEvents implements Listener {
   private final Organization org;
   private final PlayerDataManager dataManager;
   private final DisableCommands disableCommands;
+
+  private static final String PERM_BYPASS_DISABLED_COMMANDS = "footcube.bypass.disablecommands";
+  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
+  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   
   public PlayerEvents(FCManager fcManager) {
     this.fcManager = fcManager;
@@ -48,21 +50,21 @@ public class PlayerEvents implements Listener {
   }
 
   @EventHandler(priority = EventPriority.HIGHEST)
-  public void onPreprocess(PlayerCommandPreprocessEvent event) {
+  public void onDisabledCommand(PlayerCommandPreprocessEvent event) {
     Player player = event.getPlayer();
 
-    if (player.hasPermission("footcube.bypass.disablecommands")) return;
-    if (org.isInGame(player)) {
-      String raw = event.getMessage().toLowerCase().trim();
-      if (raw.startsWith("/")) raw = raw.substring(1);
+    if (player.hasPermission(PERM_BYPASS_DISABLED_COMMANDS)) return;
+    if (!org.isInGame(player)) return;
 
-      String cmd = raw.split(" ")[0];
-      if (cmd.contains(":")) cmd = cmd.split(":")[1];
+    String raw = event.getMessage().toLowerCase().trim();
+    if (raw.startsWith("/")) raw = raw.substring(1);
 
-      if (disableCommands.getCommands().contains(cmd)) {
-        logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null));
-        event.setCancelled(true);
-      }
+    String cmd = raw.split(" ")[0];
+    if (cmd.contains(":")) cmd = cmd.split(":")[1];
+
+    if (disableCommands.getCommands().contains(cmd)) {
+      logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null));
+      event.setCancelled(true);
     }
   }
   
@@ -72,20 +74,19 @@ public class PlayerEvents implements Listener {
     if (player.getExp() > 0) player.setExp(0);
     org.clearInventory(player);
 
-    Bukkit.getScheduler().runTaskAsynchronously(fcManager.getPlugin(), () -> {
+    Bukkit.getScheduler().runTaskLaterAsynchronously(fcManager.getPlugin(), () -> {
       PlayerData playerData = dataManager.get(player);
       dataManager.addDefaults(playerData);
-
-      Bukkit.getScheduler().runTaskLater(fcManager.getPlugin(), () -> handleSounds(player, playerData), 20L);
-    });
+      handleSounds(player, playerData);
+    }, 20L);
   }
 
   private void handleSounds(Player player, PlayerData playerData) {
     PlayerSoundSettings settings = physics.getSettings(player);
-    if (playerData.has("sounds.kick.enabled")) settings.setKickEnabled((Boolean) playerData.get("sounds.kick.enabled"));
-    if (playerData.has("sounds.kick.sound")) settings.setKickSound(Sound.valueOf((String) playerData.get("sounds.kick.sound")));
-    if (playerData.has("sounds.goal.enabled")) settings.setGoalEnabled((Boolean) playerData.get("sounds.goal.enabled"));
-    if (playerData.has("sounds.goal.sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get("sounds.goal.sound")));
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
   }
 
   @EventHandler
@@ -108,49 +109,7 @@ public class PlayerEvents implements Listener {
   }
 
   @EventHandler
-  public void onMove(PlayerMoveEvent event) {
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    Location to = event.getTo();
-    Location from = event.getFrom();
-    double dx = to.getX() - from.getX();
-    double dy = (to.getY() - from.getY()) / 2.0;
-    double dz = to.getZ() - from.getZ();
-    double speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    physics.getSpeed().put(event.getPlayer().getUniqueId(), speed);
-  }
-
-  @EventHandler
-  public void onRightClick(PlayerInteractEntityEvent event) {
-    if (!(event.getRightClicked() instanceof Slime)) return;
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    if (!physics.getCubes().contains((Slime) event.getRightClicked())) return;
-    if (physics.getKicked().containsKey(event.getPlayer().getUniqueId())) return;
-
-    Player player = event.getPlayer();
-    long now = System.currentTimeMillis();
-
-    Slime cube = (Slime) event.getRightClicked();
-    cube.setVelocity(cube.getVelocity().add(new Vector(0.0, 0.7, 0.0)));
-    physics.getKicked().put(player.getUniqueId(), now);
-
-    org.ballTouch(player);
-    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1.0F, 1.0F);
-  }
-
-  @EventHandler
-  public void onSneak(PlayerToggleSneakEvent event) {
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    Player player = event.getPlayer();
-    if (event.isSneaking()) {
-      physics.getCharges().put(player.getUniqueId(), (double) 0.0F);
-    } else {
-      player.setExp(0.0F);
-      physics.getCharges().remove(player.getUniqueId());
-    }
-  }
-
-  @EventHandler
-  public void onInteract(PlayerInteractEvent event) {
+  public void playerSpeedConsumption(PlayerInteractEvent event) {
     if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
     Action action = event.getAction();
     if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
@@ -170,26 +129,17 @@ public class PlayerEvents implements Listener {
 
   @EventHandler
   public void onItemDrop(PlayerDropItemEvent event) {
-    Player player = event.getPlayer();
-    if (org.isInGame(player)) {
-      event.setCancelled(true);
-    }
+    if (org.isInGame(event.getPlayer())) event.setCancelled(true);
   }
 
   @EventHandler
   public void onItemPickup(PlayerPickupItemEvent event) {
-    Player player = event.getPlayer();
-    if (org.isInGame(player)) {
-      event.setCancelled(true);
-    }
+    if (org.isInGame(event.getPlayer())) event.setCancelled(true);
   }
 
   @EventHandler
   public void onInventoryInteract(InventoryClickEvent event) {
-    Player player = (Player) event.getWhoClicked();
-    if (org.isInGame(player)) {
-      event.setCancelled(true);
-    }
+    if (org.isInGame((Player) event.getWhoClicked())) event.setCancelled(true);
   }
 
   @EventHandler

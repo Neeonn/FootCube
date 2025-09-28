@@ -26,7 +26,6 @@ import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class FCCommand implements CommandExecutor, TabCompleter {
@@ -37,6 +36,12 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private final Organization org;
   private final FileConfiguration arenas;
   private final PlayerDataManager dataManager;
+
+  private static final String PERM_MAIN = "footcube";
+  private static final String PERM_CUBE = PERM_MAIN + ".cube";
+  private static final String PERM_CLEAR_CUBE = PERM_MAIN + ".clearcube";
+  private static final String PERM_SET_SOUND = PERM_MAIN + ".sound";
+  private static final String PERM_ADMIN = PERM_MAIN + ".admin";
 
   public FCCommand(FCManager fcManager) {
     this.fcManager = fcManager;
@@ -64,7 +69,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (org.isBanned(player)) return true;
 
       String matchType = args[1];
-      if (matchType == null) { logger.send(player, "&cUsage: /fc join <2v2|3v3|4v4>"); return true; }
+      if (matchType == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
       if (org.isInGame(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
 
       MatchHelper.ArenaData data = MatchHelper.getArenaData(org, matchType);
@@ -126,7 +131,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
 
-      if (args.length < 2) { logger.send(player, "&cUsage: /fc teamchat <message>"); return true; }
+      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <message>"})); return true; }
 
       Match match = MatchHelper.getMatch(org, player);
       if (match == null) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
@@ -227,7 +232,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("cube")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (!player.hasPermission("footcube.cube")) return noPerm(sender, "footcube.cube", "cube");
+      if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
       if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
       if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete stvarati lopte dok ste u igri."); return true; }
 
@@ -242,8 +247,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("clearcube")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (!player.hasPermission("footcube.clearcube")) return noPerm(sender, "footcube.clearcube", "clearcube");
-
+      if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
       if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
 
       double closestDistance = 100.0;
@@ -267,7 +271,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("clearcubes")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (!player.hasPermission("footcube.clearcube")) return noPerm(sender, "footcube.clearcube", "clearcubes");
+      if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
       if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
 
       int count = 0;
@@ -283,7 +287,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("toggles") || sub.equalsIgnoreCase("ts")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (args.length < 2) { logger.send(player, "&cUsage: /fc toggles <kick|goal>"); return true; }
+      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal>"})); return true; }
 
       String type = args[1].toLowerCase();
       PlayerData playerData = dataManager.get(player);
@@ -308,8 +312,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("setsound")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (!player.hasPermission("footcube.sound")) return noPerm(player, "footcube.sound", "fc setsound");
-      if (args.length <= 2) { logger.send(player, "&cUsage: /fc setsound <kick|goal> <soundName>"); return true; }
+      if (!player.hasPermission(PERM_SET_SOUND)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_SOUND, label + " " + sub})); return true; }
+      if (args.length <= 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName>"})); return true; }
 
       PlayerData playerData = dataManager.get(player);
       if (playerData == null) return true;
@@ -340,7 +344,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           break;
 
         default:
-          logger.send(player, "&cUsage: /fc setsound <kick|goal> <soundName>");
+          logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName>"}));
           String sounds = String.join("&c, &e", Arrays.stream(Sound.values()).map(Sound::name).toArray(String[]::new));
           logger.send(player, "&fList of available sounds: &e" + sounds.toLowerCase());
           break;
@@ -353,16 +357,11 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   private void sendHelp(CommandSender sender) {
     logger.send(sender, Lang.HELP.replace(new String[]{Lang.OR.replace(null)}));
-    if (sender.hasPermission("footcube.admin")) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
+    if (sender.hasPermission(PERM_ADMIN)) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
   }
 
   private boolean inGameOnly(CommandSender sender) {
     logger.send(sender, "&cThis command can only be used by players.");
-    return true;
-  }
-
-  private boolean noPerm(CommandSender sender, String permission, String command) {
-    logger.send(sender, Lang.NO_PERM.replace(new String[]{permission, command}));
     return true;
   }
 
@@ -397,9 +396,12 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (sub.equals("setsound")) for (Sound sound : Sound.values()) completions.add(sound.name());
     }
 
-    String lastWord = args[args.length - 1].toLowerCase();
-    completions.removeIf(s -> !s.toLowerCase().startsWith(lastWord));
-    Collections.sort(completions);
+    if (!completions.isEmpty()) {
+      String lastWord = args[args.length - 1].toLowerCase();
+      completions.removeIf(s -> !s.toLowerCase().startsWith(lastWord));
+      completions.sort(String.CASE_INSENSITIVE_ORDER);
+    }
+
     return completions;
   }
 }

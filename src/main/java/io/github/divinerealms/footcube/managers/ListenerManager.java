@@ -23,7 +23,7 @@ public class ListenerManager {
     server.getPluginManager().registerEvents(new ChunkCheckers(fcManager), plugin);
     server.getPluginManager().registerEvents(new PlayerEvents(fcManager), plugin);
     server.getPluginManager().registerEvents(new SignManipulation(fcManager), plugin);
-    server.getPluginManager().registerEvents(new SlimeKick(fcManager), plugin);
+    server.getPluginManager().registerEvents(new BallControl(fcManager), plugin);
 
     fcManager.getLogger().info("&a✔ &2Registered &e5 &2listeners.");
   }

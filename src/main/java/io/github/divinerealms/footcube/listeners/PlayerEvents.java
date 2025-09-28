@@ -100,7 +100,7 @@ public class PlayerEvents implements Listener {
     physics.getSpeed().remove(uuid);
     physics.getCharges().remove(uuid);
     physics.getKicked().remove(uuid);
-    physics.getHitCooldowns().remove(uuid);
+    physics.getBallHitCooldowns().remove(uuid);
     physics.getSoundSettings().remove(uuid);
     physics.getVelocities().remove(uuid);
 

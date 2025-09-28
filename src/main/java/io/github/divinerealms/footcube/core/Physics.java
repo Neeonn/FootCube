@@ -30,10 +30,10 @@ public class Physics {
   private final Map<UUID, Long> kicked = new HashMap<>();
   private final Map<UUID, Double> speed = new HashMap<>();
   private final Map<UUID, Double> charges = new HashMap<>();
-  private final Map<UUID, Long> hitCooldowns = new HashMap<>();
+  private final Map<UUID, Long> ballHitCooldowns = new HashMap<>();
   private final Map<UUID, PlayerSoundSettings> soundSettings = new ConcurrentHashMap<>();
 
-  public static final long HIT_COOLDOWN_MS = 500;
+  private static final long BALL_HIT_COOLDOWN_MS = 500;
   private static final double MAX_KP = 7.75;
   private static final double SOFT_CAP_MIN_FACTOR = 0.7;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
@@ -91,11 +91,11 @@ public class Physics {
     return RANDOM.nextDouble(minRandomKP, MAX_KP); // 5.425 - 7.75
   }
 
-  public boolean isCooldownReady(Player player) {
+  public boolean canHitBall(Player player) {
     long now = System.currentTimeMillis();
-    long lastHit = hitCooldowns.getOrDefault(player.getUniqueId(), 0L);
-    if (now - lastHit < HIT_COOLDOWN_MS) return false;
-    hitCooldowns.put(player.getUniqueId(), now);
+    long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
+    if (now - lastHit < BALL_HIT_COOLDOWN_MS) return false;
+    ballHitCooldowns.put(player.getUniqueId(), now);
     return true;
   }
 

@@ -50,7 +50,7 @@ public class BallControl implements Listener {
 
     event.setCancelled(true);
     if (player.getGameMode() != GameMode.SURVIVAL) return;
-    if (player.isSneaking() && !physics.isCooldownReady(player)) return; // Handle hit cooldown if player is crouching
+    if (player.isSneaking() && !physics.canHitBall(player)) return; // Handle hit cooldown if player is crouching
 
     org.ballTouch(player); // Register Cube Hit in FC Matches
 

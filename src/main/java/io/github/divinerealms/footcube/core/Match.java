@@ -170,7 +170,7 @@ public class Match {
 
         if (this.type != 2) {
           playerData.add("matches");
-          player.getInventory().setItem(0, this.sugar);
+          player.getInventory().setItem(4, this.sugar);
         }
 
         if (this.isRed.get(player)) {
@@ -522,7 +522,7 @@ public class Match {
 
     for (Player p : toRestore) {
       this.sugarCooldown.remove(p);
-      p.getInventory().setItem(0, this.sugar);
+      if (organization.isInGame(p)) p.getInventory().setItem(4, this.sugar);
     }
   }
 

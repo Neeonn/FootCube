@@ -32,6 +32,6 @@ public class ChunkCheckers implements Listener {
       entity.remove();
     }
 
-    if (amount > 0) logger.broadcastBar(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(amount)}));
+    if (amount > 0) logger.broadcast(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(amount)}));
   }
 }

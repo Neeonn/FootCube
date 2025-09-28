@@ -96,7 +96,7 @@ public class FCManager {
       this.cubeCleanerRunning = true;
       this.cubeCleanerTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
         cubeCleaner.clearCubes();
-        if (!cubeCleaner.isEmpty()) logger.broadcastBar(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(cubeCleaner.getAmount())}));
+        if (!cubeCleaner.isEmpty()) logger.broadcast(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(cubeCleaner.getAmount())}));
       }, 20L, cubeCleaner.getRemoveInterval()).getTaskId();
     }
 

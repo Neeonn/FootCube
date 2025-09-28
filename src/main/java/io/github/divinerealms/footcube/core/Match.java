@@ -231,7 +231,7 @@ public class Match {
       logger.send(p, Lang.WELCOME.replace(new String[]{Lang.BLUE.replace(null)}));
     }
 
-    if (this.type != 2) p.getInventory().setItem(0, this.sugar);
+    if (this.type != 2) p.getInventory().setItem(4, this.sugar);
     if (this.isRed.containsKey(p) && this.isRed.get(p)) {
       p.getInventory().setChestplate(this.redChestPlate);
       p.getInventory().setLeggings(this.redLeggings);

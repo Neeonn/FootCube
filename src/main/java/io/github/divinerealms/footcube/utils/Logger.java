@@ -26,41 +26,42 @@ public class Logger {
   }
 
   public void info(String message) {
-    message = message.replace("{plugin-string}", "").replace("{admin-string}", "");
+    message = message.replace("{prefix}", "").replace("{prefix-admin}", "");
     consoleSender.sendMessage(consolePrefix + color(message));
   }
 
   public void send(CommandSender sender, String message) {
     if (sender instanceof Player) {
-      message = message.replace("{plugin-string}", Lang.PLUGIN_STRING.replace(null)).replace("{admin-string}", Lang.ADMIN_STRING.replace(null));
+      message = message.replace("{prefix}", Lang.PREFIX.replace(null)).replace("{prefix-admin}", Lang.PREFIX_ADMIN.replace(null));
       sender.sendMessage(color(message));
     } else {
-      message = message.replace("{plugin-string}", "").replace("{admin-string}", "");
+      message = message.replace("{prefix}", "").replace("{prefix-admin}", "");
       consoleSender.sendMessage(consolePrefix + color(message));
     }
   }
 
   public void send(String permission, String message) {
-    String formattedMc = message.replace("{plugin-string}", Lang.PLUGIN_STRING.replace(null)).replace("{admin-string}", Lang.ADMIN_STRING.replace(null));
-    String formattedConsole = message.replace("{plugin-string}", "").replace("{admin-string}", "");
+    String formattedMc = message.replace("{prefix}", Lang.PREFIX.replace(null)).replace("{prefix-admin}", Lang.PREFIX_ADMIN.replace(null));
+    String formattedConsole = message.replace("{prefix}", "").replace("{prefix-admin}", "");
 
     server.broadcast(color(formattedMc), permission);
     consoleSender.sendMessage(consolePrefix + color(formattedConsole));
   }
 
   public void broadcast(String message) {
+    message = message.replace("{prefix}", Lang.PREFIX.replace(null)).replace("{prefix-admin}", Lang.PREFIX_ADMIN.replace(null));
     server.broadcastMessage(color(message));
   }
 
   public void sendActionBar(Player player, String message) {
-    message = color(message.replace("{plugin-string}", Lang.PLUGIN_STRING.replace(null)).replace("{admin-string}", Lang.ADMIN_STRING.replace(null)));
+    message = color(message.replace("{prefix}", Lang.PREFIX.replace(null)).replace("{prefix-admin}", Lang.PREFIX_ADMIN.replace(null)));
     IChatBaseComponent iChatBaseComponent = ChatSerializer.a("{\"text\": \"" + message + "\"}");
     PacketPlayOutChat packetPlayOutChat = new PacketPlayOutChat(iChatBaseComponent, (byte)2);
     ((CraftPlayer)player).getHandle().playerConnection.sendPacket(packetPlayOutChat);
   }
 
   public void broadcastBar(String message) {
-    message = color(message.replace("{plugin-string}", Lang.PLUGIN_STRING.replace(null)).replace("{admin-string}", Lang.ADMIN_STRING.replace(null)));
+    message = color(message.replace("{prefix}", Lang.PREFIX.replace(null)).replace("{prefix-admin}", Lang.PREFIX_ADMIN.replace(null)));
     IChatBaseComponent iChatBaseComponent = ChatSerializer.a("{\"text\": \"" + message + "\"}");
     PacketPlayOutChat packetPlayOutChat = new PacketPlayOutChat(iChatBaseComponent, (byte)2);
 

@@ -111,7 +111,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       long banUntil = System.currentTimeMillis() + (seconds * 1000L);
       org.getLeaveCooldowns().put(target.getUniqueId(), banUntil);
 
-      logger.send(sender, Lang.ADMIN_STRING.replace(null) + target.getDisplayName() + "&c je banovan iz FC na " + seconds + "s.");
+      logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na " + seconds + "s.");
       return true;
     } else if (sub.equalsIgnoreCase("unban")) {
       if (!sender.hasPermission(PERM_UNBAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_UNBAN, label + " " + sub})); return true; }
@@ -121,9 +121,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
       if (org.getLeaveCooldowns().remove(target.getUniqueId()) != null) {
-        logger.send(sender, Lang.ADMIN_STRING.replace(null) + target.getDisplayName() + "&a je unbanovan.");
+        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&a je unbanovan.");
       } else {
-        logger.send(sender, Lang.ADMIN_STRING.replace(null) + target.getDisplayName() + "&c nije banovan.");
+        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
       }
       return true;
     } else if (sub.equalsIgnoreCase("statset")) {
@@ -191,7 +191,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
       Player player = (Player) sender;
 
-      if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.ADMIN_STRING.replace(null) + "Not setting up an arena"); return true; }
+      if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "Not setting up an arena"); return true; }
       int arenaType = org.getSetupType();
       String typeString = arenaType + "v" + arenaType;
 
@@ -228,7 +228,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
       Player player = (Player) sender;
 
-      if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.ADMIN_STRING.replace(null) + "Not setting up an arena"); return true; }
+      if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "Not setting up an arena"); return true; }
 
       org.setSetupGuy(null); org.setSetupType(0); org.setSetupLoc(null);
       logger.send(sender, Lang.UNDO.replace(null));

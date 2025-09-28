@@ -95,7 +95,7 @@ public class MatchesCommand implements CommandExecutor {
         logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
       }
     } else {
-      logger.send(sender, Lang.PLUGIN_STRING.replace(null) + "&cUnknown subcommand. Use /matches list");
+      logger.send(sender, Lang.PREFIX.replace(null) + "&cUnknown subcommand. Use /matches list");
     }
 
     return true;

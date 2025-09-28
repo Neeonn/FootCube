@@ -233,22 +233,22 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
-      if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete stvarati lopte dok ste u igri."); return true; }
+      if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete stvarati lopte dok ste u igri."); return true; }
 
       Location loc = player.getLocation();
       Vector dir = loc.getDirection().normalize();
       Location spawnLoc = loc.add(dir.multiply(2.0));
       spawnLoc.setY(loc.getY() + 2.5);
       physics.spawnCube(spawnLoc);
-      logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&aCube spawned!");
+      logger.send(player, Lang.PREFIX.replace(null) + "&aCube spawned!");
 
       return true;
     } else if (sub.equalsIgnoreCase("clearcube")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
 
       double closestDistance = 100.0;
       Slime closest = null;
@@ -272,7 +272,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PLUGIN_STRING.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
 
       int count = 0;
       for (Slime cube : physics.getCubes()) {

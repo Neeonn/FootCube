@@ -31,8 +31,12 @@ public class PlayerData {
   }
 
   public void set(String path, Object value) {
-    config.set(path, value);
-    dataManager.queueAdd(playerName);
+    Object current = config.get(path);
+
+    if ((current == null && value != null) || (current != null && !current.equals(value))) {
+      config.set(path, value);
+      dataManager.queueAdd(playerName);
+    }
   }
 
   public void add(String key) {

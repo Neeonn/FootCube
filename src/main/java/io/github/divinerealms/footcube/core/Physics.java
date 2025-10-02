@@ -2,11 +2,13 @@ package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EntitySlime;
+import net.minecraft.server.v1_8_R3.EnumParticle;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
@@ -246,8 +248,11 @@ public class Physics {
         if (distance > 32) {
           Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
           PlayerSettings settings = getPlayerSettings(player);
-          player.spigot().playEffect(cubeLocation, settings.getParticle(),
-              0, 0, 0.1f, 0.025f, 0.1f, 0f, 5, 100);
+          if (settings.getParticle() == EnumParticle.REDSTONE) {
+            Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.1f, 0.025f, 0.1f, 1.0f, 0, settings.getRedstoneColor());
+          } else {
+            Utilities.sendParticle(player, settings.getParticle(), cubeLocation, 0.1f, 0.025f, 0.1f, 0.1f, 1);
+          }
         }
       }
     }

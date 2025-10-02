@@ -11,7 +11,11 @@ import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
-import org.bukkit.*;
+import net.minecraft.server.v1_8_R3.EnumParticle;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -354,26 +358,52 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_SET_PARTICLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_PARTICLE, label + " " + sub})); return true; }
-      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <particleName>"})); return true; }
+      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <particleName> [color]"})); return true; }
 
       PlayerData playerData = dataManager.get(player);
       if (playerData == null) return true;
 
       PlayerSettings settings = physics.getPlayerSettings(player);
-      Effect effect;
+      EnumParticle particle;
       try {
-        effect = Effect.valueOf(args[1].toUpperCase());
+        particle = EnumParticle.valueOf(args[1].toUpperCase());
       } catch (Exception exception) {
         logger.send(player, "&cInvalid particle.");
-        String effects = String.join("&c, &e",
-            Arrays.stream(Effect.values()).map(Effect::name).toArray(String[]::new));
-        logger.send(player, "&fList of available particles: &e" + effects);
+        logger.send(player, "&fList of available particles: &c" + String.join("&e, &c", PlayerSettings.getAllowedParticles()));
         return true;
       }
 
-      settings.setParticle(effect);
-      playerData.set("particles.effect", effect.toString());
-      logger.send(player, "&aParticle set to: &e" + effect);
+      if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
+        logger.send(player, "&cInvalid particle.");
+        logger.send(player, "&fList of available particles: &c" + String.join("&e, &c", PlayerSettings.getAllowedParticles()));
+        return true;
+      }
+
+      if (particle == EnumParticle.REDSTONE) {
+        if (args.length >= 3) {
+          try {
+            String colorName = args[2].toUpperCase();
+            settings.setCustomRedstoneColor(colorName);
+            playerData.set("particles.effect", "REDSTONE:" + colorName);
+            logger.send(player, "&aParticle set to &eREDSTONE &awith color &f" + colorName);
+            return true;
+          } catch (IllegalArgumentException ex) {
+            logger.send(player, "&cInvalid color name. Allowed: &e" + PlayerSettings.getAllowedColorNames());
+            return true;
+          }
+        } else {
+          settings.setCustomRedstoneColor("WHITE");
+          playerData.set("particles.effect", "REDSTONE:WHITE");
+          logger.send(player, "&aParticle set to &eREDSTONE &awith default color &fWHITE");
+        }
+
+        settings.setParticle(EnumParticle.REDSTONE);
+        return true;
+      }
+
+      settings.setParticle(particle);
+      playerData.set("particles.effect", particle.toString());
+      logger.send(player, "&aParticle set to: &e" + particle);
       return true;
     } else sendHelp(sender);
     return true;
@@ -414,12 +444,14 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         case "toggles":
         case "ts":
           completions.addAll(Arrays.asList("kick", "goal", "particles")); break;
+        case "setparticle": completions.addAll(PlayerSettings.getAllowedParticles());
       }
     } else if (args.length == 3) {
       String sub = args[0].toLowerCase();
-      switch (sub) {
-        case "setsound": for (Sound sound : Sound.values()) completions.add(sound.name()); break;
-        case "setparticle": for (Effect effect : Effect.values()) completions.add(effect.name()); break;
+      if (sub.equalsIgnoreCase("setsound")) {
+        for (Sound sound : Sound.values()) completions.add(sound.name());
+      } else if (sub.equalsIgnoreCase("setparticle") && args[1].equalsIgnoreCase("redstone")) {
+        completions.addAll(PlayerSettings.getAllowedColorNames());
       }
     }
 

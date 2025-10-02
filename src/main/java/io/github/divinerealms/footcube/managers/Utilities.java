@@ -1,17 +1,28 @@
 package io.github.divinerealms.footcube.managers;
 
 import io.github.divinerealms.footcube.core.FCManager;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.cacheddata.CachedMetaData;
+import net.minecraft.server.v1_8_R3.EnumParticle;
+import net.minecraft.server.v1_8_R3.PacketPlayOutWorldParticles;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class Utilities {
+  private static Plugin plugin;
   public LuckPerms luckPerms;
 
   public Utilities(FCManager fcManager) {
+    plugin = fcManager.getPlugin();
     this.luckPerms = fcManager.getLuckPerms();
   }
 
@@ -48,5 +59,29 @@ public class Utilities {
     }
     if (number.length() > 0) totalSeconds += Integer.parseInt(number.toString());
     return totalSeconds;
+  }
+
+  public static void sendParticle(Player player, EnumParticle particle, Location loc, float offsetX, float offsetY, float offsetZ, float speed, int count) {
+    sendParticle(player, particle, loc, offsetX, offsetY, offsetZ, speed, count, null);
+  }
+
+  public static void sendParticle(Player player, EnumParticle particle, Location loc, float offsetX, float offsetY, float offsetZ, float speed, int count, Color color) {
+    PacketPlayOutWorldParticles packet;
+    try {
+      if (particle == EnumParticle.REDSTONE && color != null) {
+        float r = color.getRed() / 255f;
+        float g = color.getGreen() / 255f;
+        float b = color.getBlue() / 255f;
+        packet = new PacketPlayOutWorldParticles(particle, true, (float) loc.getX(), (float) loc.getY(), (float) loc.getZ(), r, g, b, 1.0f, 0);
+      } else if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
+        return;
+      } else {
+        packet = new PacketPlayOutWorldParticles(particle, true, (float) loc.getX(), (float) loc.getY(), (float) loc.getZ(), offsetX, offsetY, offsetZ, speed, count);
+      }
+
+      ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
+    } catch (Exception exception) {
+      plugin.getLogger().log(Level.SEVERE, "Error while trying to send particle", exception);
+    }
   }
 }

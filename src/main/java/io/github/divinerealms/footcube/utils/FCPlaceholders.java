@@ -53,6 +53,10 @@ public class FCPlaceholders extends PlaceholderExpansion {
       return String.valueOf(count);
     }
 
+    if (identifier.equalsIgnoreCase("active_players_all")) {
+      return String.valueOf(org.playingPlayers.size());
+    }
+
     // Active lobbies
     if (identifier.startsWith("active_lobbies_")) {
       String type = identifier.replace("active_lobbies_", "");

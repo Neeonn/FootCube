@@ -5,7 +5,7 @@ import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
-import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -599,8 +599,8 @@ public class Match {
       goalMessage += " Razdaljina: &e"  + String.format("%.0f", distanceToGoal) + " blokova&a.";
       if (assister != null && assister != scorer) goalMessage += " Assist: " + fcManager.getChat().getPlayerPrefix(assister) + assister.getName();
       logger.send(p, goalMessage);
-      PlayerSoundSettings settings = physics.getSettings(p);
-      if (settings.isGoalEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);
+      PlayerSettings settings = physics.getPlayerSettings(p);
+      if (settings.isGoalSoundEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);
 
       fcManager.getLogger().title(p, Lang.MATCH_GOAL_TITLE.replace(null),
           Lang.MATCH_GOAL_SUBTITLE.replace(new String[]{

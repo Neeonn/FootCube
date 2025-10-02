@@ -10,7 +10,7 @@ import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
-import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -82,10 +82,10 @@ public class PlayerEvents implements Listener {
   }
 
   private void handleSounds(Player player, PlayerData playerData) {
-    PlayerSoundSettings settings = physics.getSettings(player);
-    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
+    PlayerSettings settings = physics.getPlayerSettings(player);
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
     if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
-    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
   }
 
@@ -101,7 +101,7 @@ public class PlayerEvents implements Listener {
     physics.getCharges().remove(uuid);
     physics.getKicked().remove(uuid);
     physics.getBallHitCooldowns().remove(uuid);
-    physics.getSoundSettings().remove(uuid);
+    physics.getPlayerSettings().remove(uuid);
     physics.getVelocities().remove(uuid);
 
     Match match = MatchHelper.getMatch(org, player);

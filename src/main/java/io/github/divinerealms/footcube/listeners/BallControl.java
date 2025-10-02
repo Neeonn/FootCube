@@ -6,7 +6,7 @@ import io.github.divinerealms.footcube.core.Organization;
 import io.github.divinerealms.footcube.core.Physics;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -67,8 +67,8 @@ public class BallControl implements Listener {
     cube.setVelocity(player.isSneaking() ? kick : cube.getVelocity().add(kick)); // Regular Kick stacks velocity, Charged Kick sets velocity.
 
     cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
-    PlayerSoundSettings settings = physics.getSettings(player);
-    if (settings.isKickEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
+    PlayerSettings settings = physics.getPlayerSettings(player);
+    if (settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
 
     if (physics.isHitDebug()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
     physics.recordPlayerAction(player);

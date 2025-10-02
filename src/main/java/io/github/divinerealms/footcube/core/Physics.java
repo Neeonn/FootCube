@@ -3,7 +3,7 @@ package io.github.divinerealms.footcube.core;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.utils.KickResult;
-import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EntitySlime;
@@ -36,7 +36,7 @@ public class Physics {
   private final Map<UUID, Double> charges = new HashMap<>();
   private final Map<UUID, Long> ballHitCooldowns = new HashMap<>();
   private final Map<UUID, Long> lastAction = new HashMap<>();
-  private final Map<UUID, PlayerSoundSettings> soundSettings = new ConcurrentHashMap<>();
+  private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
   private static final long CHARGED_HIT_COOLDOWN = 500L;
   private static final long REGULAR_HIT_COOLDOWN = 150L;
@@ -240,23 +240,25 @@ public class Physics {
       for (Entity entity : cube.getNearbyEntities(100, 100, 100)) {
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
+        if (!getPlayerSettings(player).isParticlesEnabled()) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
         if (distance > 32) {
           Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
-          player.spigot().playEffect(cubeLocation, Effect.HAPPY_VILLAGER,
+          PlayerSettings settings = getPlayerSettings(player);
+          player.spigot().playEffect(cubeLocation, settings.getParticle(),
               0, 0, 0.1f, 0.025f, 0.1f, 0f, 5, 100);
         }
       }
     }
   }
 
-  public PlayerSoundSettings getSettings(Player player) {
-    return soundSettings.computeIfAbsent(player.getUniqueId(), k -> new PlayerSoundSettings());
+  public PlayerSettings getPlayerSettings(Player player) {
+    return playerSettings.computeIfAbsent(player.getUniqueId(), k -> new PlayerSettings());
   }
 
   public void removePlayer(Player player) {
-    soundSettings.remove(player.getUniqueId());
+    playerSettings.remove(player.getUniqueId());
   }
 
   public void recordPlayerAction(Player player) {
@@ -275,7 +277,7 @@ public class Physics {
     speed.clear();
     charges.clear();
     ballHitCooldowns.clear();
-    soundSettings.clear();
+    playerSettings.clear();
     lastAction.clear();
   }
 }

@@ -10,11 +10,8 @@ import io.github.divinerealms.footcube.core.Physics;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
-import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
-import org.bukkit.Difficulty;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -41,6 +38,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private static final String PERM_CUBE = PERM_MAIN + ".cube";
   private static final String PERM_CLEAR_CUBE = PERM_MAIN + ".clearcube";
   private static final String PERM_SET_SOUND = PERM_MAIN + ".sound";
+  private static final String PERM_SET_PARTICLE = PERM_MAIN + ".particle";
   private static final String PERM_ADMIN = PERM_MAIN + ".admin";
 
   public FCCommand(FCManager fcManager) {
@@ -283,22 +281,27 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (sub.equalsIgnoreCase("toggles") || sub.equalsIgnoreCase("ts")) {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
-      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal>"})); return true; }
+      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles>"})); return true; }
 
       String type = args[1].toLowerCase();
       PlayerData playerData = dataManager.get(player);
       if (playerData == null) return true;
-      PlayerSoundSettings settings = physics.getSettings(player);
+      PlayerSettings settings = physics.getPlayerSettings(player);
       switch (type) {
         case "kick":
-          settings.setKickEnabled(!settings.isKickEnabled());
-          playerData.set("sounds.kick.enabled", settings.isKickEnabled());
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isKickEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "kick sound.");
+          settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
+          playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
+          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isKickSoundEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "kick sound.");
           break;
         case "goal":
-          settings.setGoalEnabled(!settings.isGoalEnabled());
-          playerData.set("sounds.goal.enabled", settings.isGoalEnabled());
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isGoalEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "goal sound.");
+          settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
+          playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
+          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isGoalSoundEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "goal sound.");
+          break;
+        case "particles":
+          settings.setParticlesEnabled(!settings.isParticlesEnabled());
+          playerData.set("particles.enabled", settings.isParticlesEnabled());
+          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isParticlesEnabled() ? "&aEnabled &9" : "&cDisabled &9" + "cube particles."));
           break;
         default:
           logger.send(player, Lang.BETA_FEATURE.replace(null) + "Invalid type. Use: goal|kick");
@@ -314,7 +317,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       PlayerData playerData = dataManager.get(player);
       if (playerData == null) return true;
 
-      PlayerSoundSettings settings = physics.getSettings(player);
+      PlayerSettings settings = physics.getPlayerSettings(player);
       Sound sound;
       try {
         sound = Sound.valueOf(args[2].toUpperCase());
@@ -342,10 +345,35 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         default:
           logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName>"}));
           String sounds = String.join("&c, &e", Arrays.stream(Sound.values()).map(Sound::name).toArray(String[]::new));
-          logger.send(player, "&fList of available sounds: &e" + sounds.toLowerCase());
+          logger.send(player, "&fList of available sounds: &e" + sounds);
           break;
       }
 
+      return true;
+    } else if (sub.equalsIgnoreCase("setparticle")) {
+      if (!(sender instanceof Player)) return inGameOnly(sender);
+      Player player = (Player) sender;
+      if (!player.hasPermission(PERM_SET_PARTICLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_PARTICLE, label + " " + sub})); return true; }
+      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <particleName>"})); return true; }
+
+      PlayerData playerData = dataManager.get(player);
+      if (playerData == null) return true;
+
+      PlayerSettings settings = physics.getPlayerSettings(player);
+      Effect effect;
+      try {
+        effect = Effect.valueOf(args[1].toUpperCase());
+      } catch (Exception exception) {
+        logger.send(player, "&cInvalid particle.");
+        String effects = String.join("&c, &e",
+            Arrays.stream(Effect.values()).map(Effect::name).toArray(String[]::new));
+        logger.send(player, "&fList of available particles: &e" + effects);
+        return true;
+      }
+
+      settings.setParticle(effect);
+      playerData.set("particles.effect", effect.toString());
+      logger.send(player, "&aParticle set to: &e" + effect);
       return true;
     } else sendHelp(sender);
     return true;
@@ -369,7 +397,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       completions.addAll(Arrays.asList(
           "join", "leave", "takeplace", "tkp", "teamchat", "tc", "team", "t",
           "stats", "best", "highscores", "toggles", "ts", "cube", "clearcube",
-          "clearcubes", "help", "h", "setsound"
+          "clearcubes", "help", "h", "setsound", "setparticle"
       ));
     } else if (args.length == 2) {
       String sub = args[0].toLowerCase();
@@ -385,11 +413,14 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           break;
         case "toggles":
         case "ts":
-        case "setsound": completions.addAll(Arrays.asList("kick", "goal")); break;
+          completions.addAll(Arrays.asList("kick", "goal", "particles")); break;
       }
     } else if (args.length == 3) {
       String sub = args[0].toLowerCase();
-      if (sub.equals("setsound")) for (Sound sound : Sound.values()) completions.add(sound.name());
+      switch (sub) {
+        case "setsound": for (Sound sound : Sound.values()) completions.add(sound.name()); break;
+        case "setparticle": for (Effect effect : Effect.values()) completions.add(effect.name()); break;
+      }
     }
 
     if (!completions.isEmpty()) {

@@ -172,10 +172,6 @@ public class FCManager {
     logger.info("&a✔ &2Hooked into &dLuckPerms &2and &dVault &2successfully!");
   }
 
-  private void ensureSection(FileConfiguration file, String path) {
-    if (!file.isConfigurationSection(path)) file.createSection(path);
-  }
-
   private void setDefaultIfMissing(FileConfiguration file, String path, Object value) {
     if (!file.isSet(path)) file.set(path, value);
   }

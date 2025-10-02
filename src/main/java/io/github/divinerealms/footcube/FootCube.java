@@ -3,6 +3,8 @@ package io.github.divinerealms.footcube;
 import io.github.divinerealms.footcube.core.FCManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.logging.Level;
+
 public class FootCube extends JavaPlugin {
   private FCManager fcManager;
 
@@ -12,8 +14,7 @@ public class FootCube extends JavaPlugin {
       this.fcManager = new FCManager(this);
       fcManager.getLogger().info("&aSuccessfully enabled.");
     } catch (Exception exception) {
-      getLogger().severe("Failed to initialize FootCube: " + exception.getMessage());
-      exception.printStackTrace();
+      getLogger().log(Level.SEVERE, "Failed to initialize FootCube", exception);
       getServer().getPluginManager().disablePlugin(this);
     }
   }

@@ -20,7 +20,7 @@ public class ListenerManager {
   public void registerAll() {
     unregisterAll();
 
-    server.getPluginManager().registerEvents(new ChunkCheckers(fcManager), plugin);
+    server.getPluginManager().registerEvents(new ChunkCheckers(), plugin);
     server.getPluginManager().registerEvents(new PlayerEvents(fcManager), plugin);
     server.getPluginManager().registerEvents(new SignManipulation(fcManager), plugin);
     server.getPluginManager().registerEvents(new BallControl(fcManager), plugin);

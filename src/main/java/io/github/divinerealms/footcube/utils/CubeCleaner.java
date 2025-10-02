@@ -2,7 +2,6 @@ package io.github.divinerealms.footcube.utils;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Physics;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import lombok.Getter;
 import org.bukkit.Location;
@@ -14,7 +13,6 @@ import java.util.Collection;
 
 public class CubeCleaner {
   private final FileConfiguration practice;
-  private final Physics physics;
 
   @Getter public boolean empty;
   @Getter public int amount = 0;
@@ -25,7 +23,6 @@ public class CubeCleaner {
     this.practice = configManager.getConfig("practice.yml");
 
     Logger logger = fcManager.getLogger();
-    this.physics = fcManager.getPhysics();
 
     if (!practiceAreasSet()) {
       logger.info(Lang.PRACTICE_AREAS_EMPTY.replace(null));
@@ -49,9 +46,7 @@ public class CubeCleaner {
         if (entity instanceof Slime) {
           this.amount++;
           this.empty = false;
-          if (physics.getCubes() != null) physics.getCubes().remove(entity);
-          if (physics.getPracticeCubes() != null) physics.getPracticeCubes().remove(entity);
-          entity.remove();
+          ((Slime) entity).setHealth(0);
         }
       }
     }

@@ -1,5 +1,6 @@
 package io.github.divinerealms.footcube.listeners;
 
+import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
 import io.github.divinerealms.footcube.core.Physics;
@@ -50,13 +51,18 @@ public class BallControl implements Listener {
 
     event.setCancelled(true);
 
+    if (player.getGameMode() == GameMode.CREATIVE) {
+      cube.setHealth(0);
+      logger.send(player, Lang.CUBE_CLEAR.replace(null));
+    }
+
     if (player.getGameMode() != GameMode.SURVIVAL) return;
     if (!physics.canHitBall(player)) return; // Handle hit cooldown
 
     org.ballTouch(player); // Register Cube Hit in FC Matches
 
     KickResult kickResult = physics.calculateKickPower(player);
-    if (kickResult.getPower() > 1.0 && physics.getDistance(player.getLocation(), cube.getLocation()) > 16.0) return; // Max Reach
+    if (kickResult.getPower() > 1.0 && physics.getDistance(player.getLocation(), cube.getLocation()) > 4.0) return; // Max Reach
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
     cube.setVelocity(player.isSneaking() ? kick : cube.getVelocity().add(kick)); // Regular Kick stacks velocity, Charged Kick sets velocity.
 
@@ -65,6 +71,7 @@ public class BallControl implements Listener {
     if (settings.isKickEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
 
     if (physics.isHitDebug()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
+    physics.recordPlayerAction(player);
   }
 
   @EventHandler
@@ -83,6 +90,7 @@ public class BallControl implements Listener {
 
     org.ballTouch(player);
     cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1.0F, 1.0F);
+    physics.recordPlayerAction(event.getPlayer());
   }
 
   @EventHandler
@@ -97,6 +105,7 @@ public class BallControl implements Listener {
 
     double speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
     physics.getSpeed().put(event.getPlayer().getUniqueId(), speed);
+    physics.recordPlayerAction(event.getPlayer());
   }
 
   @EventHandler
@@ -106,6 +115,7 @@ public class BallControl implements Listener {
     Player player = event.getPlayer();
     if (event.isSneaking()) {
       physics.getCharges().put(player.getUniqueId(), 0.0);
+      physics.recordPlayerAction(event.getPlayer());
     } else {
       player.setExp(0.0F);
       physics.getCharges().remove(player.getUniqueId());

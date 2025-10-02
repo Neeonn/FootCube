@@ -46,6 +46,8 @@ public class Match {
   public HashMap<Player, Boolean> isRed = new HashMap<>();
   private Player lastKickRed = null;
   private Player lastKickBlue = null;
+  private Player assistRed = null;
+  private Player assistBlue = null;
   public int scoreRed;
   public int scoreBlue;
   public final HashMap<Player, Integer> goals = new HashMap<>();
@@ -246,8 +248,10 @@ public class Match {
   public void kick(Player p) {
     if (this.isRed.containsKey(p)) {
       if (this.isRed.get(p)) {
+        this.assistRed = this.lastKickRed;
         this.lastKickRed = p;
       } else {
+        this.assistBlue = this.lastKickBlue;
         this.lastKickBlue = p;
       }
     }
@@ -533,6 +537,7 @@ public class Match {
     this.cube.setHealth(0.0);
 
     Player scorer = red ? this.lastKickRed : this.lastKickBlue;
+    Player assister = red ? this.assistRed : this.assistBlue;
     String team = red ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
 
     if (red) {
@@ -588,6 +593,11 @@ public class Match {
       String goalMessage = ownGoal
           ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team})
           : Lang.MATCH_GOAL.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team});
+      Location goalLocation = red ? this.blue : this.red;
+      double distanceToGoal = scorer.getLocation().distance(goalLocation);
+
+      goalMessage += " Razdaljina: &e"  + String.format("%.0f", distanceToGoal) + " blokova&a.";
+      if (assister != null && assister != scorer) goalMessage += " Assist: " + fcManager.getChat().getPlayerPrefix(assister) + assister.getName();
       logger.send(p, goalMessage);
       PlayerSoundSettings settings = physics.getSettings(p);
       if (settings.isGoalEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);
@@ -659,6 +669,7 @@ public class Match {
           p.getInventory().clear();
           p.getInventory().setArmorContents(null);
           p.setLevel(0);
+          logger.send(p, Lang.RELOAD.replace(null));
         } catch (Exception ignored) {}
       }
     } catch (Exception ignored) {}
@@ -687,6 +698,8 @@ public class Match {
       this.sugarCooldown.clear();
       this.lastKickRed = null;
       this.lastKickBlue = null;
+      this.assistRed = null;
+      this.assistBlue = null;
     } catch (Exception ignored) {}
   }
 }

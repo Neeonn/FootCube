@@ -6,7 +6,10 @@ import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.PlayerSoundSettings;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.server.v1_8_R3.EntitySlime;
+import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -15,9 +18,11 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 @Getter
 public class Physics {
@@ -25,18 +30,19 @@ public class Physics {
   private final Organization org;
 
   private final HashSet<Slime> cubes = new HashSet<>();
-  private final HashSet<Slime> practiceCubes = new HashSet<>();
   private final Map<UUID, Vector> velocities = new HashMap<>();
   private final Map<UUID, Long> kicked = new HashMap<>();
   private final Map<UUID, Double> speed = new HashMap<>();
   private final Map<UUID, Double> charges = new HashMap<>();
   private final Map<UUID, Long> ballHitCooldowns = new HashMap<>();
+  private final Map<UUID, Long> lastAction = new HashMap<>();
   private final Map<UUID, PlayerSoundSettings> soundSettings = new ConcurrentHashMap<>();
 
   private static final long CHARGED_HIT_COOLDOWN = 500L;
   private static final long REGULAR_HIT_COOLDOWN = 150L;
-  private static final double MAX_KP = 7.75;
-  private static final double SOFT_CAP_MIN_FACTOR = 0.7;
+  private static final long AFK_THRESHOLD = 60_000L;
+  private static final double MAX_KP = 7.25;
+  private static final double SOFT_CAP_MIN_FACTOR = 0.75;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
   @Setter private boolean matchesEnabled = true;
@@ -52,19 +58,24 @@ public class Physics {
     cube.setRemoveWhenFarAway(false);
     cube.setSize(1);
     cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, -3, true), true);
+
+    EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
+    try {
+      Field gField = PathfinderGoalSelector.class.getDeclaredField("b");
+      gField.setAccessible(true);
+      gField.set(nmsSlime.goalSelector, new java.util.LinkedList<>());
+      gField.set(nmsSlime.targetSelector, new java.util.LinkedList<>());
+    } catch (Exception e) {
+      plugin.getLogger().log(Level.SEVERE, "Error: ", e);
+    }
+
     cubes.add(cube);
     return cube;
   }
 
   public void removeCubes() {
     List<Entity> entities = plugin.getServer().getWorlds().get(0).getEntities();
-    for (Entity entity : entities) {
-      if (entity instanceof Slime) {
-        cubes.remove(entity);
-        ((Slime) entity).setHealth(0.0);
-        entity.remove();
-      }
-    }
+    for (Entity entity : entities) if (entity instanceof Slime) ((Slime) entity).setHealth(0.0);
   }
 
   public double getDistance(Location locA, Location locB) {
@@ -112,7 +123,7 @@ public class Physics {
     }
   }
 
-  public void update() {
+  public void tick() {
     long now = System.currentTimeMillis();
     kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
 
@@ -121,16 +132,18 @@ public class Physics {
       if (player == null) continue;
 
       double charge = entry.getValue();
-      double nextCharge = 1.0 - (1.0 - charge) * (0.95 - 0.005);
+      double nextCharge = 1.0 - (1.0 - charge) * 0.945;
       charges.put(entry.getKey(), nextCharge);
       player.setExp((float) nextCharge);
     }
 
     List<Slime> toRemove = new ArrayList<>();
+
     for (Slime cube : cubes) {
+      if (cubes.isEmpty()) continue;
+
       if (cube.isDead()) {
         toRemove.add(cube);
-        practiceCubes.remove(cube);
         continue;
       }
 
@@ -141,23 +154,55 @@ public class Physics {
       boolean sound = false;
       boolean kicked = false;
 
-      List<Entity> entities = cube.getNearbyEntities(2, 2, 2);
-      for (Entity entity : entities) {
-        if (entities.isEmpty()) continue;
+      List<Entity> nearby = cube.getNearbyEntities(2, 1, 2);
+      for (Entity entity : nearby) {
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
         if (player.getGameMode() != GameMode.SURVIVAL) continue;
+        if (isAFK(player)) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
-        if (distance < 1.2) {
+        if (distance <= 1.2) {
           double speed = newV.length();
-          if (distance < 0.8 && speed > 0.5) newV.multiply(0.5 / speed);
+          if (distance <= 0.8 && speed >= 0.5) newV.multiply(0.5 / speed);
 
           double power = this.speed.getOrDefault(player.getUniqueId(), 1.0) / 3.0 + oldV.length() / 6.0;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
           org.ballTouch(player);
           kicked = true;
           if (power > 0.15) sound = true;
+        }
+
+        double delta = getDistance(cube.getLocation(), player.getLocation());
+        if (delta < newV.length() * 1.3) {
+          Vector loc = cube.getLocation().toVector();
+          Vector nextLoc = (new Vector(loc.getX(), loc.getY(), loc.getZ())).add(newV);
+
+          boolean rightDirection = true;
+          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0.0, player.getLocation().getZ() - loc.getZ());
+          Vector cDir = (new Vector(newV.getX(), 0.0, newV.getZ())).normalize();
+
+          int px = pDir.getX() < 0 ? -1 : 1;
+          int pz = pDir.getZ() < 0 ? -1 : 1;
+          int cx = cDir.getX() < 0 ? -1 : 1;
+          int cz = cDir.getZ() < 0 ? -1 : 1;
+
+          if (px != cx && pz != cz
+              || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ())
+              || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) {
+            rightDirection = false;
+          }
+
+          if (rightDirection && loc.getY() < player.getLocation().getY() + 2.0
+              && loc.getY() > player.getLocation().getY() - 1.0
+              && nextLoc.getY() < player.getLocation().getY() + 2.0
+              && nextLoc.getY() > player.getLocation().getY() - 1.0) {
+            double a = newV.getZ() / newV.getX();
+            double b = loc.getZ() - a * loc.getX();
+            double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1.0);
+
+            if (D < 0.8) newV.multiply(delta / newV.length());
+          }
         }
       }
 
@@ -178,56 +223,32 @@ public class Physics {
 
       if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
 
-      for (Entity entity : entities) {
-        if (entities.isEmpty()) continue;
-        if (!(entity instanceof Player)) continue;
-        Player player = (Player) entity;
-        if (player.getGameMode() != GameMode.SURVIVAL) continue;
-
-        double delta = getDistance(cube.getLocation(), player.getLocation());
-        if (delta < newV.length() * 1.3) {
-          Vector loc = cube.getLocation().toVector();
-          Vector nextLoc = (new Vector(loc.getX(), loc.getY(), loc.getZ())).add(newV);
-          boolean rightDirection = true;
-          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0.0, player.getLocation().getZ() - loc.getZ());
-          Vector cDir = (new Vector(newV.getX(), 0.0, newV.getZ())).normalize();
-          int px = 1;
-          if (pDir.getX() < 0.0) px = -1;
-
-          int pz = 1;
-          if (pDir.getZ() < 0.0) pz = -1;
-
-          int cx = 1;
-          if (cDir.getX() < 0.0) cx = -1;
-
-          int cz = 1;
-          if (cDir.getZ() < 0.0) cz = -1;
-
-          if (px != cx && pz != cz || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ()) || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) {
-            rightDirection = false;
-          }
-
-          if (rightDirection && loc.getY() < player.getLocation().getY() + 2.0 && loc.getY() > player.getLocation().getY() - 1.0 && nextLoc.getY() < player.getLocation().getY() + 2.0 && nextLoc.getY() > player.getLocation().getY() - 1.0) {
-            double a = newV.getZ() / newV.getX();
-            double b = loc.getZ() - a * loc.getX();
-            double c = player.getLocation().getX();
-            double d = player.getLocation().getZ();
-            double D = Math.abs(a * c - d + b) / Math.sqrt(a * a + 1.0);
-            if (D < 0.8) newV.multiply(delta / newV.length());
-          }
-        }
-      }
-
-      cube.setMaxHealth(20.0);
-      cube.setHealth(20.0);
       cube.setVelocity(newV);
       velocities.put(id, newV);
     }
 
-    toRemove.forEach(slime -> Bukkit.getScheduler().runTaskLater(plugin, () -> {
-      cubes.remove(slime);
-      if (!slime.isDead()) slime.remove();
-    }, 20L));
+    if (!toRemove.isEmpty()) {
+      toRemove.forEach(slime -> Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        cubes.remove(slime);
+        if (!slime.isDead()) slime.remove();
+      }, 20L));
+    }
+  }
+
+  public void showCubeParticles() {
+    for (Slime cube : cubes) {
+      for (Entity entity : cube.getNearbyEntities(100, 100, 100)) {
+        if (!(entity instanceof Player)) continue;
+        Player player = (Player) entity;
+
+        double distance = getDistance(cube.getLocation(), player.getLocation());
+        if (distance > 32) {
+          Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
+          player.spigot().playEffect(cubeLocation, Effect.HAPPY_VILLAGER,
+              0, 0, 0.1f, 0.025f, 0.1f, 0f, 5, 100);
+        }
+      }
+    }
   }
 
   public PlayerSoundSettings getSettings(Player player) {
@@ -236,5 +257,25 @@ public class Physics {
 
   public void removePlayer(Player player) {
     soundSettings.remove(player.getUniqueId());
+  }
+
+  public void recordPlayerAction(Player player) {
+    lastAction.put(player.getUniqueId(), System.currentTimeMillis());
+  }
+
+  public boolean isAFK(Player player) {
+    long last = lastAction.getOrDefault(player.getUniqueId(), 0L);
+    return System.currentTimeMillis() - last > AFK_THRESHOLD;
+  }
+
+  public void cleanup() {
+    cubes.clear();
+    velocities.clear();
+    kicked.clear();
+    speed.clear();
+    charges.clear();
+    ballHitCooldowns.clear();
+    soundSettings.clear();
+    lastAction.clear();
   }
 }

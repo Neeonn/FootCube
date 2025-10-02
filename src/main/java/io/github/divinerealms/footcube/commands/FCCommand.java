@@ -261,9 +261,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       }
 
       if (closest != null) {
-        physics.getCubes().remove(closest);
-        if (physics.getPracticeCubes() != null) physics.getPracticeCubes().remove(closest);
-        closest.remove();
+        closest.setHealth(0);
         logger.send(player, Lang.CUBE_CLEAR.replace(null));
       } else logger.send(player, Lang.CUBE_NO_CUBES.replace(null));
 
@@ -276,11 +274,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
       int count = 0;
       for (Slime cube : physics.getCubes()) {
-        cube.setHealth(0.0);
+        cube.setHealth(0);
         count++;
       }
-      physics.getCubes().clear();
-      if (physics.getPracticeCubes() != null) physics.getPracticeCubes().clear();
       logger.send(player, Lang.CUBE_CLEAR_ALL.replace(new String[]{String.valueOf(count)}));
 
       return true;

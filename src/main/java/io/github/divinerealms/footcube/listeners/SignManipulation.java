@@ -91,6 +91,12 @@ public class SignManipulation implements Listener {
           event.setLine(2, "Check all");
           event.setLine(3, "highscores");
           break;
+        case "matches":
+          event.setLine(0, "[FootCube]");
+          event.setLine(1, "Use " + ChatColor.AQUA + "/matches");
+          event.setLine(2, "or " + ChatColor.AQUA + "/q" + ChatColor.RESET + " to");
+          event.setLine(3, "check matches");
+          break;
       }
     }
   }
@@ -151,14 +157,14 @@ public class SignManipulation implements Listener {
         break;
 
       case "stats":
-        org.checkStats(player.getUniqueId().toString(), player);
+        org.checkStats(player.getName(), player);
         break;
 
       case "cube":
         Location location = player.getLocation();
         Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
         if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-          physics.getPracticeCubes().add(physics.spawnCube(player.getLocation().add(new Vector(0, 1, 0))));
+          physics.spawnCube(player.getLocation().add(new Vector(0, 1, 0)));
         } else {
           logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
         }

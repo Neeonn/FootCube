@@ -46,6 +46,7 @@ public class FCManager {
 
   private boolean physicsRunning = false;
   private int physicsTaskID;
+  private int glowTaskID;
 
   private boolean cubeCleanerRunning = false;
   private int cubeCleanerTaskID;
@@ -90,7 +91,8 @@ public class FCManager {
     this.cubeCleanerRunning = false;
 
     this.physicsRunning = true;
-    this.physicsTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::update, 1L, 1L).getTaskId();
+    this.physicsTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::tick, 1L, 1L).getTaskId();
+    this.glowTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::showCubeParticles, 1L, 1L).getTaskId();
 
     if (cubeCleaner.practiceAreasSet()) {
       this.cubeCleanerRunning = true;
@@ -119,6 +121,8 @@ public class FCManager {
       plugin.getServer().getScheduler().cancelTask(cubeCleanerTaskID);
       this.cubeCleanerRunning = false;
     }
+
+    plugin.getServer().getScheduler().cancelTask(glowTaskID);
   }
 
   public void registerCommands() {

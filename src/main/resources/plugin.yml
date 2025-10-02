@@ -21,5 +21,6 @@ commands:
 
   matches:
     description: Matches command
+    aliases: [q]
     default: true
     permission: footcube.matches

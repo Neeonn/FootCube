@@ -33,7 +33,8 @@ public class Physics {
   private final Map<UUID, Long> ballHitCooldowns = new HashMap<>();
   private final Map<UUID, PlayerSoundSettings> soundSettings = new ConcurrentHashMap<>();
 
-  private static final long BALL_HIT_COOLDOWN_MS = 500;
+  private static final long CHARGED_HIT_COOLDOWN = 500L;
+  private static final long REGULAR_HIT_COOLDOWN = 150L;
   private static final double MAX_KP = 7.75;
   private static final double SOFT_CAP_MIN_FACTOR = 0.7;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
@@ -67,11 +68,11 @@ public class Physics {
   }
 
   public double getDistance(Location locA, Location locB) {
-    locA.add(0.0, -1.0, 0.0);
-    double dx = Math.abs(locA.getX() - locB.getX());
-    double dy = Math.abs(locA.getY() - locB.getY() - 0.25) - 1.25;
+    double dx = locA.getX() - locB.getX();
+    double dy = (locA.getY() - 1.0) - locB.getY() - 0.25 - 1.25;
     if (dy < 0.0) dy = 0.0;
-    double dz = Math.abs(locA.getZ() - locB.getZ());
+    double dz = locA.getZ() - locB.getZ();
+
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 
@@ -93,8 +94,9 @@ public class Physics {
 
   public boolean canHitBall(Player player) {
     long now = System.currentTimeMillis();
+    long cooldown = player.isSneaking() ? CHARGED_HIT_COOLDOWN : REGULAR_HIT_COOLDOWN;
     long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
-    if (now - lastHit < BALL_HIT_COOLDOWN_MS) return false;
+    if (now - lastHit < cooldown) return false;
     ballHitCooldowns.put(player.getUniqueId(), now);
     return true;
   }
@@ -116,31 +118,32 @@ public class Physics {
 
     for (Map.Entry<UUID, Double> entry : charges.entrySet()) {
       Player player = plugin.getServer().getPlayer(entry.getKey());
+      if (player == null) continue;
+
       double charge = entry.getValue();
       double nextCharge = 1.0 - (1.0 - charge) * (0.95 - 0.005);
       charges.put(entry.getKey(), nextCharge);
       player.setExp((float) nextCharge);
     }
 
-    Set<Slime> snapshot = new HashSet<>(cubes);
     List<Slime> toRemove = new ArrayList<>();
-
-    for (Slime cube : snapshot) {
-      UUID id = cube.getUniqueId();
-
+    for (Slime cube : cubes) {
       if (cube.isDead()) {
         toRemove.add(cube);
         practiceCubes.remove(cube);
         continue;
       }
 
+      UUID id = cube.getUniqueId();
       Vector oldV = velocities.getOrDefault(id, cube.getVelocity().clone());
       Vector newV = cube.getVelocity().clone();
 
       boolean sound = false;
       boolean kicked = false;
 
-      for (Entity entity : cube.getNearbyEntities(2, 2, 2)) {
+      List<Entity> entities = cube.getNearbyEntities(2, 2, 2);
+      for (Entity entity : entities) {
+        if (entities.isEmpty()) continue;
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
         if (player.getGameMode() != GameMode.SURVIVAL) continue;
@@ -175,7 +178,8 @@ public class Physics {
 
       if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
 
-      for (Entity entity : cube.getNearbyEntities(2, 2, 2)) {
+      for (Entity entity : entities) {
+        if (entities.isEmpty()) continue;
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
         if (player.getGameMode() != GameMode.SURVIVAL) continue;
@@ -220,12 +224,10 @@ public class Physics {
       velocities.put(id, newV);
     }
 
-    for (Slime removeCube : toRemove) {
-      Bukkit.getScheduler().runTaskLater(plugin, () -> {
-        cubes.remove(removeCube);
-        if (!removeCube.isDead()) removeCube.remove();
-      }, 20L);
-    }
+    toRemove.forEach(slime -> Bukkit.getScheduler().runTaskLater(plugin, () -> {
+      cubes.remove(slime);
+      if (!slime.isDead()) slime.remove();
+    }, 20L));
   }
 
   public PlayerSoundSettings getSettings(Player player) {

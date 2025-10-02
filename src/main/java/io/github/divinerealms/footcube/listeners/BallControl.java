@@ -49,13 +49,14 @@ public class BallControl implements Listener {
     if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
 
     event.setCancelled(true);
+
     if (player.getGameMode() != GameMode.SURVIVAL) return;
-    if (player.isSneaking() && !physics.canHitBall(player)) return; // Handle hit cooldown if player is crouching
+    if (!physics.canHitBall(player)) return; // Handle hit cooldown
 
     org.ballTouch(player); // Register Cube Hit in FC Matches
 
     KickResult kickResult = physics.calculateKickPower(player);
-    if (kickResult.getPower() > 1.0 && physics.getDistance(player.getLocation(), cube.getLocation()) > 4.0) return; // Max Reach
+    if (kickResult.getPower() > 1.0 && physics.getDistance(player.getLocation(), cube.getLocation()) > 16.0) return; // Max Reach
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
     cube.setVelocity(player.isSneaking() ? kick : cube.getVelocity().add(kick)); // Regular Kick stacks velocity, Charged Kick sets velocity.
 
@@ -77,7 +78,6 @@ public class BallControl implements Listener {
     long now = System.currentTimeMillis();
 
     Slime cube = (Slime) event.getRightClicked();
-    if (physics.getDistance(player.getLocation(), cube.getLocation()) > 4.0) return; // Max Reach
     cube.setVelocity(cube.getVelocity().add(new Vector(0.0, 0.7, 0.0)));
     physics.getKicked().put(player.getUniqueId(), now);
 

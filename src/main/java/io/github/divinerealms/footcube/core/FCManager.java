@@ -178,6 +178,7 @@ public class FCManager {
 
   public void saveAll() {
     configManager.saveAll();
+    dataManager.saveAll();
   }
 
   private void sendBanner() {

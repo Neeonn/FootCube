@@ -590,14 +590,17 @@ public class Match {
     }
 
     for (Player p : this.isRed.keySet()) {
-      String goalMessage = ownGoal
-          ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team})
-          : Lang.MATCH_GOAL.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team});
       Location goalLocation = red ? this.blue : this.red;
       double distanceToGoal = scorer.getLocation().distance(goalLocation);
 
-      goalMessage += " Razdaljina: &e"  + String.format("%.0f", distanceToGoal) + " blokova&a.";
-      if (assister != null && assister != scorer) goalMessage += " Assist: " + fcManager.getChat().getPlayerPrefix(assister) + assister.getName();
+      String goalMessage = ownGoal
+          ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team})
+          : Lang.MATCH_GOAL.replace(new String[]{
+              fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(),
+          team, String.format("%.0f", distanceToGoal),
+          assister != null && assister != scorer ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{fcManager.getChat().getPlayerPrefix(assister) + assister.getName()}) : ""
+          });
+
       logger.send(p, goalMessage);
       PlayerSettings settings = physics.getPlayerSettings(p);
       if (settings.isGoalSoundEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);

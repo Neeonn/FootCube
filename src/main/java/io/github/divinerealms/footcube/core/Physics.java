@@ -2,6 +2,8 @@ package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.configs.PlayerData;
+import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
@@ -30,6 +32,7 @@ import java.util.logging.Level;
 public class Physics {
   private final FootCube plugin;
   private final Organization org;
+  private final PlayerDataManager dataManager;
 
   private final HashSet<Slime> cubes = new HashSet<>();
   private final Map<UUID, Vector> velocities = new HashMap<>();
@@ -53,6 +56,7 @@ public class Physics {
   public Physics(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
     this.org = fcManager.getOrg();
+    this.dataManager = fcManager.getDataManager();
   }
 
   public Slime spawnCube(Location location) {
@@ -245,14 +249,31 @@ public class Physics {
         if (!getPlayerSettings(player).isParticlesEnabled()) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
-        if (distance > 32) {
-          Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
-          PlayerSettings settings = getPlayerSettings(player);
-          if (settings.getParticle() == EnumParticle.REDSTONE) {
-            Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.1f, 0.025f, 0.1f, 1.0f, 0, settings.getRedstoneColor());
-          } else {
-            Utilities.sendParticle(player, settings.getParticle(), cubeLocation, 0.1f, 0.025f, 0.1f, 0.1f, 1);
+        if (distance < 32) continue;
+
+        Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
+        PlayerSettings settings = getPlayerSettings(player);
+        EnumParticle particle = settings.getParticle();
+
+        if (particle == EnumParticle.REDSTONE) {
+          PlayerData playerData = dataManager.get(player);
+          if (playerData != null) {
+            Object effectObj = playerData.get("particles.effect");
+            if (effectObj != null) {
+              String effect = effectObj.toString();
+              if (effect.contains(":")) {
+                String colorName = effect.split(":")[1];
+                try {
+                  settings.setCustomRedstoneColor(colorName);
+                } catch (IllegalArgumentException ignored) { }
+              }
+            }
           }
+
+          Color color = settings.getRedstoneColor();
+          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.1f, 0.025f, 0.1f, 1.0f, 0, color);
+        } else {
+          Utilities.sendParticle(player, particle, cubeLocation, 0.1f, 0.025f, 0.1f, 0.1f, 1);
         }
       }
     }

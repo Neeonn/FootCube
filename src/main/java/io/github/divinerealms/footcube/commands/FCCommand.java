@@ -388,7 +388,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             logger.send(player, "&aParticle set to &eREDSTONE &awith color &f" + colorName);
             return true;
           } catch (IllegalArgumentException ex) {
-            logger.send(player, "&cInvalid color name. Allowed: &e" + PlayerSettings.getAllowedColorNames());
+            logger.send(player, "&cInvalid color name. Allowed: &c" + String.join("&e, &c", PlayerSettings.getAllowedColorNames()));
             return true;
           }
         } else {

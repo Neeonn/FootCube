@@ -26,17 +26,14 @@ public class PlayerSettings {
   static {
     Map<String, Color> map = new HashMap<>();
     map.put("RED", Color.fromRGB(255, 0, 0));
-    map.put("GREEN", Color.fromRGB(0, 255, 0));
-    map.put("BLUE", Color.fromRGB(0, 128, 255));
     map.put("YELLOW", Color.fromRGB(255, 255, 0));
     map.put("ORANGE", Color.fromRGB(255, 165, 0));
     map.put("WHITE", Color.fromRGB(255, 255, 255));
     map.put("BLACK", Color.fromRGB(30, 30, 30));
     map.put("PURPLE", Color.fromRGB(128, 0, 128));
     map.put("PINK", Color.fromRGB(255, 105, 180));
-    map.put("CYAN", Color.fromRGB(0, 255, 255));
     map.put("MAGENTA", Color.fromRGB(255, 0, 255));
-    map.put("LIME", Color.fromRGB(50, 205, 50));
+    map.put("GREEN", Color.fromRGB(50, 205, 50));
     COLOR_MAP = Collections.unmodifiableMap(map);
   }
 

@@ -54,7 +54,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
     }
 
     if (identifier.equalsIgnoreCase("active_players_all")) {
-      return String.valueOf(org.playingPlayers.size());
+      return String.valueOf(org.playingPlayers.size() + org.waitingPlayers.size());
     }
 
     // Active lobbies

@@ -15,6 +15,7 @@ public class PlayerSettings {
   private boolean kickSoundEnabled = true;
   private boolean goalSoundEnabled = true;
   private boolean particlesEnabled = true;
+  private boolean buildEnabled = false;
 
   private Sound kickSound = Sound.SUCCESSFUL_HIT;
   private Sound goalSound = Sound.FIREWORK_LARGE_BLAST;
@@ -72,5 +73,9 @@ public class PlayerSettings {
 
   public static List<String> getAllowedColorNames() {
     return new ArrayList<>(COLOR_MAP.keySet());
+  }
+
+  public void toggleBuild() {
+    this.buildEnabled = !this.buildEnabled;
   }
 }

@@ -14,7 +14,6 @@ import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
 import net.luckperms.api.node.types.PermissionNode;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -389,11 +388,11 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
   private void sendHelp(CommandSender sender) {
     logger.send(sender, Lang.HELP.replace(new String[]{Lang.OR.replace(null)}));
-    if (sender.hasPermission("footcube.admin")) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
+    if (sender.hasPermission(PERM_MAIN)) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
   }
 
   private boolean inGameOnly(CommandSender sender) {
-    logger.send(sender, ChatColor.RED + "This command can only be used by players.");
+    logger.send(sender, Lang.INGAME_ONLY.replace(null));
     return true;
   }
 

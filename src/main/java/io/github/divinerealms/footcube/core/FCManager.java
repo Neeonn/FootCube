@@ -2,6 +2,7 @@ package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.commands.AdminCommands;
+import io.github.divinerealms.footcube.commands.BuildCommand;
 import io.github.divinerealms.footcube.commands.FCCommand;
 import io.github.divinerealms.footcube.commands.MatchesCommand;
 import io.github.divinerealms.footcube.configs.Lang;
@@ -92,7 +93,7 @@ public class FCManager {
 
     this.physicsRunning = true;
     this.physicsTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::tick, 1L, 1L).getTaskId();
-    this.glowTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::showCubeParticles, 1L, 1L).getTaskId();
+    this.glowTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::showCubeParticles, 5L, 5L).getTaskId();
 
     if (cubeCleaner.practiceAreasSet()) {
       this.cubeCleanerRunning = true;
@@ -128,6 +129,7 @@ public class FCManager {
   public void registerCommands() {
     FCCommand fcCommand = new FCCommand(this);
     AdminCommands adminCommands = new AdminCommands(this, new DisableCommands(this));
+    BuildCommand buildCommand = new BuildCommand(this);
 
     plugin.getCommand("footcube").setExecutor(fcCommand);
     plugin.getCommand("footcube").setTabCompleter(fcCommand);
@@ -136,6 +138,9 @@ public class FCManager {
 
     plugin.getCommand("fcadmin").setExecutor(adminCommands);
     plugin.getCommand("fcadmin").setTabCompleter(adminCommands);
+
+    plugin.getCommand("build").setExecutor(buildCommand);
+    plugin.getCommand("build").setTabCompleter(buildCommand);
 
     logger.info("&a✔ &2Registered commands via plugin.yml successfully.");
   }

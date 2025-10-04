@@ -270,9 +270,9 @@ public class Physics {
           }
 
           Color color = settings.getRedstoneColor();
-          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.1f, 0.025f, 0.1f, 1.0f, 0, color);
+          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.0f, 0.0f, 0.0f, 0.5f, 0, color);
         } else {
-          Utilities.sendParticle(player, particle, cubeLocation, 0.1f, 0.025f, 0.1f, 0.1f, 1);
+          Utilities.sendParticle(player, particle, cubeLocation, 0.0f, 0.0f, 0.0f, 0.5f, 1);
         }
       }
     }

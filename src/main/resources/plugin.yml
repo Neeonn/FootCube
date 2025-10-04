@@ -24,3 +24,7 @@ commands:
     aliases: [q]
     default: true
     permission: footcube.matches
+
+  build:
+    description: Toggle Build Mode
+    permission: footcube.build

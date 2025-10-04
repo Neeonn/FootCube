@@ -149,11 +149,21 @@ public class PlayerEvents implements Listener {
 
   @EventHandler
   public void onBlockPlace(BlockPlaceEvent event) {
-    if (org.isInGame(event.getPlayer())) event.setCancelled(true);
+    Player player = event.getPlayer();
+    PlayerSettings settings = physics.getPlayerSettings(player);
+
+    if (org.isInGame(player) || !settings.isBuildEnabled()) {
+      event.setCancelled(true);
+    }
   }
 
   @EventHandler
   public void onBlockBreak(BlockBreakEvent event) {
-    if (org.isInGame(event.getPlayer())) event.setCancelled(true);
+    Player player = event.getPlayer();
+    PlayerSettings settings = physics.getPlayerSettings(player);
+
+    if (org.isInGame(player) || !settings.isBuildEnabled()) {
+      event.setCancelled(true);
+    }
   }
 }

@@ -246,15 +246,14 @@ public class Physics {
       for (Entity entity : cube.getNearbyEntities(100, 100, 100)) {
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
-        if (!getPlayerSettings(player).isParticlesEnabled()) continue;
+        PlayerSettings settings = getPlayerSettings(player);
+        if (!settings.isParticlesEnabled()) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
         if (distance < 32) continue;
 
         Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
-        PlayerSettings settings = getPlayerSettings(player);
         EnumParticle particle = settings.getParticle();
-
         if (particle == EnumParticle.REDSTONE) {
           PlayerData playerData = dataManager.get(player);
           if (playerData != null) {

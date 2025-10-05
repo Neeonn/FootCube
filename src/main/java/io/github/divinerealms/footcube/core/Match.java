@@ -17,7 +17,6 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class Match {
   private final FCManager fcManager;
@@ -519,15 +518,12 @@ public class Match {
     }
 
     long cutoff = System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(40);
-    List<Player> toRestore = this.sugarCooldown.entrySet().stream()
-        .filter(e -> cutoff > e.getValue())
-        .map(Map.Entry::getKey)
-        .collect(Collectors.toList());
-
-    for (Player p : toRestore) {
-      this.sugarCooldown.remove(p);
-      if (organization.isInGame(p)) p.getInventory().setItem(4, this.sugar);
-    }
+    this.sugarCooldown.entrySet().removeIf(entry -> {
+      Player player = entry.getKey();
+      boolean expired = cutoff > entry.getValue();
+      if (expired && organization.isInGame(player)) player.getInventory().setItem(4, this.sugar);
+      return expired;
+    });
   }
 
   private void score(boolean red) {

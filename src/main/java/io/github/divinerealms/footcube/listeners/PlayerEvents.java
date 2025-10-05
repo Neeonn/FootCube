@@ -77,7 +77,8 @@ public class PlayerEvents implements Listener {
     Bukkit.getScheduler().runTaskLaterAsynchronously(fcManager.getPlugin(), () -> {
       PlayerData playerData = dataManager.get(player);
       dataManager.addDefaults(playerData);
-      handleSounds(player, playerData);
+
+      Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> handleSounds(player, playerData));
     }, 20L);
   }
 

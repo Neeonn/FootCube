@@ -487,11 +487,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         }
       } else if (sub.equalsIgnoreCase("setparticle")) {
         completions.add("list");
-        if (args[1].equalsIgnoreCase("list")) {
-          completions.addAll(PlayerSettings.getAllowedParticles());
-        } else if (args[1].equalsIgnoreCase("redstone")) {
-          completions.addAll(PlayerSettings.getAllowedColorNames());
-        }
+        if (args[1].equalsIgnoreCase("list")) completions.addAll(PlayerSettings.getAllowedParticles());
+        else if (args[1].equalsIgnoreCase("redstone")) completions.addAll(PlayerSettings.getAllowedColorNames());
       }
     }
 

@@ -22,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.util.Vector;
 
 import java.util.Collection;
+import java.util.List;
 
 public class SignManipulation implements Listener {
   private final FCManager fcManager;
@@ -93,9 +94,9 @@ public class SignManipulation implements Listener {
           break;
         case "matches":
           event.setLine(0, "[FootCube]");
-          event.setLine(1, "Use " + ChatColor.AQUA + "/matches");
-          event.setLine(2, "or " + ChatColor.AQUA + "/q" + ChatColor.RESET + " to");
-          event.setLine(3, "check matches");
+          event.setLine(1, ChatColor.AQUA + "matches");
+          event.setLine(2, "See currently");
+          event.setLine(3, "active matches");
           break;
       }
     }
@@ -176,6 +177,16 @@ public class SignManipulation implements Listener {
 
       case "highscores":
         org.updateHighScores(player);
+        break;
+
+      case "matches":
+        List<String> matches = org.getMatches();
+
+        if (!matches.isEmpty()) {
+          logger.send(player, Lang.MATCHES_LIST_HEADER.replace(null));
+          matches.forEach(msg -> logger.send(player, msg));
+          logger.send(player, Lang.MATCHES_LIST_FOOTER.replace(null));
+        } else logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
         break;
     }
   }

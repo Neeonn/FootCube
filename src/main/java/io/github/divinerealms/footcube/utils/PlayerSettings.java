@@ -75,6 +75,30 @@ public class PlayerSettings {
     return new ArrayList<>(COLOR_MAP.keySet());
   }
 
+  public static final List<Sound> ALLOWED_KICK_SOUNDS = Arrays.asList(
+      Sound.CLICK,
+      Sound.NOTE_STICKS,
+      Sound.NOTE_PLING,
+      Sound.ITEM_PICKUP,
+      Sound.DIG_STONE,
+      Sound.DIG_WOOD,
+      Sound.DIG_GRASS,
+      Sound.SUCCESSFUL_HIT
+  );
+
+  public static final List<Sound> ALLOWED_GOAL_SOUNDS = Arrays.asList(
+      Sound.LEVEL_UP,
+      Sound.ANVIL_LAND,
+      Sound.ANVIL_USE,
+      Sound.EXPLODE,
+      Sound.FIREWORK_LAUNCH,
+      Sound.FIREWORK_BLAST,
+      Sound.FIREWORK_BLAST2,
+      Sound.FIREWORK_TWINKLE,
+      Sound.WITHER_DEATH,
+      Sound.ENDERDRAGON_GROWL
+  );
+
   public void toggleBuild() {
     this.buildEnabled = !this.buildEnabled;
   }

@@ -420,7 +420,7 @@ public class Match {
       }
 
       for(Player p : this.isRed.keySet()) {
-        logger.send(p, Lang.BETA_FEATURE.replace(null) + "Lopta je obrisana, stvaramo je opet.");
+        logger.send(p, Lang.CLEARED_CUBE_INGAME.replace(null));
         if (this.isRed.containsKey(p) && this.isRed.get(p)) {
           p.teleport(this.red);
         } else {

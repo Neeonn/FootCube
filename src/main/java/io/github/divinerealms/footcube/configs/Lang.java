@@ -20,6 +20,12 @@ public enum Lang {
   FC_TOGGLE("toggle.status", "{prefix-admin}FootCube Matches turned {0}"),
   ADMIN_STATSET("statset", "{prefix-admin}Updated {0} for player {1} to {2}"),
 
+  MATCHMAN_FORCE_START("matchman.force-start", "{prefix-admin}Pokrenut {0} meč."),
+  MATCHMAN_FORCE_END("matchman.force-end", "{prefix-admin}Zaustavljen {0} meč."),
+  MATCHMAN_SPEED("matchman.speed", "{prefix-admin}Stvoren speed buff."),
+
+  FORCE_LEAVE("force-leave", "{prefix-admin}Izbačen igrač {0}&f iz svih mečeva/lobbya."),
+
   HITDEBUG_CHARGED("debug.hits.charged", "{prefix}&dCharged &8| {0} &8| {1}KP &8| &e{2}PW&7, &d{3}CH"),
   HITDEBUG_REGULAR("debug.hits.regular", "{prefix}&aRegular &8| {0} &8| &a{1}KP"),
 
@@ -193,10 +199,31 @@ public enum Lang {
 
   CLEARED_CUBES("cleared-cubes", "&bℹ Obrisano &e{0} lopti &fsa zona treniranja &bℹ"),
   CLEARED_CUBES_UNLOADED("cleared-cubes-unloaded", "&bℹ Obrisano &e{0} lopti &fsa unloadanog chunka &bℹ"),
+  CLEARED_CUBE_INGAME("cleared-cube-ingame", "{prefix}Lopta je obrisana u igri! Stvaramo je opet."),
 
   PRACTICE_AREA_SET("practice-area-set", "{prefix}&fUspešno postavljena lokacija &b{0}&f (&o{1}, {2}, {3}&f)."),
 
   FC_DISABLED("fc-disabled", "{prefix}&cUlaženje u mečeve je privremeno deaktivirano od strane admina."),
+
+  TOGGLES_KICK("toggles.kick", "{prefix}Zvuk udaranje lopte je {0}&f!"),
+  TOGGLES_GOAL("toggles.goal", "{prefix}Zvuk postizanja lopte je {0}&f!"),
+  TOGGLES_PARTICLES("toggles.particles", "{prefix}Particles je {0}&f!"),
+  TOGGLES_HIT_DEBUG("toggles.hit-debug", "{prefix}Debug udaranja lopte je {0}&f!"),
+
+  INVALID_TYPE("type.invalid", "{prefix}Taj &e{0} &fse ne može koristiti."),
+  INVALID_COLOR("type.invalid-color", "{prefix}Boja &e{0} &fse ne može koristiti."),
+  AVAILABLE("type.available-regular", "{prefix}Dostupno: &e{0}"),
+  AVAILABLE_TYPE("type.available", "{prefix}Dostupni &e{0}&f: &e{1}"),
+  SOUND("type.sound", "zvuk"),
+  PARTICLE("type.particle", "particle"),
+  COLOR("type.color", "boja"),
+
+  SET_SOUND_KICK("set.sound.kick", "{prefix}Zvuk udaranje lopte podešen na: &e{0}"),
+  SET_SOUND_GOAL("set.sound.goal", "{prefix}Zvuk postizanja gola podešen na: &e{0}"),
+  SET_PARTICLE("set.particle.regular", "{prefix}Particle podešen na: &e{0}"),
+  SET_PARTICLE_REDSTONE("set.particle.redstone", "{prefix}Particle podešen na &e{0} &fsa bojom {1}"),
+  SET_BUILD_MODE("set.build-mode.self", "{prefix}Build mod {0}&f!"),
+  SET_BUILD_MODE_OTHER("set.build-mode.other", "{prefix}Build mod za &b{0}&f je {1}&f!"),
 
   MATCHES_LIST_NO_MATCHES("matches.list.no-matches", "&cTrenutno nema aktivnih mečeva..."),
   MATCHES_LIST_WAITING("matches.list.waiting", "&8&oČekamo igrače..."),

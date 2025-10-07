@@ -28,6 +28,7 @@ import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FCCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
@@ -236,7 +237,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
       if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete stvarati lopte dok ste u igri."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
       Location loc = player.getLocation();
       Vector dir = loc.getDirection().normalize();
@@ -250,7 +251,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
       double closestDistance = 100.0;
       Slime closest = null;
@@ -272,7 +273,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       if (!(sender instanceof Player)) return inGameOnly(sender);
       Player player = (Player) sender;
       if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.PREFIX.replace(null) + "&cNe možete brisati lopte dok ste u igri."); return true; }
+      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
       int count = 0;
       for (Slime cube : physics.getCubes()) {
@@ -295,20 +296,20 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         case "kick":
           settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
           playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isKickSoundEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "kick sound.");
+          logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
           break;
         case "goal":
           settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
           playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isGoalSoundEnabled() ? "§aEnabled §9" : "§cDisabled §9") + "goal sound.");
+          logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
           break;
         case "particles":
           settings.setParticlesEnabled(!settings.isParticlesEnabled());
           playerData.set("particles.enabled", settings.isParticlesEnabled());
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + (settings.isParticlesEnabled() ? "&aEnabled &9" : "&cDisabled &9" + "cube particles."));
+          logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
           break;
         default:
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + "Invalid type. Use: goal|kick");
+          logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles>"}));
       }
 
       return true;
@@ -326,30 +327,37 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       try {
         sound = Sound.valueOf(args[2].toUpperCase());
       } catch (Exception exception) {
-        logger.send(player, "&cInvalid sound.");
-        String sounds = String.join("&c, &e",
-            Arrays.stream(Sound.values()).map(Sound::name).toArray(String[]::new));
-        logger.send(player, "&fList of available sounds: &e" + sounds.toLowerCase());
+        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
         return true;
       }
 
       switch (args[1].toLowerCase()) {
         case "kick":
+          if (!PlayerSettings.ALLOWED_KICK_SOUNDS.contains(sound)) {
+            logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
+            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+            return true;
+          }
+
           settings.setKickSound(sound);
           playerData.set("sounds.kick.sound", sound.toString());
-          logger.send(player, "&aKick sound set to: &e" + sound);
+          logger.send(player, Lang.SET_SOUND_KICK.replace(new String[]{sound.name()}));
           break;
 
         case "goal":
+          if (!PlayerSettings.ALLOWED_GOAL_SOUNDS.contains(sound)) {
+            logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
+            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+            return true;
+          }
+
           settings.setGoalSound(sound);
           playerData.set("sounds.goal.sound", sound.toString());
-          logger.send(player, "&aGoal sound set to: &e" + sound);
+          logger.send(player, Lang.SET_SOUND_GOAL.replace(new String[]{sound.name()}));
           break;
 
         default:
           logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName>"}));
-          String sounds = String.join("&c, &e", Arrays.stream(Sound.values()).map(Sound::name).toArray(String[]::new));
-          logger.send(player, "&fList of available sounds: &e" + sounds);
           break;
       }
 
@@ -368,14 +376,14 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       try {
         particle = EnumParticle.valueOf(args[1].toUpperCase());
       } catch (Exception exception) {
-        logger.send(player, "&cInvalid particle.");
-        logger.send(player, "&fList of available particles: &c" + String.join("&e, &c", PlayerSettings.getAllowedParticles()));
+        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
+        logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
         return true;
       }
 
       if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
-        logger.send(player, "&cInvalid particle.");
-        logger.send(player, "&fList of available particles: &c" + String.join("&e, &c", PlayerSettings.getAllowedParticles()));
+        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
+        logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
         return true;
       }
 
@@ -385,16 +393,17 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             String colorName = args[2].toUpperCase();
             settings.setCustomRedstoneColor(colorName);
             playerData.set("particles.effect", "REDSTONE:" + colorName);
-            logger.send(player, "&aParticle set to &eREDSTONE &awith color &f" + colorName);
+            logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), colorName}));
             return true;
-          } catch (IllegalArgumentException ex) {
-            logger.send(player, "&cInvalid color name. Allowed: &c" + String.join("&e, &c", PlayerSettings.getAllowedColorNames()));
+          } catch (IllegalArgumentException exception) {
+            logger.send(player, Lang.INVALID_COLOR.replace(new String[]{args[2].toUpperCase()}));
+            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.COLOR.replace(null), String.join(", ", PlayerSettings.getAllowedColorNames())}));
             return true;
           }
         } else {
           settings.setCustomRedstoneColor("WHITE");
           playerData.set("particles.effect", "REDSTONE:WHITE");
-          logger.send(player, "&aParticle set to &eREDSTONE &awith default color &fWHITE");
+          logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), "WHITE"}));
         }
 
         settings.setParticle(EnumParticle.REDSTONE);
@@ -403,7 +412,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
       settings.setParticle(particle);
       playerData.set("particles.effect", particle.toString());
-      logger.send(player, "&aParticle set to: &e" + particle);
+      logger.send(player, Lang.SET_PARTICLE.replace(new String[]{particle.name()}));
       return true;
     } else sendHelp(sender);
     return true;
@@ -415,7 +424,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   }
 
   private boolean inGameOnly(CommandSender sender) {
-    logger.send(sender, "&cThis command can only be used by players.");
+    logger.send(sender, Lang.INGAME_ONLY.replace(null));
     return true;
   }
 
@@ -444,12 +453,21 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         case "toggles":
         case "ts":
           completions.addAll(Arrays.asList("kick", "goal", "particles")); break;
-        case "setparticle": completions.addAll(PlayerSettings.getAllowedParticles());
+        case "setparticle": completions.addAll(PlayerSettings.getAllowedParticles()); break;
+        case "setsound": completions.addAll(Arrays.asList("kick", "goal")); break;
       }
     } else if (args.length == 3) {
       String sub = args[0].toLowerCase();
       if (sub.equalsIgnoreCase("setsound")) {
-        for (Sound sound : Sound.values()) completions.add(sound.name());
+        if (args[1].equalsIgnoreCase("kick")) {
+          completions.addAll(PlayerSettings.ALLOWED_KICK_SOUNDS.stream()
+              .map(Enum::name)
+              .collect(Collectors.toList()));
+        } else if (args[1].equalsIgnoreCase("goal")) {
+          completions.addAll(PlayerSettings.ALLOWED_GOAL_SOUNDS.stream()
+              .map(Enum::name)
+              .collect(Collectors.toList()));
+        }
       } else if (sub.equalsIgnoreCase("setparticle") && args[1].equalsIgnoreCase("redstone")) {
         completions.addAll(PlayerSettings.getAllowedColorNames());
       }

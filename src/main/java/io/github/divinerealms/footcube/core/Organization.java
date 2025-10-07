@@ -6,6 +6,7 @@ import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.HighScores;
 import io.github.divinerealms.footcube.utils.Logger;
+import io.github.divinerealms.footcube.utils.MatchHelper;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -22,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Setter
 public class Organization {
@@ -519,6 +521,63 @@ public class Organization {
         }
       }
     }
+  }
+
+  public List<String> getMatches() {
+    List<String> output = new ArrayList<>();
+    boolean firstBlock = true;
+
+    for (String type : Arrays.asList("2v2", "3v3", "4v4")) {
+      MatchHelper.ArenaData data = MatchHelper.getArenaData(this, type);
+      if (data == null || data.matches == null) continue;
+
+      for (int i = 0; i < data.matches.length; i++) {
+        Match match = data.matches[i];
+        if (match == null) continue;
+
+        List<String> redPlayers = match.redPlayers.stream()
+            .filter(Objects::nonNull)
+            .map(Player::getName)
+            .collect(Collectors.toList());
+
+        List<String> bluePlayers = match.bluePlayers.stream()
+            .filter(Objects::nonNull)
+            .map(Player::getName)
+            .collect(Collectors.toList());
+
+        if (match.phase == 1 && redPlayers.isEmpty() && bluePlayers.isEmpty()) continue;
+
+        if (!firstBlock) output.add("");
+        firstBlock = false;
+
+        String timeDisplay;
+        if (match.phase == 1) {
+          timeDisplay = Lang.MATCHES_LIST_WAITING.replace(null);
+        } else if (match.phase == 2) {
+          timeDisplay = Lang.MATCHES_LIST_STARTING.replace(new String[]{String.valueOf(match.countdown)});
+        } else if (match.phase == 4) {
+          timeDisplay = Lang.MATCHES_LIST_CONTINUING.replace(new String[]{String.valueOf(match.countdown)});
+        } else {
+          int remaining = match.time != null ? match.time.getScore() : -1;
+          timeDisplay = remaining >= 0 ? remaining + "s" : "N/A";
+        }
+
+        if (match.phase == 1) {
+          output.add(Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(i + 1)}));
+          output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));
+          output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)}));
+          output.add(Lang.MATCHES_LIST_STATUS.replace(new String[]{timeDisplay}));
+        } else {
+          output.add(Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(i + 1)}));
+          output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.scoreRed), String.valueOf(match.scoreBlue)})
+              + " | " + Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay}));
+          output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));
+          output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)}));
+        }
+      }
+    }
+
+    return output;
   }
 
   public void cleanup() {

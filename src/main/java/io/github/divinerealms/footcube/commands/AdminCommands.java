@@ -279,7 +279,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       if (!sender.hasPermission(PERM_HIT_DEBUG)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_HIT_DEBUG, label + " " + sub})); return true; }
       boolean status = physics.isHitDebug();
       physics.hitDebug = !status;
-      logger.send(sender, Lang.BETA_FEATURE.replace(null) + (status ? "§cDisabled §9" : "§aEnabled §9") + "cube hit debug.");
+      logger.send(sender, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{status ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
       return true;
     } else if (sub.equalsIgnoreCase("commanddisabler") || sub.equalsIgnoreCase("cd")) {
       if (!sender.hasPermission(PERM_COMMAND_DISABLER)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_COMMAND_DISABLER, label + " " + sub})); return true; }
@@ -296,7 +296,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "remove":
           if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " remove <command>"})); return true; }
           if (disableCommands.removeCommand(args[2])) logger.send(sender, Lang.COMMAND_DISABLER_SUCCESS_REMOVE.replace(new String[]{args[2]}));
-          else logger.send(sender, "&cThis command wasn't even added");
+          else logger.send(sender, Lang.COMMAND_DISABLER_WASNT_ADDED.replace(null));
           break;
 
         case "list":
@@ -305,7 +305,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           break;
 
         default:
-          logger.send(sender, "&cUnknown command. Usage: add|remove|list");
+          logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <add|remove|list> [command]"}));
           break;
       }
       return true;
@@ -316,7 +316,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       Player player = (Player) sender;
       Match match = MatchHelper.getMatch(org, player);
-      if (match == null) { logger.send(sender, Lang.BETA_FEATURE.replace(null) + "&cNo match, cancelling"); return true; }
+      if (match == null) { logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return true; }
       int matchSize = MatchHelper.getMatchSize(org, match);
       String matchType = matchSize + "v" + matchSize;
 
@@ -324,7 +324,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "start":
           for (int i = 1; i <= (match.type * 2) - 1; i++) { match.join(player, false); org.getWaitingPlayers().put(player.getName(), match.type); }
           match.countdown = 2;
-          logger.send(player, Lang.BETA_FEATURE.replace(null) + "Force started a " + matchType + " match.");
+          logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{matchType}));
           break;
 
         case "end":
@@ -340,7 +340,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
           match.time.setScore(-1);
 
-          if (match.cube != null) { match.cube.setHealth(0.0F); match.cube.remove(); match.cube = null; }
+          if (match.cube != null) { match.cube.setHealth(0); match.cube.remove(); match.cube = null; }
 
           match.scoreRed = 0;
           match.scoreBlue = 0;
@@ -356,16 +356,16 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           org.undoTakePlace(match);
           org.endMatch(player);
 
-          logger.send(sender, Lang.BETA_FEATURE.replace(null) + "Forcefully ended a " + matchType + " match.");
+          logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{matchType}));
           break;
 
         case "speed":
           player.getInventory().addItem(match.sugar);
-          logger.send(sender, Lang.BETA_FEATURE.replace(null) + "Spawned speed buff for you.");
+          logger.send(sender, Lang.MATCHMAN_SPEED.replace(null));
           break;
 
         default:
-          logger.send(sender, Lang.BETA_FEATURE.replace(null) + "Unknown usage.");
+          logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end|speed>"}));
       }
 
       return true;
@@ -378,7 +378,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       Match match = MatchHelper.getMatch(org, target);
       MatchHelper.leaveMatch(org, target, match, logger, true);
-      logger.send(sender, Lang.BETA_FEATURE.replace(null) + "&aForce removed " + target.getDisplayName() + "&a from all matches/lobbies.");
+      logger.send(sender, Lang.FORCE_LEAVE.replace(new String[]{target.getDisplayName()}));
 
       return true;
     } else sendHelp(sender);

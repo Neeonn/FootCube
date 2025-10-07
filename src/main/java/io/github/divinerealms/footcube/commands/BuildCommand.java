@@ -44,7 +44,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
 
       settings.toggleBuild();
       String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
-      logger.send(player, Lang.BETA_FEATURE.replace(null) + "Build Mode " + status);
+      logger.send(player, Lang.SET_BUILD_MODE.replace(new String[]{status}));
       return true;
     }
 
@@ -58,8 +58,8 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
 
     settings.toggleBuild();
     String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
-    logger.send(target, Lang.BETA_FEATURE.replace(null) + "Build Mode " + status);
-    logger.send(sender, Lang.BETA_FEATURE.replace(null) + "Build Mode za " + target.getDisplayName() + status);
+    logger.send(target, Lang.SET_BUILD_MODE.replace(new String[]{status}));
+    logger.send(sender, Lang.SET_BUILD_MODE_OTHER.replace(new String[]{target.getDisplayName(), status}));
     return true;
   }
 

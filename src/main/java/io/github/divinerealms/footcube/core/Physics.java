@@ -71,8 +71,8 @@ public class Physics {
       gField.setAccessible(true);
       gField.set(nmsSlime.goalSelector, new java.util.LinkedList<>());
       gField.set(nmsSlime.targetSelector, new java.util.LinkedList<>());
-    } catch (Exception e) {
-      plugin.getLogger().log(Level.SEVERE, "Error: ", e);
+    } catch (Exception exception) {
+      plugin.getLogger().log(Level.SEVERE, "Error: ", exception);
     }
 
     cubes.add(cube);
@@ -119,7 +119,7 @@ public class Physics {
   }
 
   public String onHitDebug(Player player, KickResult result) {
-    if (player.isSneaking()) {
+    if (result.getCharge() > 1D) {
       return Lang.HITDEBUG_CHARGED.replace(new String[]{
           player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
           String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())

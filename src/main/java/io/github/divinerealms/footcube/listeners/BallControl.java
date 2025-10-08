@@ -62,9 +62,9 @@ public class BallControl implements Listener {
     org.ballTouch(player); // Register Cube Hit in FC Matches
 
     KickResult kickResult = physics.calculateKickPower(player);
-    if (kickResult.getPower() > 1.0 && physics.getDistance(player.getLocation(), cube.getLocation()) > 4.0) return; // Max Reach
+    if (kickResult.getPower() > 1D && player.getLocation().distanceSquared(cube.getLocation()) > 4D) return;
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    cube.setVelocity(player.isSneaking() ? kick : cube.getVelocity().add(kick)); // Regular Kick stacks velocity, Charged Kick sets velocity.
+    cube.setVelocity(kickResult.getCharge() > 1D ? kick : cube.getVelocity().add(kick));
 
     cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
     PlayerSettings settings = physics.getPlayerSettings(player);

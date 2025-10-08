@@ -11,7 +11,10 @@ import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -153,9 +156,7 @@ public class PlayerEvents implements Listener {
     Player player = event.getPlayer();
     PlayerSettings settings = physics.getPlayerSettings(player);
 
-    if (org.isInGame(player) || !settings.isBuildEnabled()) {
-      event.setCancelled(true);
-    }
+    if (org.isInGame(player) || !settings.isBuildEnabled()) event.setCancelled(true);
   }
 
   @EventHandler
@@ -163,8 +164,6 @@ public class PlayerEvents implements Listener {
     Player player = event.getPlayer();
     PlayerSettings settings = physics.getPlayerSettings(player);
 
-    if (org.isInGame(player) || !settings.isBuildEnabled()) {
-      event.setCancelled(true);
-    }
+    if (org.isInGame(player) || !settings.isBuildEnabled()) event.setCancelled(true);
   }
 }

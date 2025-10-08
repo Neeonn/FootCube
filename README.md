@@ -2,7 +2,7 @@
 
 Bring the thrill of football to your Minecraft server with FootCube, a custom gamemode designed for the CoalBox community!
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-None-lightgrey) ![Stars](https://img.shields.io/github/stars/FootCube/FootCube?style=social) ![Forks](https://img.shields.io/github/forks/FootCube/FootCube?style=social) ![Contributors](https://img.shields.io/badge/contributors-1-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-None-lightgrey) ![Stars](https://img.shields.io/github/stars/Neeonn/FootCube?style=social) ![Forks](https://img.shields.io/github/forks/Neeonn/FootCube?style=social) ![Contributors](https://img.shields.io/badge/contributors-1-brightgreen)
 
 ## 🤝 Contribution Guidelines
 

@@ -29,9 +29,15 @@ fun gitCommitHash(): String? = try {
         standardOutput = stdout
     }
     stdout.toString().trim()
-} catch (e: Exception) {
+} catch (_: Exception) {
     null
 }
+
+val commit = gitCommitHash()
+version = if (commit != null)
+    "$major.$minor.$patch-$commit"
+else
+    "$major.$minor.$patch"
 
 tasks.register("bumpPatch") {
     doLast {
@@ -44,12 +50,13 @@ tasks.register("bumpPatch") {
 tasks.named("build") {
     dependsOn("bumpPatch")
     doFirst {
-        val commit = gitCommitHash()
-        project.version = if (commit != null)
-            "$major.$minor.$patch-$commit"
-        else
-            "$major.$minor.$patch"
         println("Building FootCube version $version")
+    }
+}
+
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("version" to project.version.toString())
     }
 }
 

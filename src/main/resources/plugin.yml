@@ -1,5 +1,5 @@
 name: FootCube
-version: $version
+version: ${version}
 main: io.github.divinerealms.footcube.FootCube
 authors:
   - SmileyCraft

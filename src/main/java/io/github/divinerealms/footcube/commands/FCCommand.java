@@ -429,7 +429,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   }
 
   private void sendHelp(CommandSender sender) {
-    logger.send(sender, Lang.HELP.replace(new String[]{null}));
+    logger.send(sender, Lang.HELP.replace(null));
   }
 
   private boolean inGameOnly(CommandSender sender) {

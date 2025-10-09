@@ -277,8 +277,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       return true;
     } else if (sub.equalsIgnoreCase("hitdebug") || sub.equalsIgnoreCase("hits")) {
       if (!sender.hasPermission(PERM_HIT_DEBUG)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_HIT_DEBUG, label + " " + sub})); return true; }
-      boolean status = physics.isHitDebug();
-      physics.hitDebug = !status;
+      boolean status = physics.isHitDebugEnabled();
+      physics.hitDebugEnabled = !status;
       logger.send(sender, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{status ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
       return true;
     } else if (sub.equalsIgnoreCase("commanddisabler") || sub.equalsIgnoreCase("cd")) {

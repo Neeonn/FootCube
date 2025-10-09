@@ -57,20 +57,19 @@ public class BallControl implements Listener {
     }
 
     if (player.getGameMode() != GameMode.SURVIVAL) return;
-    if (!physics.canHitBall(player)) return; // Handle hit cooldown
+    if (!physics.canHitBall(player)) return;
 
-    org.ballTouch(player); // Register Cube Hit in FC Matches
+    org.ballTouch(player);
 
     KickResult kickResult = physics.calculateKickPower(player);
-    if (kickResult.getPower() > 1D && player.getLocation().distanceSquared(cube.getLocation()) > 4D) return;
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
     cube.setVelocity(kickResult.getCharge() > 1D ? kick : cube.getVelocity().add(kick));
 
-    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
+    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
     PlayerSettings settings = physics.getPlayerSettings(player);
     if (settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
 
-    if (physics.isHitDebug()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
+    if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
     physics.recordPlayerAction(player);
   }
 
@@ -85,11 +84,11 @@ public class BallControl implements Listener {
     long now = System.currentTimeMillis();
 
     Slime cube = (Slime) event.getRightClicked();
-    cube.setVelocity(cube.getVelocity().add(new Vector(0.0, 0.7, 0.0)));
+    cube.setVelocity(cube.getVelocity().add(new Vector(0, 0.7, 0)));
     physics.getKicked().put(player.getUniqueId(), now);
 
     org.ballTouch(player);
-    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1.0F, 1.0F);
+    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F);
     physics.recordPlayerAction(event.getPlayer());
   }
 
@@ -100,7 +99,7 @@ public class BallControl implements Listener {
     Location from = event.getFrom();
 
     double dx = to.getX() - from.getX();
-    double dy = (to.getY() - from.getY()) / 2.0;
+    double dy = (to.getY() - from.getY()) / 2;
     double dz = to.getZ() - from.getZ();
 
     double speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -114,10 +113,10 @@ public class BallControl implements Listener {
 
     Player player = event.getPlayer();
     if (event.isSneaking()) {
-      physics.getCharges().put(player.getUniqueId(), 0.0);
+      physics.getCharges().put(player.getUniqueId(), 0D);
       physics.recordPlayerAction(event.getPlayer());
     } else {
-      player.setExp(0.0F);
+      player.setExp(0F);
       physics.getCharges().remove(player.getUniqueId());
     }
   }

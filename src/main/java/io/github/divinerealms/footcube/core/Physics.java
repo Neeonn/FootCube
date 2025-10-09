@@ -51,7 +51,7 @@ public class Physics {
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
   @Setter private boolean matchesEnabled = true;
-  @Getter public boolean hitDebug = false;
+  @Getter public boolean hitDebugEnabled = false;
 
   public Physics(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
@@ -81,22 +81,22 @@ public class Physics {
 
   public void removeCubes() {
     List<Entity> entities = plugin.getServer().getWorlds().get(0).getEntities();
-    for (Entity entity : entities) if (entity instanceof Slime) ((Slime) entity).setHealth(0.0);
+    for (Entity entity : entities) if (entity instanceof Slime) ((Slime) entity).setHealth(0);
   }
 
   public double getDistance(Location locA, Location locB) {
     double dx = locA.getX() - locB.getX();
-    double dy = (locA.getY() - 1.0) - locB.getY() - 0.25 - 1.25;
-    if (dy < 0.0) dy = 0.0;
+    double dy = (locA.getY() - 1) - locB.getY() - 0.25 - 1.25;
+    if (dy < 0) dy = 0;
     double dz = locA.getZ() - locB.getZ();
 
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 
   public KickResult calculateKickPower(Player player) {
-    double charge = 1.0 + charges.getOrDefault(player.getUniqueId(), 0.0) * 7.0;
-    double speed = this.speed.getOrDefault(player.getUniqueId(), 1.0);
-    double power = speed * 2.0 + 0.4;
+    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * 7;
+    double speed = this.speed.getOrDefault(player.getUniqueId(), 1D);
+    double power = speed * 2 + 0.4;
     double baseKickPower = player.isSneaking() ? charge * power : power;
     double finalKickPower = capKickPower(baseKickPower);
 
@@ -106,7 +106,7 @@ public class Physics {
   private double capKickPower(double baseKickPower) {
     if (baseKickPower <= MAX_KP) return baseKickPower;
     double minRandomKP = MAX_KP * SOFT_CAP_MIN_FACTOR;
-    return RANDOM.nextDouble(minRandomKP, MAX_KP); // 5.425 - 7.75
+    return RANDOM.nextDouble(minRandomKP, MAX_KP);
   }
 
   public boolean canHitBall(Player player) {
@@ -138,7 +138,7 @@ public class Physics {
       if (player == null) continue;
 
       double charge = entry.getValue();
-      double nextCharge = 1.0 - (1.0 - charge) * 0.945;
+      double nextCharge = 1 - (1 - charge) * 0.945;
       charges.put(entry.getKey(), nextCharge);
       player.setExp((float) nextCharge);
     }
@@ -172,7 +172,7 @@ public class Physics {
           double speed = newV.length();
           if (distance <= 0.8 && speed >= 0.5) newV.multiply(0.5 / speed);
 
-          double power = this.speed.getOrDefault(player.getUniqueId(), 1.0) / 3.0 + oldV.length() / 6.0;
+          double power = this.speed.getOrDefault(player.getUniqueId(), 1D) / 3 + oldV.length() / 6;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
           org.ballTouch(player);
           kicked = true;
@@ -185,8 +185,8 @@ public class Physics {
           Vector nextLoc = (new Vector(loc.getX(), loc.getY(), loc.getZ())).add(newV);
 
           boolean rightDirection = true;
-          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0.0, player.getLocation().getZ() - loc.getZ());
-          Vector cDir = (new Vector(newV.getX(), 0.0, newV.getZ())).normalize();
+          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0, player.getLocation().getZ() - loc.getZ());
+          Vector cDir = (new Vector(newV.getX(), 0, newV.getZ())).normalize();
 
           int px = pDir.getX() < 0 ? -1 : 1;
           int pz = pDir.getZ() < 0 ? -1 : 1;
@@ -199,35 +199,35 @@ public class Physics {
             rightDirection = false;
           }
 
-          if (rightDirection && loc.getY() < player.getLocation().getY() + 2.0
-              && loc.getY() > player.getLocation().getY() - 1.0
-              && nextLoc.getY() < player.getLocation().getY() + 2.0
-              && nextLoc.getY() > player.getLocation().getY() - 1.0) {
+          if (rightDirection && loc.getY() < player.getLocation().getY() + 2
+              && loc.getY() > player.getLocation().getY() - 1
+              && nextLoc.getY() < player.getLocation().getY() + 2
+              && nextLoc.getY() > player.getLocation().getY() - 1) {
             double a = newV.getZ() / newV.getX();
             double b = loc.getZ() - a * loc.getX();
-            double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1.0);
+            double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1);
 
             if (D < 0.8) newV.multiply(delta / newV.length());
           }
         }
       }
 
-      if (newV.getX() == 0.0) {
+      if (newV.getX() == 0) {
         newV.setX(-oldV.getX() * 0.8);
         if (Math.abs(oldV.getX()) > 0.3) sound = true;
       } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < 0.1) newV.setX(oldV.getX() * 0.98);
 
-      if (newV.getZ() == 0.0) {
+      if (newV.getZ() == 0) {
         newV.setZ(-oldV.getZ() * 0.8);
         if (Math.abs(oldV.getZ()) > 0.3) sound = true;
       } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < 0.1) newV.setZ(oldV.getZ() * 0.98);
 
-      if (newV.getY() < 0.0 && oldV.getY() < 0.0 && oldV.getY() < newV.getY() - 0.05) {
+      if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - 0.05) {
         newV.setY(-oldV.getY() * 0.8);
         if (Math.abs(oldV.getY()) > 0.3) sound = true;
       }
 
-      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1.0F);
+      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
 
       cube.setVelocity(newV);
       velocities.put(id, newV);
@@ -270,9 +270,9 @@ public class Physics {
           }
 
           Color color = settings.getRedstoneColor();
-          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.0f, 0.0f, 0.0f, 0.5f, 0, color);
+          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0F, 0F, 0F, 0.5F, 0, color);
         } else {
-          Utilities.sendParticle(player, particle, cubeLocation, 0.0f, 0.0f, 0.0f, 0.5f, 1);
+          Utilities.sendParticle(player, particle, cubeLocation, 0F, 0F, 0F, 0.5F, 1);
         }
       }
     }

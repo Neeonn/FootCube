@@ -468,7 +468,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         case "toggles":
         case "ts":
           completions.addAll(Arrays.asList("kick", "goal", "particles")); break;
-        case "setparticle": completions.addAll(PlayerSettings.getAllowedParticles()); break;
+        case "setparticle":
+          completions.add("list");
+          completions.addAll(PlayerSettings.getAllowedParticles());
+          break;
         case "setsound": completions.addAll(Arrays.asList("kick", "goal")); break;
       }
     } else if (args.length == 3) {
@@ -486,7 +489,6 @@ public class FCCommand implements CommandExecutor, TabCompleter {
               .collect(Collectors.toList()));
         }
       } else if (sub.equalsIgnoreCase("setparticle")) {
-        completions.add("list");
         if (args[1].equalsIgnoreCase("list")) completions.addAll(PlayerSettings.getAllowedParticles());
         else if (args[1].equalsIgnoreCase("redstone")) completions.addAll(PlayerSettings.getAllowedColorNames());
       }

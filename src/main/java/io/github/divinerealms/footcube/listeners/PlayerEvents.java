@@ -74,7 +74,7 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onJoin(PlayerJoinEvent event) {
     Player player = event.getPlayer();
-    if (player.getExp() > 0) player.setExp(0);
+    player.setExp(0);
     org.clearInventory(player);
 
     Bukkit.getScheduler().runTaskLaterAsynchronously(fcManager.getPlugin(), () -> {

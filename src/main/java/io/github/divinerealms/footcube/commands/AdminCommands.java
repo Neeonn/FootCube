@@ -382,13 +382,11 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       return true;
     } else sendHelp(sender);
-
     return true;
   }
 
   private void sendHelp(CommandSender sender) {
-    logger.send(sender, Lang.HELP.replace(new String[]{Lang.OR.replace(null)}));
-    if (sender.hasPermission(PERM_MAIN)) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
+    if (sender.hasPermission(PERM_MAIN)) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{null}));
   }
 
   private boolean inGameOnly(CommandSender sender) {

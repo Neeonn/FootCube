@@ -44,7 +44,6 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private static final String PERM_CLEAR_CUBE = PERM_MAIN + ".clearcube";
   private static final String PERM_SET_SOUND = PERM_MAIN + ".sound";
   private static final String PERM_SET_PARTICLE = PERM_MAIN + ".particle";
-  private static final String PERM_ADMIN = PERM_MAIN + ".admin";
 
   public FCCommand(FCManager fcManager) {
     this.fcManager = fcManager;
@@ -58,11 +57,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    if (args.length == 0) {
-      logger.send(sender, Lang.HELP.replace(null));
-      if (sender.hasPermission("footcube.admin")) logger.send(sender, Lang.HELP_ADMIN.replace(null));
-      return true;
-    }
+    if (args.length == 0) { sendHelp(sender); return true; }
 
     String sub = args[0].toLowerCase();
     if (sub.equalsIgnoreCase("join")) {
@@ -434,8 +429,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   }
 
   private void sendHelp(CommandSender sender) {
-    logger.send(sender, Lang.HELP.replace(new String[]{Lang.OR.replace(null)}));
-    if (sender.hasPermission(PERM_ADMIN)) logger.send(sender, Lang.HELP_ADMIN.replace(new String[]{Lang.OR.replace(null)}));
+    logger.send(sender, Lang.HELP.replace(new String[]{null}));
   }
 
   private boolean inGameOnly(CommandSender sender) {

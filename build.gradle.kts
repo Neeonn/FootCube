@@ -1,9 +1,57 @@
+import java.io.ByteArrayOutputStream
+import java.util.Properties
+
 plugins {
     id("java")
 }
 
 group = "io.github.divinerealms.footcube"
-version = "1.0.0"
+
+val versionFile = file("version.properties")
+val props = Properties().apply {
+    if (versionFile.exists()) {
+        load(versionFile.inputStream())
+    } else {
+        setProperty("major", "1")
+        setProperty("minor", "0")
+        setProperty("patch", "0")
+    }
+}
+
+val major = props.getProperty("major").toInt()
+val minor = props.getProperty("minor").toInt()
+var patch = props.getProperty("patch").toInt()
+
+fun gitCommitHash(): String? = try {
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+        standardOutput = stdout
+    }
+    stdout.toString().trim()
+} catch (e: Exception) {
+    null
+}
+
+tasks.register("bumpPatch") {
+    doLast {
+        patch += 1
+        props.setProperty("patch", patch.toString())
+        props.store(versionFile.outputStream(), "Auto-incremented patch version")
+    }
+}
+
+tasks.named("build") {
+    dependsOn("bumpPatch")
+    doFirst {
+        val commit = gitCommitHash()
+        project.version = if (commit != null)
+            "$major.$minor.$patch-$commit"
+        else
+            "$major.$minor.$patch"
+        println("Building FootCube version $version")
+    }
+}
 
 repositories {
     mavenCentral()

@@ -19,7 +19,7 @@ public class PlayerSettings {
 
   private Sound kickSound = Sound.SUCCESSFUL_HIT;
   private Sound goalSound = Sound.FIREWORK_LARGE_BLAST;
-  private EnumParticle particle = EnumParticle.REDSTONE;
+  private EnumParticle particle = EnumParticle.VILLAGER_HAPPY;
 
   private Color redstoneColor = Color.WHITE;
 

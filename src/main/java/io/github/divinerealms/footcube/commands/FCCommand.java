@@ -40,6 +40,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private final PlayerDataManager dataManager;
 
   private static final String PERM_MAIN = "footcube";
+  private static final String PERM_PLAY = PERM_MAIN + ".play";
   private static final String PERM_CUBE = PERM_MAIN + ".cube";
   private static final String PERM_CLEAR_CUBE = PERM_MAIN + ".clearcube";
   private static final String PERM_SET_SOUND = PERM_MAIN + ".sound";
@@ -60,371 +61,393 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     if (args.length == 0) { sendHelp(sender); return true; }
 
     String sub = args[0].toLowerCase();
-    if (sub.equalsIgnoreCase("join")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
-      if (org.isBanned(player)) return true;
+    Player player;
+    Match match;
+    PlayerData playerData;
+    PlayerSettings settings;
 
-      String matchType = args[1];
-      if (matchType == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
+    switch (sub) {
+      case "join":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
+        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (org.isBanned(player)) return true;
 
-      MatchHelper.ArenaData data = MatchHelper.getArenaData(org, matchType);
-      if (data == null) { logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)})); return true; }
-      if (arenas.getInt("arenas." + matchType + ".amount", 0) == 0) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
+        String matchType = args[1];
+        if (matchType == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
+        if (org.isInGame(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
 
-      org.removeTeam(player);
-      data.matches[data.lobby].join(player, false);
-      org.getWaitingPlayers().put(player.getName(), data.size);
+        MatchHelper.ArenaData data = MatchHelper.getArenaData(org, matchType);
+        if (data == null) { logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)})); return true; }
+        if (arenas.getInt("arenas." + matchType + ".amount", 0) == 0) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
 
-      if (player.getAllowFlight()) { player.setFlying(false); player.setAllowFlight(false); }
-      if (player.getGameMode() != GameMode.SURVIVAL) player.setGameMode(GameMode.SURVIVAL);
-      return true;
-    } else if (sub.equalsIgnoreCase("leave")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!org.isInGame(player)) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
+        org.removeTeam(player);
+        data.matches[data.lobby].join(player, false);
+        org.getWaitingPlayers().put(player.getName(), data.size);
 
-      Match match = MatchHelper.getMatch(org, player);
-      if (match != null) {
-        int playerScore, opponentScore;
+        if (player.getAllowFlight()) { player.setFlying(false); player.setAllowFlight(false); }
+        if (player.getGameMode() != GameMode.SURVIVAL) player.setGameMode(GameMode.SURVIVAL);
+        break;
 
-        if (match.redPlayers.contains(player)) {
-          playerScore = match.scoreRed;
-          opponentScore = match.scoreBlue;
-        } else {
-          playerScore = match.scoreBlue;
-          opponentScore = match.scoreRed;
-        }
+      case "leave":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
+        if (!org.isInGame(player)) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
 
-        boolean freeLeave = match.phase == 2 || playerScore == opponentScore || playerScore > opponentScore;
-        if (!freeLeave) {
-          fcManager.getEconomy().withdrawPlayer(player, 200);
-          long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
-          org.getLeaveCooldowns().put(player.getUniqueId(), banUntil);
-          logger.send(player, Lang.LEAVE_LOSING.replace(null));
-        }
-      }
+        match = MatchHelper.getMatch(org, player);
+        if (match != null) {
+          int playerScore, opponentScore;
 
-      MatchHelper.leaveMatch(org, player, match, logger, false);
-      return true;
-    } else if (sub.equalsIgnoreCase("takeplace") || sub.equalsIgnoreCase("tkp")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-
-      if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
-      if (org.isBanned(player)) return true;
-      if (org.getLeftMatches().length == 0) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
-
-      org.getPlayingPlayers().add(player.getName());
-      org.getLeftMatches()[0].takePlace(player);
-
-      org.setLeftMatches(Arrays.copyOfRange(org.getLeftMatches(), 1, org.getLeftMatches().length));
-      org.setLeftPlayerIsRed(Arrays.copyOfRange(org.getLeftPlayerIsRed(), 1, org.getLeftPlayerIsRed().length));
-
-      return true;
-    } else if (sub.equalsIgnoreCase("teamchat") || sub.equalsIgnoreCase("tc")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-
-      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <message>"})); return true; }
-
-      Match match = MatchHelper.getMatch(org, player);
-      if (match == null) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
-      if (!match.canUseTeamChat()) { logger.send(player, Lang.TEAMS_NOT_SETUP.replace(null)); return true; }
-
-      match.teamChat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
-      return true;
-    } else if (sub.equalsIgnoreCase("stats")) {
-      if (sender instanceof Player) {
-        Player p = (Player) sender;
-        org.checkStats(args.length > 1 ? args[1] : p.getName(), sender);
-      } else {
-        if (args.length < 2) { logger.send(sender, "&cYou need to specify a player."); }
-        else { org.checkStats(args[1], sender); }
-      }
-      return true;
-    } else if (sub.equalsIgnoreCase("team")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-
-      if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
-      if (args.length < 2) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
-
-      String action = args[1].toLowerCase();
-      String targetName = args.length > 2 ? args[2] : null;
-      Player target;
-      MatchHelper.ArenaData dataTeam;
-
-      switch (action) {
-        case "cancel":
-          if (!org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST_SENT.replace(null)); break; }
-          target = org.getTeamReverse().get(player);
-          logger.send(target, Lang.TEAM_CANCEL_OTHER.replace(new String[]{player.getName()}));
-          logger.send(player, Lang.TEAM_CANCEL.replace(null));
-          org.getTeamType().remove(player);
-          org.getTeamReverse().remove(player);
-          org.getTeam().remove(target);
-          break;
-
-        case "accept":
-          if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
-          target = org.getTeam().get(player);
-          int sizeTeam = org.getTeamType().get(target);
-          dataTeam = MatchHelper.getArenaData(org, sizeTeam + "v" + sizeTeam);
-          if (dataTeam == null || dataTeam.matches[dataTeam.lobby].team(player, target)) {
-            org.getWaitingTeamPlayers().add(player);
-            org.getWaitingTeamPlayers().add(target);
-            org.setWaitingTeams(org.extendArray(org.getWaitingTeams(), new Player[]{player, target, null}));
+          if (match.redPlayers.contains(player)) {
+            playerScore = match.scoreRed;
+            opponentScore = match.scoreBlue;
           } else {
-            org.getWaitingPlayers().put(player.getName(), sizeTeam);
-            org.getWaitingPlayers().put(target.getName(), sizeTeam);
+            playerScore = match.scoreBlue;
+            opponentScore = match.scoreRed;
           }
-          logger.send(player, Lang.TEAM_ACCEPT_OTHER.replace(new String[]{target.getName()}));
-          logger.send(target, Lang.TEAM_ACCEPT_SELF.replace(new String[]{player.getName()}));
-          org.getTeam().remove(player);
-          org.getTeamReverse().remove(target);
-          org.getTeamType().remove(target);
-          break;
 
-        case "decline":
-          if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
-          target = org.getTeam().get(player);
-          logger.send(target, Lang.TEAM_DECLINE_OTHER.replace(new String[]{player.getName()}));
-          logger.send(player, Lang.TEAM_DECLINE_SELF.replace(null));
-          org.getTeamType().remove(target);
-          org.getTeamReverse().remove(target);
-          org.getTeam().remove(player);
-          break;
-
-        case "2v2":
-        case "3v3":
-        case "4v4":
-          if (targetName == null || !org.isOnlinePlayer(targetName)) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); break; }
-          target = plugin.getServer().getPlayer(targetName);
-          if (player.equals(target)) { logger.send(player, Lang.TEAM_YOURSELF.replace(null)); break; }
-          if (org.isInGame(player) || org.isInGame(target)) { logger.send(player, Lang.TEAM_CANT_SEND_INGAME.replace(null)); break; }
-          if (org.getTeam().containsKey(target) || org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_ALREADY_SENT.replace(new String[]{targetName})); break; }
-
-          dataTeam = MatchHelper.getArenaData(org, action);
-          if (dataTeam == null) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); break; }
-
-          org.getTeam().put(target, player);
-          org.getTeamReverse().put(player, target);
-          org.getTeamType().put(player, dataTeam.size);
-          logger.send(target, Lang.TEAM_WANTS_TO_TEAM_OTHER.replace(new String[]{player.getName(), String.valueOf(dataTeam.size)}));
-          logger.send(player, Lang.TEAM_WANTS_TO_TEAM_SELF.replace(new String[]{target.getName(), String.valueOf(dataTeam.size)}));
-          break;
-
-        default:
-          logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)}));
-      }
-
-      return true;
-    } else if (sub.equalsIgnoreCase("highscores") || sub.equalsIgnoreCase("best")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      org.updateHighScores((Player) sender);
-      return true;
-    } else if (sub.equalsIgnoreCase("cube")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
-      if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
-
-      Location loc = player.getLocation();
-      Vector dir = loc.getDirection().normalize();
-      Location spawnLoc = loc.add(dir.multiply(2.0));
-      spawnLoc.setY(loc.getY() + 2.5);
-      physics.spawnCube(spawnLoc);
-      logger.send(player, Lang.PREFIX.replace(null) + "&aCube spawned!");
-
-      return true;
-    } else if (sub.equalsIgnoreCase("clearcube")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
-
-      double closestDistance = 100.0;
-      Slime closest = null;
-      for (Slime cube : physics.getCubes()) {
-        double distance = cube.getLocation().distance(player.getLocation());
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closest = cube;
+          boolean freeLeave = match.phase == 2 || playerScore == opponentScore || playerScore > opponentScore;
+          if (!freeLeave) {
+            fcManager.getEconomy().withdrawPlayer(player, 200);
+            long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
+            org.getLeaveCooldowns().put(player.getUniqueId(), banUntil);
+            logger.send(player, Lang.LEAVE_LOSING.replace(null));
+          }
         }
-      }
 
-      if (closest != null) {
-        closest.setHealth(0);
-        logger.send(player, Lang.CUBE_CLEAR.replace(null));
-      } else logger.send(player, Lang.CUBE_NO_CUBES.replace(null));
+        MatchHelper.leaveMatch(org, player, match, logger, false);
+        break;
 
-      return true;
-    } else if (sub.equalsIgnoreCase("clearcubes")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-      if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+      case "takeplace":
+      case "tkp":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
+        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (org.isBanned(player)) return true;
+        if (org.getLeftMatches().length == 0) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
+        if (org.isInGame(player)) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
 
-      int count = 0;
-      for (Slime cube : physics.getCubes()) {
-        cube.setHealth(0);
-        count++;
-      }
-      logger.send(player, Lang.CUBE_CLEAR_ALL.replace(new String[]{String.valueOf(count)}));
+        org.getPlayingPlayers().add(player.getName());
+        org.getLeftMatches()[0].takePlace(player);
 
-      return true;
-    } else if (sub.equalsIgnoreCase("toggles") || sub.equalsIgnoreCase("ts")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"})); return true; }
+        org.setLeftMatches(Arrays.copyOfRange(org.getLeftMatches(), 1, org.getLeftMatches().length));
+        org.setLeftPlayerIsRed(Arrays.copyOfRange(org.getLeftPlayerIsRed(), 1, org.getLeftPlayerIsRed().length));
+        break;
 
-      String type = args[1].toLowerCase();
-      PlayerData playerData = dataManager.get(player);
-      if (playerData == null) return true;
-      PlayerSettings settings = physics.getPlayerSettings(player);
-      switch (type) {
-        case "kick":
-          settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
-          playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
-          logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
-          break;
-        case "goal":
-          settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
-          playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
-          logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
-          break;
-        case "particles":
-          settings.setParticlesEnabled(!settings.isParticlesEnabled());
-          playerData.set("particles.enabled", settings.isParticlesEnabled());
-          logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
-          break;
-        default:
-          logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"}));
-      }
+      case "teamchat":
+      case "tc":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
 
-      return true;
-    } else if (sub.equalsIgnoreCase("setsound")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!player.hasPermission(PERM_SET_SOUND)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_SOUND, label + " " + sub})); return true; }
-      if (args.length <= 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName|list>"})); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <message>"})); return true; }
 
-      PlayerData playerData = dataManager.get(player);
-      if (playerData == null) return true;
+        match = MatchHelper.getMatch(org, player);
+        if (match == null) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
+        if (!match.canUseTeamChat()) { logger.send(player, Lang.TEAMS_NOT_SETUP.replace(null)); return true; }
 
-      PlayerSettings settings = physics.getPlayerSettings(player);
-      Sound sound = Sound.SUCCESSFUL_HIT;
-      try {
-        if (!args[2].equalsIgnoreCase("list")) sound = Sound.valueOf(args[2].toUpperCase());
-      } catch (Exception exception) {
-        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
-        return true;
-      }
+        match.teamChat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+        break;
 
-      switch (args[1].toLowerCase()) {
-        case "kick":
-          if (args[2].equalsIgnoreCase("list")) {
-            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
-            return true;
-          }
-
-          if (!PlayerSettings.ALLOWED_KICK_SOUNDS.contains(sound)) {
-            logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
-            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
-            return true;
-          }
-
-          settings.setKickSound(sound);
-          playerData.set("sounds.kick.sound", sound.toString());
-          logger.send(player, Lang.SET_SOUND_KICK.replace(new String[]{sound.name()}));
-          break;
-
-        case "goal":
-          if (args[2].equalsIgnoreCase("list")) {
-            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
-            return true;
-          }
-
-          if (!PlayerSettings.ALLOWED_GOAL_SOUNDS.contains(sound)) {
-            logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
-            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
-            return true;
-          }
-
-          settings.setGoalSound(sound);
-          playerData.set("sounds.goal.sound", sound.toString());
-          logger.send(player, Lang.SET_SOUND_GOAL.replace(new String[]{sound.name()}));
-          break;
-
-        default:
-          logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName|list>"}));
-          break;
-      }
-
-      return true;
-    } else if (sub.equalsIgnoreCase("setparticle")) {
-      if (!(sender instanceof Player)) return inGameOnly(sender);
-      Player player = (Player) sender;
-      if (!player.hasPermission(PERM_SET_PARTICLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_PARTICLE, label + " " + sub})); return true; }
-      if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <particleName|list> [color]"})); return true; }
-
-      if (args[1].equalsIgnoreCase("list")) {
-        logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
-        return true;
-      }
-
-      PlayerData playerData = dataManager.get(player);
-      if (playerData == null) return true;
-
-      PlayerSettings settings = physics.getPlayerSettings(player);
-      EnumParticle particle;
-      try {
-        particle = EnumParticle.valueOf(args[1].toUpperCase());
-      } catch (Exception exception) {
-        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
-        logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
-        return true;
-      }
-
-      if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
-        logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
-        logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
-        return true;
-      }
-
-      if (particle == EnumParticle.REDSTONE) {
-        if (args.length >= 3) {
-          try {
-            String colorName = args[2].toUpperCase();
-            settings.setCustomRedstoneColor(colorName);
-            playerData.set("particles.effect", "REDSTONE:" + colorName);
-            logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), colorName}));
-            return true;
-          } catch (IllegalArgumentException exception) {
-            logger.send(player, Lang.INVALID_COLOR.replace(new String[]{args[2].toUpperCase()}));
-            logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.COLOR.replace(null), String.join(", ", PlayerSettings.getAllowedColorNames())}));
-            return true;
-          }
+      case "stats":
+        if (sender instanceof Player) {
+          Player p = (Player) sender;
+          org.checkStats(args.length > 1 ? args[1] : p.getName(), sender);
         } else {
-          settings.setCustomRedstoneColor("WHITE");
-          playerData.set("particles.effect", "REDSTONE:WHITE");
-          logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), "WHITE"}));
+          if (args.length < 2) { logger.send(sender, "&cYou need to specify a player."); }
+          else { org.checkStats(args[1], sender); }
+        }
+        break;
+
+      case "team":
+      case "t":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
+        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (args.length < 2) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
+
+        String action = args[1].toLowerCase();
+        String targetName = args.length > 2 ? args[2] : null;
+        Player target;
+        MatchHelper.ArenaData dataTeam;
+
+        switch (action) {
+          case "cancel":
+            if (!org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST_SENT.replace(null)); break; }
+            target = org.getTeamReverse().get(player);
+            logger.send(target, Lang.TEAM_CANCEL_OTHER.replace(new String[]{player.getName()}));
+            logger.send(player, Lang.TEAM_CANCEL.replace(null));
+            org.getTeamType().remove(player);
+            org.getTeamReverse().remove(player);
+            org.getTeam().remove(target);
+            break;
+
+          case "accept":
+            if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
+            target = org.getTeam().get(player);
+            int sizeTeam = org.getTeamType().get(target);
+            dataTeam = MatchHelper.getArenaData(org, sizeTeam + "v" + sizeTeam);
+            if (dataTeam == null || dataTeam.matches[dataTeam.lobby].team(player, target)) {
+              org.getWaitingTeamPlayers().add(player);
+              org.getWaitingTeamPlayers().add(target);
+              org.setWaitingTeams(org.extendArray(org.getWaitingTeams(), new Player[]{player, target, null}));
+            } else {
+              org.getWaitingPlayers().put(player.getName(), sizeTeam);
+              org.getWaitingPlayers().put(target.getName(), sizeTeam);
+            }
+            logger.send(player, Lang.TEAM_ACCEPT_OTHER.replace(new String[]{target.getName()}));
+            logger.send(target, Lang.TEAM_ACCEPT_SELF.replace(new String[]{player.getName()}));
+            org.getTeam().remove(player);
+            org.getTeamReverse().remove(target);
+            org.getTeamType().remove(target);
+            break;
+
+          case "decline":
+            if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
+            target = org.getTeam().get(player);
+            logger.send(target, Lang.TEAM_DECLINE_OTHER.replace(new String[]{player.getName()}));
+            logger.send(player, Lang.TEAM_DECLINE_SELF.replace(null));
+            org.getTeamType().remove(target);
+            org.getTeamReverse().remove(target);
+            org.getTeam().remove(player);
+            break;
+
+          case "2v2":
+          case "3v3":
+          case "4v4":
+            if (targetName == null || !org.isOnlinePlayer(targetName)) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); break; }
+            target = plugin.getServer().getPlayer(targetName);
+            if (player.equals(target)) { logger.send(player, Lang.TEAM_YOURSELF.replace(null)); break; }
+            if (org.isInGame(player) || org.isInGame(target)) { logger.send(player, Lang.TEAM_CANT_SEND_INGAME.replace(null)); break; }
+            if (org.getTeam().containsKey(target) || org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_ALREADY_SENT.replace(new String[]{targetName})); break; }
+
+            dataTeam = MatchHelper.getArenaData(org, action);
+            if (dataTeam == null) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); break; }
+
+            org.getTeam().put(target, player);
+            org.getTeamReverse().put(player, target);
+            org.getTeamType().put(player, dataTeam.size);
+            logger.send(target, Lang.TEAM_WANTS_TO_TEAM_OTHER.replace(new String[]{player.getName(), String.valueOf(dataTeam.size)}));
+            logger.send(player, Lang.TEAM_WANTS_TO_TEAM_SELF.replace(new String[]{target.getName(), String.valueOf(dataTeam.size)}));
+            break;
+
+          default:
+            logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)}));
+        }
+        break;
+
+      case "highscores":
+      case "best":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        org.updateHighScores((Player) sender);
+        break;
+
+      case "cube":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
+        if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
+        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+
+        Location loc = player.getLocation();
+        Vector dir = loc.getDirection().normalize();
+        Location spawnLoc = loc.add(dir.multiply(2.0));
+        spawnLoc.setY(loc.getY() + 2.5);
+        physics.spawnCube(spawnLoc);
+        logger.send(player, Lang.PREFIX.replace(null) + "&aCube spawned!");
+        break;
+
+      case "clearcube":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
+        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+
+        double closestDistance = 100.0;
+        Slime closest = null;
+        for (Slime cube : physics.getCubes()) {
+          double distance = cube.getLocation().distance(player.getLocation());
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closest = cube;
+          }
         }
 
-        settings.setParticle(EnumParticle.REDSTONE);
-        return true;
-      }
+        if (closest != null) {
+          closest.setHealth(0);
+          logger.send(player, Lang.CUBE_CLEAR.replace(null));
+        } else logger.send(player, Lang.CUBE_NO_CUBES.replace(null));
+        break;
 
-      settings.setParticle(particle);
-      playerData.set("particles.effect", particle.toString());
-      logger.send(player, Lang.SET_PARTICLE.replace(new String[]{particle.name()}));
-      return true;
-    } else sendHelp(sender);
+      case "clearcubes":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
+        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+
+        int count = 0;
+        for (Slime cube : physics.getCubes()) {
+          cube.setHealth(0);
+          count++;
+        }
+        logger.send(player, Lang.CUBE_CLEAR_ALL.replace(new String[]{String.valueOf(count)}));
+        break;
+
+      case "toggles":
+      case "ts":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"})); return true; }
+
+        String type = args[1].toLowerCase();
+        playerData = dataManager.get(player);
+        if (playerData == null) return true;
+        settings = physics.getPlayerSettings(player);
+        switch (type) {
+          case "kick":
+            settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
+            playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
+            logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            break;
+          case "goal":
+            settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
+            playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
+            logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            break;
+          case "particles":
+            settings.setParticlesEnabled(!settings.isParticlesEnabled());
+            playerData.set("particles.enabled", settings.isParticlesEnabled());
+            logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            break;
+          default:
+            logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"}));
+        }
+        break;
+
+      case "setsound":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_SET_SOUND)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_SOUND, label + " " + sub})); return true; }
+        if (args.length <= 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName|list>"})); return true; }
+
+        playerData = dataManager.get(player);
+        if (playerData == null) return true;
+
+        settings = physics.getPlayerSettings(player);
+        Sound sound = Sound.SUCCESSFUL_HIT;
+        try {
+          if (!args[2].equalsIgnoreCase("list")) sound = Sound.valueOf(args[2].toUpperCase());
+        } catch (Exception exception) {
+          logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
+          return true;
+        }
+
+        switch (args[1].toLowerCase()) {
+          case "kick":
+            if (args[2].equalsIgnoreCase("list")) {
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              return true;
+            }
+
+            if (!PlayerSettings.ALLOWED_KICK_SOUNDS.contains(sound)) {
+              logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              return true;
+            }
+
+            settings.setKickSound(sound);
+            playerData.set("sounds.kick.sound", sound.toString());
+            logger.send(player, Lang.SET_SOUND_KICK.replace(new String[]{sound.name()}));
+            break;
+
+          case "goal":
+            if (args[2].equalsIgnoreCase("list")) {
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              return true;
+            }
+
+            if (!PlayerSettings.ALLOWED_GOAL_SOUNDS.contains(sound)) {
+              logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              return true;
+            }
+
+            settings.setGoalSound(sound);
+            playerData.set("sounds.goal.sound", sound.toString());
+            logger.send(player, Lang.SET_SOUND_GOAL.replace(new String[]{sound.name()}));
+            break;
+
+          default:
+            logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal> <soundName|list>"}));
+            break;
+        }
+        break;
+
+      case "setparticle":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_SET_PARTICLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_PARTICLE, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <particleName|list> [color]"})); return true; }
+
+        if (args[1].equalsIgnoreCase("list")) {
+          logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
+          return true;
+        }
+
+        playerData = dataManager.get(player);
+        if (playerData == null) return true;
+
+        settings = physics.getPlayerSettings(player);
+        EnumParticle particle;
+        try {
+          particle = EnumParticle.valueOf(args[1].toUpperCase());
+        } catch (Exception exception) {
+          logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
+          logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
+          return true;
+        }
+
+        if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
+          logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.PARTICLE.replace(null)}));
+          logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.PARTICLE.replace(null), String.join(", ", PlayerSettings.getAllowedParticles())}));
+          return true;
+        }
+
+        if (particle == EnumParticle.REDSTONE) {
+          if (args.length >= 3) {
+            try {
+              String colorName = args[2].toUpperCase();
+              settings.setCustomRedstoneColor(colorName);
+              playerData.set("particles.effect", "REDSTONE:" + colorName);
+              logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), colorName}));
+              return true;
+            } catch (IllegalArgumentException exception) {
+              logger.send(player, Lang.INVALID_COLOR.replace(new String[]{args[2].toUpperCase()}));
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.COLOR.replace(null), String.join(", ", PlayerSettings.getAllowedColorNames())}));
+              return true;
+            }
+          } else {
+            settings.setCustomRedstoneColor("WHITE");
+            playerData.set("particles.effect", "REDSTONE:WHITE");
+            logger.send(player, Lang.SET_PARTICLE_REDSTONE.replace(new String[]{particle.name(), "WHITE"}));
+          }
+
+          settings.setParticle(EnumParticle.REDSTONE);
+          return true;
+        }
+
+        settings.setParticle(particle);
+        playerData.set("particles.effect", particle.toString());
+        logger.send(player, Lang.SET_PARTICLE.replace(new String[]{particle.name()}));
+        break;
+
+      default: sendHelp(sender); break;
+    }
+
     return true;
   }
 

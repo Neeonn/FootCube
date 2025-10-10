@@ -11,6 +11,7 @@ import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -42,6 +43,7 @@ public class PlayerEvents implements Listener {
   private static final String PERM_BYPASS_DISABLED_COMMANDS = "footcube.bypass.disablecommands";
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
+  private static final String CONFIG_PARTICLES_BASE = "particles.";
   
   public PlayerEvents(FCManager fcManager) {
     this.fcManager = fcManager;
@@ -81,16 +83,18 @@ public class PlayerEvents implements Listener {
       PlayerData playerData = dataManager.get(player);
       dataManager.addDefaults(playerData);
 
-      Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> handleSounds(player, playerData));
+      Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> handleSettings(player, playerData));
     }, 20L);
   }
 
-  private void handleSounds(Player player, PlayerData playerData) {
+  private void handleSettings(Player player, PlayerData playerData) {
     PlayerSettings settings = physics.getPlayerSettings(player);
     if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
     if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".effect")) settings.setParticle(EnumParticle.valueOf((String) playerData.get(CONFIG_PARTICLES_BASE + ".effect")));
   }
 
   @EventHandler

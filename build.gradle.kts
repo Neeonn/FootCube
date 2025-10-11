@@ -39,16 +39,7 @@ version = if (commit != null)
 else
     "$major.$minor.$patch"
 
-tasks.register("bumpPatch") {
-    doLast {
-        patch += 1
-        props.setProperty("patch", patch.toString())
-        props.store(versionFile.outputStream(), "Auto-incremented patch version")
-    }
-}
-
 tasks.named("build") {
-    dependsOn("bumpPatch")
     doFirst {
         println("Building FootCube version $version")
     }

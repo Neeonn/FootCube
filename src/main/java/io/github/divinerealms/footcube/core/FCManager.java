@@ -6,6 +6,7 @@ import io.github.divinerealms.footcube.commands.BuildCommand;
 import io.github.divinerealms.footcube.commands.FCCommand;
 import io.github.divinerealms.footcube.commands.MatchesCommand;
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.ListenerManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
@@ -83,6 +84,11 @@ public class FCManager {
     initTasks();
     org.loadArenas();
     getListenerManager().registerAll();
+
+    plugin.getServer().getOnlinePlayers().forEach(player -> {
+      PlayerData playerData = dataManager.get(player);
+      if (playerData != null) physics.preloadSettings(player, playerData);
+    });
   }
 
   public void initTasks() {

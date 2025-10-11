@@ -31,6 +31,8 @@ public class SignManipulation implements Listener {
   private final Physics physics;
   private final FileConfiguration arenas;
 
+  private static final String PERM_PLAY = "footcube.play";
+
   public SignManipulation(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
@@ -120,15 +122,10 @@ public class SignManipulation implements Listener {
 
     switch (line1.toLowerCase()) {
       case "join":
-        if (org.isInGame(player)) {
-          logger.send(player, Lang.JOIN_INTEAM.replace(null));
-          return;
-        }
-
-        if (!physics.isMatchesEnabled()) {
-          logger.send(player, Lang.FC_DISABLED.replace(null));
-          return;
-        }
+        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, "fc join"})); return; }
+        if (org.isBanned(player)) return;
+        if (org.isInGame(player)) { logger.send(player, Lang.JOIN_INTEAM.replace(null)); return; }
+        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return;}
 
         String arenaType = ChatColor.stripColor(sign.getLine(2)).toLowerCase();
 

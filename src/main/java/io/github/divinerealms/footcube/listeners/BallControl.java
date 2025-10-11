@@ -19,12 +19,14 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
 public class BallControl implements Listener {
   private final Physics physics;
   private final Organization org;
   private final Logger logger;
+  private final Plugin plugin;
 
   private static final String PERM_HIT_DEBUG = "footcube.admin.hitdebug";
 
@@ -32,6 +34,7 @@ public class BallControl implements Listener {
     this.physics = fcManager.getPhysics();
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
+    this.plugin = fcManager.getPlugin();
   }
 
   @EventHandler
@@ -51,26 +54,24 @@ public class BallControl implements Listener {
 
     event.setCancelled(true);
 
-    if (player.getGameMode() == GameMode.CREATIVE) {
-      cube.setHealth(0);
-      logger.send(player, Lang.CUBE_CLEAR.replace(null));
-    }
-
+    if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
     if (player.getGameMode() != GameMode.SURVIVAL) return;
     if (!physics.canHitBall(player)) return;
 
     org.ballTouch(player);
+    physics.recordPlayerAction(player);
 
     KickResult kickResult = physics.calculateKickPower(player);
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
     cube.setVelocity(kickResult.getCharge() > 1D ? kick : cube.getVelocity().add(kick));
 
-    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
-    PlayerSettings settings = physics.getPlayerSettings(player);
-    if (settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
+    plugin.getServer().getScheduler().runTask(plugin, () -> {
+      PlayerSettings settings = physics.getPlayerSettings(player);
+      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
+      if (settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
+    });
 
     if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
-    physics.recordPlayerAction(player);
   }
 
   @EventHandler

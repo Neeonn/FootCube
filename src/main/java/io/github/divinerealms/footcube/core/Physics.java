@@ -48,6 +48,9 @@ public class Physics {
   private static final long AFK_THRESHOLD = 60_000L;
   private static final double MAX_KP = 7.25;
   private static final double SOFT_CAP_MIN_FACTOR = 0.75;
+  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
+  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
+  private static final String CONFIG_PARTICLES_BASE = "particles.";
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
   @Setter private boolean matchesEnabled = true;
@@ -279,7 +282,22 @@ public class Physics {
   }
 
   public PlayerSettings getPlayerSettings(Player player) {
-    return playerSettings.computeIfAbsent(player.getUniqueId(), k -> new PlayerSettings());
+    return playerSettings.get(player.getUniqueId());
+  }
+
+  public void preloadSettings(Player player, PlayerData playerData) {
+    PlayerSettings settings = getPlayerSettings(player);
+    if (settings == null) {
+      settings = new PlayerSettings();
+      playerSettings.put(player.getUniqueId(), settings);
+    }
+
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".effect")) settings.setParticle(EnumParticle.valueOf((String) playerData.get(CONFIG_PARTICLES_BASE + ".effect")));
   }
 
   public void removePlayer(Player player) {

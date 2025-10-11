@@ -246,11 +246,13 @@ public class Physics {
 
   public void showCubeParticles() {
     for (Slime cube : cubes) {
+      if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
+
       for (Entity entity : cube.getNearbyEntities(100, 100, 100)) {
         if (!(entity instanceof Player)) continue;
         Player player = (Player) entity;
         PlayerSettings settings = getPlayerSettings(player);
-        if (!settings.isParticlesEnabled()) continue;
+        if (settings == null || !settings.isParticlesEnabled()) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
         if (distance < 32) continue;

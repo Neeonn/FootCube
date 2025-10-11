@@ -24,15 +24,16 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.UUID;
 
 public class PlayerEvents implements Listener {
-  private final FCManager fcManager;
   private final Logger logger;
   private final Physics physics;
+  private final Plugin plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
   private final DisableCommands disableCommands;
@@ -40,9 +41,9 @@ public class PlayerEvents implements Listener {
   private static final String PERM_BYPASS_DISABLED_COMMANDS = "footcube.bypass.disablecommands";
   
   public PlayerEvents(FCManager fcManager) {
-    this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
     this.physics = fcManager.getPhysics();
+    this.plugin = fcManager.getPlugin();
     this.org = fcManager.getOrg();
     this.dataManager = fcManager.getDataManager();
     this.disableCommands = new DisableCommands(fcManager);
@@ -73,9 +74,11 @@ public class PlayerEvents implements Listener {
     player.setExp(0);
     org.clearInventory(player);
 
-    PlayerData playerData = dataManager.get(player);
-    dataManager.addDefaults(playerData);
-    physics.preloadSettings(player, playerData);
+    plugin.getServer().getScheduler().runTask(plugin, () -> {
+      PlayerData playerData = dataManager.get(player);
+      dataManager.addDefaults(playerData);
+      physics.preloadSettings(player, playerData);
+    });
   }
 
   @EventHandler

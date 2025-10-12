@@ -159,7 +159,7 @@ public class Match {
       logger.send(p, Lang.WELCOME.replace(new String[]{Lang.BLUE.replace(null)}));
     }
 
-    if (this.bluePlayers.size() == this.type && this.redPlayers.size() == this.type) {
+    if (this.phase < 2 && this.bluePlayers.size() == this.type && this.redPlayers.size() == this.type) {
       this.phase = 2;
       this.countdown = 15;
       this.tickToSec = 20;

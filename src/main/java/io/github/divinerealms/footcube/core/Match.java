@@ -572,7 +572,7 @@ public class Match {
       }
     }
 
-    if (data != null && !this.takePlace.contains(scorer)) {
+    if (data != null && !this.takePlace.contains(scorer) && !ownGoal) {
       if (this.type != 2) data.add("goals");
       fcManager.getEconomy().depositPlayer(scorer.getPlayer(), 10);
       if (this.goals.containsKey(scorer)) this.goals.put(scorer, this.goals.get(scorer) + 1);

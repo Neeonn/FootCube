@@ -74,17 +74,26 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
         if (org.isBanned(player)) return true;
 
-        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
-        String matchType = args[1];
-        if (matchType == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
-        if (org.isInGame(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
+        if (args.length < 2 || args[1] == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
+        String matchType = args[1].toLowerCase();
+        if (org.isInGame(player) || org.getWaitingPlayers().containsKey(player.getName())) {
+          logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null));
+          return true;
+        }
 
         MatchHelper.ArenaData data = MatchHelper.getArenaData(org, matchType);
-        if (data == null) { logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)})); return true; }
+        if (data == null || data.lobby < 0 || data.lobby >= data.matches.length) {
+          logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)}));
+          return true;
+        }
+
         if (arenas.getInt("arenas." + matchType + ".amount", 0) == 0) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
 
+        match = data.matches[data.lobby];
+        if (match == null) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
+
         org.removeTeam(player);
-        data.matches[data.lobby].join(player, false);
+        match.join(player, false);
         org.getWaitingPlayers().put(player.getName(), data.size);
 
         if (player.getAllowFlight()) { player.setFlying(false); player.setAllowFlight(false); }

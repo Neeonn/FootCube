@@ -1,5 +1,6 @@
 package io.github.divinerealms.footcube.managers;
 
+import io.github.divinerealms.footcube.configs.Lang;
 import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -53,6 +54,7 @@ public class ConfigManager {
 
   public void reloadAllConfigs() {
     configs.keySet().forEach(this::reloadConfig);
+    Lang.setFile(getConfig("messages.yml"));
   }
 
   public void reloadConfig(String name) {

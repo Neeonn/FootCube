@@ -200,13 +200,12 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             target = org.getTeam().get(player);
             int sizeTeam = org.getTeamType().get(target);
             dataTeam = MatchHelper.getArenaData(org, sizeTeam + "v" + sizeTeam);
-            if (dataTeam == null || dataTeam.matches[dataTeam.lobby].team(player, target)) {
+            boolean placedInMatch = false;
+            if (dataTeam != null) placedInMatch = dataTeam.matches[dataTeam.lobby].team(player, target);
+            if (!placedInMatch) {
               org.getWaitingTeamPlayers().add(player);
               org.getWaitingTeamPlayers().add(target);
               org.setWaitingTeams(org.extendArray(org.getWaitingTeams(), new Player[]{player, target, null}));
-            } else {
-              org.getWaitingPlayers().put(player.getName(), sizeTeam);
-              org.getWaitingPlayers().put(target.getName(), sizeTeam);
             }
             logger.send(player, Lang.TEAM_ACCEPT_OTHER.replace(new String[]{target.getName()}));
             logger.send(target, Lang.TEAM_ACCEPT_SELF.replace(new String[]{player.getName()}));
@@ -228,6 +227,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           case "2v2":
           case "3v3":
           case "4v4":
+            if (args.length < 3) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
             if (targetName == null || !org.isOnlinePlayer(targetName)) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); break; }
             target = plugin.getServer().getPlayer(targetName);
             if (player.equals(target)) { logger.send(player, Lang.TEAM_YOURSELF.replace(null)); break; }

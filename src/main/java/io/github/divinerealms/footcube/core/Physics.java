@@ -13,6 +13,7 @@ import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.*;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -33,6 +34,7 @@ public class Physics {
   private final FootCube plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
+  private final FileConfiguration config;
 
   private final HashSet<Slime> cubes = new HashSet<>();
   private final Map<UUID, Vector> velocities = new HashMap<>();
@@ -43,14 +45,14 @@ public class Physics {
   private final Map<UUID, Long> lastAction = new HashMap<>();
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
-  private static final long CHARGED_HIT_COOLDOWN = 500L;
-  private static final long REGULAR_HIT_COOLDOWN = 150L;
-  private static final long AFK_THRESHOLD = 60_000L;
-  private static final double MAX_KP = 7.25;
-  private static final double SOFT_CAP_MIN_FACTOR = 0.75;
+  private long CHARGED_HIT_COOLDOWN, REGULAR_HIT_COOLDOWN, AFK_THRESHOLD;
+  private double MAX_KP, SOFT_CAP_MIN_FACTOR, CHARGE_MULTIPLIER, BASE_POWER, CHARGE_RECOVERY_RATE, HIT_RADIUS, MIN_RADIUS, BOUNCE_THRESHOLD;
+  private float SOUND_VOLUME, SOUND_PITCH;
+
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   private static final String CONFIG_PARTICLES_BASE = "particles.";
+
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
   @Setter private boolean matchesEnabled = true;
@@ -60,6 +62,8 @@ public class Physics {
     this.plugin = fcManager.getPlugin();
     this.org = fcManager.getOrg();
     this.dataManager = fcManager.getDataManager();
+    this.config = fcManager.getConfigManager().getConfig("config.yml");
+    this.reload();
   }
 
   public Slime spawnCube(Location location) {
@@ -97,9 +101,9 @@ public class Physics {
   }
 
   public KickResult calculateKickPower(Player player) {
-    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * 7;
+    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * CHARGE_MULTIPLIER;
     double speed = this.speed.getOrDefault(player.getUniqueId(), 1D);
-    double power = speed * 2 + 0.4;
+    double power = speed * 2 + BASE_POWER;
     double baseKickPower = player.isSneaking() ? charge * power : power;
     double finalKickPower = capKickPower(baseKickPower);
 
@@ -136,21 +140,19 @@ public class Physics {
     long now = System.currentTimeMillis();
     kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
 
-    for (Map.Entry<UUID, Double> entry : charges.entrySet()) {
-      Player player = plugin.getServer().getPlayer(entry.getKey());
-      if (player == null) continue;
+    plugin.getServer().getOnlinePlayers().forEach(player -> {
+      Double charge = charges.get(player.getUniqueId());
+      if (charge == null) return;
 
-      double charge = entry.getValue();
-      double nextCharge = 1 - (1 - charge) * 0.945;
-      charges.put(entry.getKey(), nextCharge);
+      double nextCharge = 1 - (1 - charge) * CHARGE_RECOVERY_RATE;
+      charges.put(player.getUniqueId(), nextCharge);
       player.setExp((float) nextCharge);
-    }
+    });
 
     List<Slime> toRemove = new ArrayList<>();
+    if (cubes.isEmpty()) return;
 
     for (Slime cube : cubes) {
-      if (cubes.isEmpty()) continue;
-
       if (cube.isDead()) {
         toRemove.add(cube);
         continue;
@@ -171,9 +173,9 @@ public class Physics {
         if (isAFK(player)) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
-        if (distance <= 1.2) {
+        if (distance <= HIT_RADIUS) {
           double speed = newV.length();
-          if (distance <= 0.8 && speed >= 0.5) newV.multiply(0.5 / speed);
+          if (distance <= MIN_RADIUS && speed >= 0.5) newV.multiply(0.5 / speed);
 
           double power = this.speed.getOrDefault(player.getUniqueId(), 1D) / 3 + oldV.length() / 6;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
@@ -210,27 +212,27 @@ public class Physics {
             double b = loc.getZ() - a * loc.getX();
             double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1);
 
-            if (D < 0.8) newV.multiply(delta / newV.length());
+            if (D < MIN_RADIUS) newV.multiply(delta / newV.length());
           }
         }
       }
 
       if (newV.getX() == 0) {
         newV.setX(-oldV.getX() * 0.8);
-        if (Math.abs(oldV.getX()) > 0.3) sound = true;
+        if (Math.abs(oldV.getX()) > BOUNCE_THRESHOLD) sound = true;
       } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < 0.1) newV.setX(oldV.getX() * 0.98);
 
       if (newV.getZ() == 0) {
         newV.setZ(-oldV.getZ() * 0.8);
-        if (Math.abs(oldV.getZ()) > 0.3) sound = true;
+        if (Math.abs(oldV.getZ()) > BOUNCE_THRESHOLD) sound = true;
       } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < 0.1) newV.setZ(oldV.getZ() * 0.98);
 
       if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - 0.05) {
         newV.setY(-oldV.getY() * 0.8);
-        if (Math.abs(oldV.getY()) > 0.3) sound = true;
+        if (Math.abs(oldV.getY()) > BOUNCE_THRESHOLD) sound = true;
       }
 
-      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
+      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, SOUND_VOLUME, SOUND_PITCH);
 
       cube.setVelocity(newV);
       velocities.put(id, newV);
@@ -300,6 +302,22 @@ public class Physics {
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
     if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
     if (playerData.has(CONFIG_PARTICLES_BASE + ".effect")) settings.setParticle(EnumParticle.valueOf((String) playerData.get(CONFIG_PARTICLES_BASE + ".effect")));
+  }
+
+  public void reload() {
+    CHARGED_HIT_COOLDOWN = config.getLong("physics.cooldowns.charged-hit", 500);
+    REGULAR_HIT_COOLDOWN = config.getLong("physics.cooldowns.regular-hit", 150);
+    AFK_THRESHOLD = config.getLong("physics.afk-threshold", 60000);
+    MAX_KP = config.getDouble("physics.kick-power.max", 6.75);
+    SOFT_CAP_MIN_FACTOR = config.getDouble("physics.kick-power.soft-cap-min-factor", 0.8);
+    CHARGE_MULTIPLIER = config.getDouble("physics.kick-power.charge-multiplier", 7.0);
+    BASE_POWER = config.getDouble("physics.kick-power.base-power", 0.4);
+    CHARGE_RECOVERY_RATE = config.getDouble("physics.charge-recovery-rate", 0.945);
+    HIT_RADIUS = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
+    MIN_RADIUS = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
+    BOUNCE_THRESHOLD = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
+    SOUND_VOLUME = (float) config.getDouble("physics.sound.volume", 0.5);
+    SOUND_PITCH = (float) config.getDouble("physics.sound.pitch", 1.0);
   }
 
   public void removePlayer(Player player) {

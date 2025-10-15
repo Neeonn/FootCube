@@ -14,9 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Slime;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -91,14 +89,6 @@ public class Organization {
     arenas.addDefault("arenas.4v4.amount", 0);
     arenas.options().copyDefaults(true);
     configManager.saveConfig("arenas.yml");
-
-    if (arenas.contains("arenas.world")) {
-      for(Entity e : plugin.getServer().getWorld(arenas.getString("arenas.world")).getEntities()) {
-        if (e instanceof Slime) {
-          ((Slime)e).setHealth(0.0F);
-        }
-      }
-    }
 
     this.updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, this::update, 1L, 1L);
   }
@@ -214,18 +204,13 @@ public class Organization {
 
   public void undoTakePlace(Match m) {
     int matches = 0;
-
-    for (Match match : this.leftMatches) {
-      if (m.equals(match)) {
-        ++matches;
-      }
-    }
+    for (Match match : this.leftMatches) if (m.equals(match)) ++matches;
 
     Match[] newL = new Match[this.leftMatches.length - matches];
     boolean[] newB = new boolean[this.leftMatches.length - matches];
     int i = 0;
 
-    for(int l = 0; i < this.leftMatches.length; ++i) {
+    for (int l = 0; i < this.leftMatches.length; ++i) {
       if (!this.leftMatches[i].equals(m)) {
         newL[l] = this.leftMatches[i];
         newB[l] = this.leftPlayerIsRed[i];
@@ -237,28 +222,20 @@ public class Organization {
     this.leftPlayerIsRed = newB;
   }
 
-  public void endMatch(Player p) {
-    this.playingPlayers.remove(p.getName());
-    p.setExp(0);
+  public void endMatch(Player player) {
+    this.playingPlayers.remove(player.getName());
+    player.setExp(0);
   }
 
-  public void playerStarts(Player p) {
-    this.playingPlayers.add(p.getName());
-    this.waitingPlayers.remove(p.getName());
+  public void playerStarts(Player player) {
+    this.playingPlayers.add(player.getName());
+    this.waitingPlayers.remove(player.getName());
   }
 
-  public void ballTouch(Player p) {
-    for (Match m : this.matches2v2) {
-      m.kick(p);
-    }
-
-    for (Match m : this.matches3v3) {
-      m.kick(p);
-    }
-
-    for (Match m : this.matches4v4) {
-      m.kick(p);
-    }
+  public void ballTouch(Player player) {
+    for (Match match : this.matches2v2) match.kick(player);
+    for (Match match : this.matches3v3) match.kick(player);
+    for (Match match : this.matches4v4) match.kick(player);
   }
 
   public ItemStack createComplexItem(Material material, String name, String[] lore) {

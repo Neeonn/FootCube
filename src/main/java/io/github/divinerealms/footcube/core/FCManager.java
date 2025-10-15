@@ -97,6 +97,7 @@ public class FCManager {
     this.physicsRunning = false;
     this.cubeCleanerRunning = false;
 
+    physics.reload();
     this.physicsRunning = true;
     this.physicsTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::tick, 1L, 1L).getTaskId();
     this.glowTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::showCubeParticles, 5L, 5L).getTaskId();

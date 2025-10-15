@@ -76,10 +76,25 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
     switch (sub) {
       case "reload":
+        if (args.length == 1) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <configs|all>"})); return true; }
         if (!sender.hasPermission(PERM_MAIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MAIN, label + " " + sub})); return true; }
-        fcManager.reload();
-        logger.send(sender, Lang.RELOAD.replace(null));
-        break;
+
+        switch (args[1].toLowerCase()) {
+          case "configs":
+            fcManager.getConfigManager().reloadAllConfigs();
+            physics.reload();
+            logger.send(sender, Lang.RELOAD.replace(new String[]{"configs"}));
+            return true;
+
+          case "all":
+            fcManager.reload();
+            logger.send(sender, Lang.RELOAD.replace(new String[]{"all"}));
+            return true;
+
+          default:
+            logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <configs|all>"}));
+            return true;
+        }
 
       case "toggle":
         if (!sender.hasPermission(PERM_TOGGLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_TOGGLE, label + " " + sub})); return true; }
@@ -424,6 +439,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       completions.addAll(Arrays.asList("reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby", "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "help"));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
+        case "reload": completions.addAll(Arrays.asList("configs", "all")); break;
         case "statset":
         case "forceleave":
         case "ban":

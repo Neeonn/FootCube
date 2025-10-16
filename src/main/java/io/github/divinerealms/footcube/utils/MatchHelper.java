@@ -172,6 +172,8 @@ public class MatchHelper {
   }
 
   public static void leaveMatch(Organization org, Player player, Match active, Logger logger, boolean notifyTeam) {
+    player.getInventory().setItem(4, null);
+
     if (active != null) {
       Boolean red = active.isRed.get(player);
       org.clearInventory(player);
@@ -194,7 +196,7 @@ public class MatchHelper {
       org.setWaitingTeams(org.reduceArray(org.getWaitingTeams(), player));
     }
 
-    if (player.getExp() > 0) player.setExp(0);
+    player.setExp(0);
     org.getWaitingPlayers().remove(player.getName());
     org.getPlayingPlayers().remove(player.getName());
     org.getWaitingTeamPlayers().remove(player);

@@ -28,8 +28,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.UUID;
-
 public class PlayerEvents implements Listener {
   private final Logger logger;
   private final Physics physics;
@@ -84,17 +82,9 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onQuit(PlayerQuitEvent event) {
     Player player = event.getPlayer();
-    UUID uuid = player.getUniqueId();
 
     dataManager.unload(player);
     physics.removePlayer(player);
-
-    physics.getSpeed().remove(uuid);
-    physics.getCharges().remove(uuid);
-    physics.getKicked().remove(uuid);
-    physics.getBallHitCooldowns().remove(uuid);
-    physics.getPlayerSettings().remove(uuid);
-    physics.getVelocities().remove(uuid);
 
     Match match = MatchHelper.getMatch(org, player);
     if (match != null) MatchHelper.leaveMatch(org, player, match, logger, true);

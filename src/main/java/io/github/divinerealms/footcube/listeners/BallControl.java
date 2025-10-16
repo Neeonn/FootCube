@@ -8,7 +8,6 @@ import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
@@ -85,7 +84,15 @@ public class BallControl implements Listener {
     long now = System.currentTimeMillis();
 
     Slime cube = (Slime) event.getRightClicked();
-    cube.setVelocity(cube.getVelocity().add(new Vector(0, 0.7, 0)));
+
+    // *** NEW TEST FEATURE ***
+    // If the player is running and right-clicks a cube, it doesn't jump that high so the cube won't go over players' head.
+    // If the player is relatively standing still (preparing to shoot), it will jump normally.
+    // *** EXPERIMENTAL FEATURE ***
+    double speed = physics.getSpeed().getOrDefault(player.getUniqueId(), 0D);
+    double verticalBoost = speed > physics.getMovementThreshold() ? physics.getJumpRunning() : physics.getJumpShooting();
+
+    cube.setVelocity(cube.getVelocity().add(new Vector(0, verticalBoost, 0)));
     physics.getKicked().put(player.getUniqueId(), now);
 
     org.ballTouch(player);
@@ -94,17 +101,8 @@ public class BallControl implements Listener {
   }
 
   @EventHandler
-  public void playerSpeedCalculator(PlayerMoveEvent event) {
+  public void onMove(PlayerMoveEvent event) {
     if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    Location to = event.getTo();
-    Location from = event.getFrom();
-
-    double dx = to.getX() - from.getX();
-    double dy = (to.getY() - from.getY()) / 2;
-    double dz = to.getZ() - from.getZ();
-
-    double speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    physics.getSpeed().put(event.getPlayer().getUniqueId(), speed);
     physics.recordPlayerAction(event.getPlayer());
   }
 

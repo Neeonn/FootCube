@@ -255,6 +255,7 @@ public class Organization {
     PlayerInventory inv = p.getInventory();
     inv.setChestplate(null);
     inv.setLeggings(null);
+    inv.setItem(4, null);
   }
 
   public void removeTeam(Player p) {

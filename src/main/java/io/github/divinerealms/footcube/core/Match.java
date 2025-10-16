@@ -665,8 +665,7 @@ public class Match {
           p.setScoreboard(this.sbm.getNewScoreboard());
           Location lobby = config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation();
           p.teleport(lobby);
-          p.getInventory().clear();
-          p.getInventory().setArmorContents(null);
+          organization.clearInventory(p);
           p.setLevel(0);
           logger.send(p, Lang.RELOAD.replace(null));
         } catch (Exception ignored) {}

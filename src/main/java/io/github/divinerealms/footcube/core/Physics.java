@@ -50,7 +50,7 @@ public class Physics {
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
   private double hitRadius, minRadius, bounceThreshold, movementThreshold;
-  private double jumpShooting, jumpRunning;
+  private double cubeJumpRightClick;
   private float soundVolume, soundPitch;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
@@ -352,8 +352,7 @@ public class Physics {
     bounceThreshold = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
     movementThreshold = config.getDouble("physics.movement-threshold", 0.05D);
 
-    jumpShooting = config.getDouble("physics.jump.shooting", 0.7D);
-    jumpRunning = config.getDouble("physics.jump.running", 0.25D);
+    cubeJumpRightClick = config.getDouble("physics.jump", 0.7D);
 
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);

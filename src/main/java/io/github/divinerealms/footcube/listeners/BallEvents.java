@@ -16,12 +16,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
-public class BallControl implements Listener {
+public class BallEvents implements Listener {
   private final Physics physics;
   private final Organization org;
   private final Logger logger;
@@ -29,7 +27,7 @@ public class BallControl implements Listener {
 
   private static final String PERM_HIT_DEBUG = "footcube.admin.hitdebug";
 
-  public BallControl(FCManager fcManager) {
+  public BallEvents(FCManager fcManager) {
     this.physics = fcManager.getPhysics();
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
@@ -37,12 +35,12 @@ public class BallControl implements Listener {
   }
 
   @EventHandler
-  public void disableBallDamage(EntityDamageEvent event) {
+  public void disableDamage(EntityDamageEvent event) {
     if (event.getEntity() instanceof Slime && physics.getCubes().contains((Slime) event.getEntity())) event.setCancelled(true);
   }
 
   @EventHandler
-  public void ballHitDetection(EntityDamageByEntityEvent event) {
+  public void hitDetection(EntityDamageByEntityEvent event) {
     if (!(event.getEntity() instanceof Slime)) return;
     Slime cube = (Slime) event.getEntity();
     if (!physics.getCubes().contains(cube)) return;
@@ -74,7 +72,7 @@ public class BallControl implements Listener {
   }
 
   @EventHandler
-  public void ballRightClick(PlayerInteractEntityEvent event) {
+  public void rightClick(PlayerInteractEntityEvent event) {
     if (!(event.getRightClicked() instanceof Slime)) return;
     if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
     if (!physics.getCubes().contains((Slime) event.getRightClicked())) return;
@@ -84,39 +82,11 @@ public class BallControl implements Listener {
     long now = System.currentTimeMillis();
 
     Slime cube = (Slime) event.getRightClicked();
-
-    // *** NEW TEST FEATURE ***
-    // If the player is running and right-clicks a cube, it doesn't jump that high so the cube won't go over players' head.
-    // If the player is relatively standing still (preparing to shoot), it will jump normally.
-    // *** EXPERIMENTAL FEATURE ***
-    double speed = physics.getSpeed().getOrDefault(player.getUniqueId(), 0D);
-    double verticalBoost = speed > physics.getMovementThreshold() ? physics.getJumpRunning() : physics.getJumpShooting();
-
-    cube.setVelocity(cube.getVelocity().add(new Vector(0, verticalBoost, 0)));
+    cube.setVelocity(cube.getVelocity().add(new Vector(0, physics.getCubeJumpRightClick(), 0)));
     physics.getKicked().put(player.getUniqueId(), now);
 
     org.ballTouch(player);
     cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F);
     physics.recordPlayerAction(event.getPlayer());
-  }
-
-  @EventHandler
-  public void onMove(PlayerMoveEvent event) {
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    physics.recordPlayerAction(event.getPlayer());
-  }
-
-  @EventHandler
-  public void playerChargeCalculator(PlayerToggleSneakEvent event) {
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-
-    Player player = event.getPlayer();
-    if (event.isSneaking()) {
-      physics.getCharges().put(player.getUniqueId(), 0D);
-      physics.recordPlayerAction(event.getPlayer());
-    } else {
-      player.setExp(0F);
-      physics.getCharges().remove(player.getUniqueId());
-    }
   }
 }

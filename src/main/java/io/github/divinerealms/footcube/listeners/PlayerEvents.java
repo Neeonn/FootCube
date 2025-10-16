@@ -91,6 +91,12 @@ public class PlayerEvents implements Listener {
   }
 
   @EventHandler
+  public void onMove(PlayerMoveEvent event) {
+    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
+    physics.recordPlayerAction(event.getPlayer());
+  }
+
+  @EventHandler
   public void playerSpeedConsumption(PlayerInteractEvent event) {
     if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
     Action action = event.getAction();
@@ -107,6 +113,20 @@ public class PlayerEvents implements Listener {
     match.sugarCooldown.put(player, System.currentTimeMillis());
     player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 5 * 20, 1));
     event.setCancelled(true);
+  }
+
+  @EventHandler
+  public void playerChargeCalculator(PlayerToggleSneakEvent event) {
+    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
+
+    Player player = event.getPlayer();
+    if (event.isSneaking()) {
+      physics.getCharges().put(player.getUniqueId(), 0D);
+      physics.recordPlayerAction(event.getPlayer());
+    } else {
+      player.setExp(0F);
+      physics.getCharges().remove(player.getUniqueId());
+    }
   }
 
   @EventHandler

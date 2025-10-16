@@ -21,6 +21,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 import java.lang.reflect.Field;
@@ -39,21 +40,26 @@ public class Physics {
   private final HashSet<Slime> cubes = new HashSet<>();
   private final Map<UUID, Vector> velocities = new HashMap<>();
   private final Map<UUID, Long> kicked = new HashMap<>();
-  private final Map<UUID, Double> speed = new HashMap<>();
-  private final Map<UUID, Double> charges = new HashMap<>();
-  private final Map<UUID, Long> ballHitCooldowns = new HashMap<>();
-  private final Map<UUID, Long> lastAction = new HashMap<>();
+  private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
+  private final Map<UUID, Double> charges = new ConcurrentHashMap<>();
+  private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
+  private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
+  private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
-  private long CHARGED_HIT_COOLDOWN, REGULAR_HIT_COOLDOWN, AFK_THRESHOLD;
-  private double MAX_KP, SOFT_CAP_MIN_FACTOR, CHARGE_MULTIPLIER, BASE_POWER, CHARGE_RECOVERY_RATE, HIT_RADIUS, MIN_RADIUS, BOUNCE_THRESHOLD;
-  private float SOUND_VOLUME, SOUND_PITCH;
+  private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
+  private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
+  private double hitRadius, minRadius, bounceThreshold, movementThreshold;
+  private double jumpShooting, jumpRunning;
+  private float soundVolume, soundPitch;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   private static final String CONFIG_PARTICLES_BASE = "particles.";
 
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
+
+  private BukkitTask speedUpdateTask;
 
   @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -64,6 +70,30 @@ public class Physics {
     this.dataManager = fcManager.getDataManager();
     this.config = fcManager.getConfigManager().getConfig("config.yml");
     this.reload();
+    this.startSpeedCalculation();
+  }
+
+  private void startSpeedCalculation() {
+    if (speedUpdateTask != null) speedUpdateTask.cancel();
+
+    speedUpdateTask = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+      for (Player player : plugin.getServer().getOnlinePlayers()) {
+        if (player.getGameMode() != GameMode.SURVIVAL) { lastLocations.remove(player.getUniqueId()); continue; }
+
+        Location current = player.getLocation();
+        Location last = lastLocations.put(player.getUniqueId(), current);
+
+        if (last == null) continue;
+
+        double dx = current.getX() - last.getX();
+        double dy = (current.getY() - last.getY()) / 2;
+        double dz = current.getZ() - last.getZ();
+
+        double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        double normalizedSpeed = distanceTraveled / speedCalcInterval;
+        speed.put(player.getUniqueId(), normalizedSpeed);
+      }
+    }, 1L, speedCalcInterval);
   }
 
   public Slime spawnCube(Location location) {
@@ -93,7 +123,7 @@ public class Physics {
 
   public double getDistance(Location locA, Location locB) {
     double dx = locA.getX() - locB.getX();
-    double dy = (locA.getY() - 1) - locB.getY() - 0.25 - 1.25;
+    double dy = (locA.getY() - 1) - locB.getY() - 1.5;
     if (dy < 0) dy = 0;
     double dz = locA.getZ() - locB.getZ();
 
@@ -101,9 +131,9 @@ public class Physics {
   }
 
   public KickResult calculateKickPower(Player player) {
-    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * CHARGE_MULTIPLIER;
-    double speed = this.speed.getOrDefault(player.getUniqueId(), 1D);
-    double power = speed * 2 + BASE_POWER;
+    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * chargeMultiplier;
+    double speed = this.speed.getOrDefault(player.getUniqueId(), 0.5D);
+    double power = speed * 2 + basePower;
     double baseKickPower = player.isSneaking() ? charge * power : power;
     double finalKickPower = capKickPower(baseKickPower);
 
@@ -111,14 +141,14 @@ public class Physics {
   }
 
   private double capKickPower(double baseKickPower) {
-    if (baseKickPower <= MAX_KP) return baseKickPower;
-    double minRandomKP = MAX_KP * SOFT_CAP_MIN_FACTOR;
-    return RANDOM.nextDouble(minRandomKP, MAX_KP);
+    if (baseKickPower <= maxKP) return baseKickPower;
+    double minRandomKP = maxKP * softCapMinFactor;
+    return RANDOM.nextDouble(minRandomKP, maxKP);
   }
 
   public boolean canHitBall(Player player) {
     long now = System.currentTimeMillis();
-    long cooldown = player.isSneaking() ? CHARGED_HIT_COOLDOWN : REGULAR_HIT_COOLDOWN;
+    long cooldown = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
     long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
     if (now - lastHit < cooldown) return false;
     ballHitCooldowns.put(player.getUniqueId(), now);
@@ -140,14 +170,17 @@ public class Physics {
     long now = System.currentTimeMillis();
     kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
 
-    plugin.getServer().getOnlinePlayers().forEach(player -> {
-      Double charge = charges.get(player.getUniqueId());
-      if (charge == null) return;
+    for (UUID uuid : new HashSet<>(charges.keySet())) {
+      Player player = plugin.getServer().getPlayer(uuid);
+      if (player == null || !player.isOnline()) { charges.remove(uuid); continue; }
 
-      double nextCharge = 1 - (1 - charge) * CHARGE_RECOVERY_RATE;
-      charges.put(player.getUniqueId(), nextCharge);
+      Double charge = charges.get(uuid);
+      if (charge == null) continue;
+
+      double nextCharge = 1 - (1 - charge) * chargeRecoveryRate;
+      charges.put(uuid, nextCharge);
       player.setExp((float) nextCharge);
-    });
+    }
 
     List<Slime> toRemove = new ArrayList<>();
     if (cubes.isEmpty()) return;
@@ -173,11 +206,11 @@ public class Physics {
         if (isAFK(player)) continue;
 
         double distance = getDistance(cube.getLocation(), player.getLocation());
-        if (distance <= HIT_RADIUS) {
+        if (distance <= hitRadius) {
           double speed = newV.length();
-          if (distance <= MIN_RADIUS && speed >= 0.5) newV.multiply(0.5 / speed);
+          if (distance <= minRadius && speed >= 0.5) newV.multiply(0.5 / speed);
 
-          double power = this.speed.getOrDefault(player.getUniqueId(), 1D) / 3 + oldV.length() / 6;
+          double power = this.speed.getOrDefault(player.getUniqueId(), 0D) / 3 + oldV.length() / 6;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
           org.ballTouch(player);
           kicked = true;
@@ -212,27 +245,27 @@ public class Physics {
             double b = loc.getZ() - a * loc.getX();
             double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1);
 
-            if (D < MIN_RADIUS) newV.multiply(delta / newV.length());
+            if (D < minRadius) newV.multiply(delta / newV.length());
           }
         }
       }
 
       if (newV.getX() == 0) {
         newV.setX(-oldV.getX() * 0.8);
-        if (Math.abs(oldV.getX()) > BOUNCE_THRESHOLD) sound = true;
+        if (Math.abs(oldV.getX()) > bounceThreshold) sound = true;
       } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < 0.1) newV.setX(oldV.getX() * 0.98);
 
       if (newV.getZ() == 0) {
         newV.setZ(-oldV.getZ() * 0.8);
-        if (Math.abs(oldV.getZ()) > BOUNCE_THRESHOLD) sound = true;
+        if (Math.abs(oldV.getZ()) > bounceThreshold) sound = true;
       } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < 0.1) newV.setZ(oldV.getZ() * 0.98);
 
       if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - 0.05) {
         newV.setY(-oldV.getY() * 0.8);
-        if (Math.abs(oldV.getY()) > BOUNCE_THRESHOLD) sound = true;
+        if (Math.abs(oldV.getY()) > bounceThreshold) sound = true;
       }
 
-      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, SOUND_VOLUME, SOUND_PITCH);
+      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch);
 
       cube.setVelocity(newV);
       velocities.put(id, newV);
@@ -250,9 +283,7 @@ public class Physics {
     for (Slime cube : cubes) {
       if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
 
-      for (Entity entity : cube.getNearbyEntities(100, 100, 100)) {
-        if (!(entity instanceof Player)) continue;
-        Player player = (Player) entity;
+      for (Player player : plugin.getServer().getOnlinePlayers()) {
         PlayerSettings settings = getPlayerSettings(player);
         if (settings == null || !settings.isParticlesEnabled()) continue;
 
@@ -305,23 +336,40 @@ public class Physics {
   }
 
   public void reload() {
-    CHARGED_HIT_COOLDOWN = config.getLong("physics.cooldowns.charged-hit", 500);
-    REGULAR_HIT_COOLDOWN = config.getLong("physics.cooldowns.regular-hit", 150);
-    AFK_THRESHOLD = config.getLong("physics.afk-threshold", 60000);
-    MAX_KP = config.getDouble("physics.kick-power.max", 6.75);
-    SOFT_CAP_MIN_FACTOR = config.getDouble("physics.kick-power.soft-cap-min-factor", 0.8);
-    CHARGE_MULTIPLIER = config.getDouble("physics.kick-power.charge-multiplier", 7.0);
-    BASE_POWER = config.getDouble("physics.kick-power.base-power", 0.4);
-    CHARGE_RECOVERY_RATE = config.getDouble("physics.charge-recovery-rate", 0.945);
-    HIT_RADIUS = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
-    MIN_RADIUS = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
-    BOUNCE_THRESHOLD = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
-    SOUND_VOLUME = (float) config.getDouble("physics.sound.volume", 0.5);
-    SOUND_PITCH = (float) config.getDouble("physics.sound.pitch", 1.0);
+    chargedHitCooldown = config.getLong("physics.cooldowns.charged-hit", 500);
+    regularHitCooldown = config.getLong("physics.cooldowns.regular-hit", 150);
+    afkThreshold = config.getLong("physics.afk-threshold", 60000);
+    speedCalcInterval = config.getLong("physics.speed-calculation-interval", 5L);
+
+    maxKP = config.getDouble("physics.kick-power.max", 6.75);
+    softCapMinFactor = config.getDouble("physics.kick-power.soft-cap-min-factor", 0.8);
+    chargeMultiplier = config.getDouble("physics.kick-power.charge-multiplier", 7.0);
+    basePower = config.getDouble("physics.kick-power.base-power", 0.4);
+    chargeRecoveryRate = config.getDouble("physics.charge-recovery-rate", 0.945);
+
+    hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
+    minRadius = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
+    bounceThreshold = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
+    movementThreshold = config.getDouble("physics.movement-threshold", 0.05D);
+
+    jumpShooting = config.getDouble("physics.jump.shooting", 0.7D);
+    jumpRunning = config.getDouble("physics.jump.running", 0.25D);
+
+    soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
+    soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
+
+    startSpeedCalculation();
   }
 
   public void removePlayer(Player player) {
-    playerSettings.remove(player.getUniqueId());
+    UUID uuid = player.getUniqueId();
+    playerSettings.remove(uuid);
+    speed.remove(uuid);
+    lastLocations.remove(uuid);
+    charges.remove(uuid);
+    kicked.remove(uuid);
+    ballHitCooldowns.remove(uuid);
+    lastAction.remove(uuid);
   }
 
   public void recordPlayerAction(Player player) {
@@ -330,10 +378,11 @@ public class Physics {
 
   public boolean isAFK(Player player) {
     long last = lastAction.getOrDefault(player.getUniqueId(), 0L);
-    return System.currentTimeMillis() - last > AFK_THRESHOLD;
+    return System.currentTimeMillis() - last > afkThreshold;
   }
 
   public void cleanup() {
+    if (speedUpdateTask != null) speedUpdateTask.cancel();
     cubes.clear();
     velocities.clear();
     kicked.clear();

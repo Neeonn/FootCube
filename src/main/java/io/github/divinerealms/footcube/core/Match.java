@@ -267,11 +267,11 @@ public class Match {
   public void teamChat(Player p, String message) {
     if (this.isRed.get(p)) {
       for (Player player : this.redPlayers) {
-        if (player != null) logger.send(player, Lang.TEAMCHAT_RED.replace(new String[]{p.getName()}) + message);
+        if (player != null) logger.send(player, Lang.TEAMCHAT_RED.replace(new String[]{fcManager.getChat().getPlayerPrefix(p) + p.getName()}) + message);
       }
     } else {
       for (Player player : this.bluePlayers) {
-        if (player != null) logger.send(player, Lang.TEAMCHAT_BLUE.replace(new String[]{p.getName()}) + message);
+        if (player != null) logger.send(player, Lang.TEAMCHAT_BLUE.replace(new String[]{fcManager.getChat().getPlayerPrefix(p) + p.getName()}) + message);
       }
     }
   }

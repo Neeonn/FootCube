@@ -17,6 +17,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
 public class BallEvents implements Listener {
@@ -24,6 +25,7 @@ public class BallEvents implements Listener {
   private final Organization org;
   private final Logger logger;
   private final Plugin plugin;
+  private final BukkitScheduler scheduler;
 
   private static final String PERM_HIT_DEBUG = "footcube.admin.hitdebug";
 
@@ -32,6 +34,7 @@ public class BallEvents implements Listener {
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
     this.plugin = fcManager.getPlugin();
+    this.scheduler = plugin.getServer().getScheduler();
   }
 
   @EventHandler
@@ -41,13 +44,14 @@ public class BallEvents implements Listener {
 
   @EventHandler
   public void hitDetection(EntityDamageByEntityEvent event) {
+    if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
     if (!(event.getEntity() instanceof Slime)) return;
+
     Slime cube = (Slime) event.getEntity();
     if (!physics.getCubes().contains(cube)) return;
 
     if (!(event.getDamager() instanceof Player)) return;
     Player player = (Player) event.getDamager();
-    if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
 
     event.setCancelled(true);
 
@@ -60,12 +64,12 @@ public class BallEvents implements Listener {
 
     KickResult kickResult = physics.calculateKickPower(player);
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    cube.setVelocity(kickResult.getCharge() > 1D ? kick : cube.getVelocity().add(kick));
+    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 
-    plugin.getServer().getScheduler().runTask(plugin, () -> {
+    scheduler.runTask(plugin, () -> {
       PlayerSettings settings = physics.getPlayerSettings(player);
       cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
-      if (settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
+      if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
     });
 
     if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
@@ -74,19 +78,20 @@ public class BallEvents implements Listener {
   @EventHandler
   public void rightClick(PlayerInteractEntityEvent event) {
     if (!(event.getRightClicked() instanceof Slime)) return;
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    if (!physics.getCubes().contains((Slime) event.getRightClicked())) return;
-    if (physics.getKicked().containsKey(event.getPlayer().getUniqueId())) return;
 
     Player player = event.getPlayer();
-    long now = System.currentTimeMillis();
-
     Slime cube = (Slime) event.getRightClicked();
+
+    if (player.getGameMode() != GameMode.SURVIVAL) return;
+    if (!physics.getCubes().contains(cube)) return;
+    if (physics.getKicked().containsKey(player.getUniqueId())) return;
+
+    long now = System.currentTimeMillis();
     cube.setVelocity(cube.getVelocity().add(new Vector(0, physics.getCubeJumpRightClick(), 0)));
     physics.getKicked().put(player.getUniqueId(), now);
 
     org.ballTouch(player);
-    cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F);
+    scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F));
     physics.recordPlayerAction(event.getPlayer());
   }
 }

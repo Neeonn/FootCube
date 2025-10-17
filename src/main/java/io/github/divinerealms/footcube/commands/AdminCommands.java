@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 public class AdminCommands implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
@@ -53,7 +51,6 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   private static final String PERM_COMMAND_DISABLER = PERM_MAIN + ".commanddisabler";
   private static final String PERM_MATCHMAN = PERM_MAIN + ".matchman";
   private static final String PERM_FORCE_LEAVE = PERM_MAIN + ".forceleave";
-  private static final String PERM_CFG_SET = PERM_MAIN + ".cfg-set";
 
   public AdminCommands(FCManager fcManager, DisableCommands disableCommands) {
     this.fcManager = fcManager;
@@ -346,6 +343,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         break;
 
       case "matchman":
+      case "mm":
         if (!(sender instanceof Player)) return inGameOnly(sender);
         if (!sender.hasPermission(PERM_MATCHMAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MATCHMAN, label + " " + sub})); return true; }
         if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end|speed>"})); return true; }
@@ -406,6 +404,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         break;
 
       case "forceleave":
+      case "fl":
         if (!sender.hasPermission(PERM_FORCE_LEAVE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_FORCE_LEAVE, label + " " + sub})); return true; }
         if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player>"})); return true; }
 
@@ -415,33 +414,6 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         match = MatchHelper.getMatch(org, target);
         MatchHelper.leaveMatch(org, target, match, logger, true);
         logger.send(sender, Lang.FORCE_LEAVE.replace(new String[]{target.getDisplayName()}));
-        break;
-
-      case "configset":
-      case "cfgset":
-        if (!sender.hasPermission(PERM_CFG_SET)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CFG_SET, label + " " + sub})); return true; }
-        if (args.length < 3) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <key> <value>"})); return true; }
-
-        String key = args[1], valueString = args[2];
-        try {
-          if (!config.isSet(key)) { logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "&cConfig key \"&e" + key + "&c\" not found or is a section."); return true; }
-          Object value;
-          if (valueString.equalsIgnoreCase("true") || valueString.equalsIgnoreCase("false")) value = Boolean.parseBoolean(valueString);
-          else if (valueString.matches("-?\\d+")) value = Integer.parseInt(valueString);
-          else if (valueString.matches("-?\\d+\\.\\d+")) value = Double.parseDouble(valueString);
-          else value = valueString;
-
-          Object defaultValue = config.get(key);
-          config.set(key, value);
-          configManager.saveConfig("config.yml");
-          fcManager.reload();
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "&aConfig key &b" + key + "&a updated to &e" + value + "&a (from: &7" + defaultValue + "&a) and plugin reloaded.");
-        } catch (NumberFormatException ignored) {
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "&cInvalid value \"&e" + valueString + "&c\" for a number type.");
-        } catch (Exception exception) {
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "&cAn unexpected error occurred while setting the key: " + key);
-          plugin.getLogger().log(Level.SEVERE, "Error setting config key \"" + key + "\"!", exception);
-        }
         break;
 
       default: sendHelp(sender); break;
@@ -466,7 +438,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     List<String> completions = new ArrayList<>();
 
     if (args.length == 1) {
-      completions.addAll(Arrays.asList("reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby", "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "help", "cfgset", "configset"));
+      completions.addAll(Arrays.asList("reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby", "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "help"));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
         case "reload": completions.addAll(Arrays.asList("configs", "all")); break;
@@ -480,15 +452,6 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "set": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;
         case "matchman": completions.addAll(Arrays.asList("start", "end", "speed")); break;
         case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
-        case "configset":
-        case "cfgset":
-          completions.addAll(this.config.getKeys(true).stream()
-              .filter(s -> !this.config.isConfigurationSection(s))
-              .filter(s -> !s.equals("enabledCommands"))
-              .filter(s -> !s.equals("lobby"))
-              .filter(s -> s.startsWith(args[1].toLowerCase()))
-              .collect(Collectors.toList()));
-          break;
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));

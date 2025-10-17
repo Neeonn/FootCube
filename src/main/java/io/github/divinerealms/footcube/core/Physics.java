@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 @Getter
 public class Physics {
@@ -40,6 +41,7 @@ public class Physics {
   private final BukkitScheduler scheduler;
 
   private final HashSet<Slime> cubes = new HashSet<>();
+  private final Set<UUID> inactiveCubesIds = ConcurrentHashMap.newKeySet();
   private final Map<UUID, Vector> velocities = new HashMap<>();
   private final Map<UUID, Long> kicked = new HashMap<>();
   private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
@@ -52,6 +54,7 @@ public class Physics {
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
   private double hitRadius, hitRadiusSquared, minRadius, bounceThreshold, movementThreshold;
+  private double inactivityRadiusSquared;
   private double cubeJumpRightClick;
   private float soundVolume, soundPitch;
 
@@ -61,7 +64,7 @@ public class Physics {
   private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
-  private BukkitTask speedUpdateTask;
+  private BukkitTask speedUpdateTask, activityUpdateTask;
 
   @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -74,6 +77,30 @@ public class Physics {
     this.config = fcManager.getConfigManager().getConfig("config.yml");
     this.reload();
     this.startSpeedCalculation();
+    this.startActivityCheck();
+  }
+
+  private void startActivityCheck() {
+    if (activityUpdateTask != null) activityUpdateTask.cancel();
+
+    activityUpdateTask = scheduler.runTaskTimerAsynchronously(plugin, () -> {
+      if (cubes.isEmpty()) { inactiveCubesIds.clear(); return; }
+
+      List<UUID> activeCubes = new ArrayList<>();
+      Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+      double threshold = inactivityRadiusSquared;
+
+      for (Slime cube : cubes) {
+        if (cube.isDead()) continue;
+
+        boolean isNearPlayer = onlinePlayers.stream().anyMatch(player -> player.getLocation().distanceSquared(cube.getLocation()) <= threshold);
+        if (isNearPlayer) activeCubes.add(cube.getUniqueId());
+      }
+
+      Set<UUID> allCubeIds = cubes.stream().map(Entity::getUniqueId).collect(Collectors.toSet());
+      inactiveCubesIds.clear();
+      allCubeIds.stream().filter(id -> !activeCubes.contains(id)).forEach(inactiveCubesIds::add);
+    }, 20L, 20L * 5);
   }
 
   private void startSpeedCalculation() {
@@ -117,6 +144,7 @@ public class Physics {
     }
 
     cubes.add(cube);
+    inactiveCubesIds.remove(cube.getUniqueId());
     return cube;
   }
 
@@ -165,14 +193,12 @@ public class Physics {
   }
 
   public String onHitDebug(Player player, KickResult result) {
-    if (result.getCharge() > 1D) {
-      return Lang.HITDEBUG_CHARGED.replace(new String[]{
-          player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
-          String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
-      });
-    } else {
-      return Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
-    }
+    return result.isChargedHit()
+        ? Lang.HITDEBUG_CHARGED.replace(new String[]{
+            player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
+            String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
+        })
+        : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
   }
 
   public void tick() {
@@ -200,6 +226,8 @@ public class Physics {
       }
 
       UUID id = cube.getUniqueId();
+      if (inactiveCubesIds.contains(id)) continue;
+
       Vector oldV = velocities.getOrDefault(id, cube.getVelocity());
       Vector newV = cube.getVelocity().clone();
 
@@ -298,6 +326,7 @@ public class Physics {
 
     for (Slime cube : cubes) {
       if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
+      if (inactiveCubesIds.contains(cube.getUniqueId())) continue;
 
       Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
 
@@ -371,12 +400,16 @@ public class Physics {
     bounceThreshold = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
     movementThreshold = config.getDouble("physics.movement-threshold", 0.05D);
 
+    double inactivityRadius = config.getDouble("physics.distance-thresholds.inactivity-radius", 100D);
+    inactivityRadiusSquared = inactivityRadius * inactivityRadius;
+
     cubeJumpRightClick = config.getDouble("physics.jump", 0.7D);
 
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
 
     startSpeedCalculation();
+    startActivityCheck();
   }
 
   public void removePlayer(Player player) {
@@ -401,7 +434,9 @@ public class Physics {
 
   public void cleanup() {
     if (speedUpdateTask != null) speedUpdateTask.cancel();
+    if (activityUpdateTask != null) activityUpdateTask.cancel();
     cubes.clear();
+    inactiveCubesIds.clear();
     velocities.clear();
     kicked.clear();
     speed.clear();

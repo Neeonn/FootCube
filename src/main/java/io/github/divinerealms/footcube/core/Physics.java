@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.core;
 
-import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
@@ -19,8 +18,10 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
@@ -32,10 +33,11 @@ import java.util.logging.Level;
 
 @Getter
 public class Physics {
-  private final FootCube plugin;
+  private final Plugin plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
   private final FileConfiguration config;
+  private final BukkitScheduler scheduler;
 
   private final HashSet<Slime> cubes = new HashSet<>();
   private final Map<UUID, Vector> velocities = new HashMap<>();
@@ -66,6 +68,7 @@ public class Physics {
 
   public Physics(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
+    this.scheduler = plugin.getServer().getScheduler();
     this.org = fcManager.getOrg();
     this.dataManager = fcManager.getDataManager();
     this.config = fcManager.getConfigManager().getConfig("config.yml");
@@ -76,7 +79,7 @@ public class Physics {
   private void startSpeedCalculation() {
     if (speedUpdateTask != null) speedUpdateTask.cancel();
 
-    speedUpdateTask = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+    speedUpdateTask = scheduler.runTaskTimer(plugin, () -> {
       for (Player player : plugin.getServer().getOnlinePlayers()) {
         UUID uuid = player.getUniqueId();
         if (player.getGameMode() != GameMode.SURVIVAL) { lastLocations.remove(uuid); continue; }
@@ -275,7 +278,7 @@ public class Physics {
         if (Math.abs(oldV.getY()) > bounceThreshold) sound = true;
       }
 
-      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch);
+      if (sound) scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch));
 
       cube.setVelocity(newV);
       velocities.put(id, newV);

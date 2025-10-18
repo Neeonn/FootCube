@@ -70,9 +70,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) { sendHelp(sender); return true; }
 
-    String sub = args[0].toLowerCase();
+    String sub = args[0].toLowerCase(), formattedTime;
     Player player, target;
     Match match;
+    PlayerData playerData;
 
     switch (sub) {
       case "reload":
@@ -131,7 +132,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         long banUntil = System.currentTimeMillis() + (seconds * 1000L);
         org.getLeaveCooldowns().put(target.getUniqueId(), banUntil);
 
-        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na " + seconds + "s.");
+        playerData = dataManager.get(target);
+        playerData.set("ban", banUntil);
+        dataManager.savePlayerData(target.getName());
+
+        formattedTime = String.format("%02dmin %02ds", seconds / 60, seconds);
+        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na &e" + formattedTime + "&c.");
         break;
 
       case "unban":
@@ -142,7 +148,27 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
         if (org.getLeaveCooldowns().remove(target.getUniqueId()) != null) {
+          playerData = dataManager.get(target);
+          playerData.set("ban", null);
+          dataManager.savePlayerData(target.getName());
+
           logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&a je unbanovan.");
+        } else {
+          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
+        }
+        break;
+
+      case "checkban":
+        if (!sender.hasPermission(PERM_BAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_BAN, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player>"})); return true; }
+
+        target = plugin.getServer().getPlayer(args[1]);
+        if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
+
+        if (org.getLeaveCooldowns().containsKey(target.getUniqueId())) {
+          long secondsLeft = org.getLeaveCooldowns().get(target.getUniqueId()) / 1000L;
+          formattedTime = String.format("%02dmin %02ds", secondsLeft / 60, secondsLeft);
+          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + formattedTime + "&c.");
         } else {
           logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
         }
@@ -156,7 +182,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         target = plugin.getServer().getPlayer(args[1]);
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-        PlayerData data = dataManager.get(target);
+        playerData = dataManager.get(target);
         String stat = args[2].toLowerCase();
         boolean clear = args[3].equalsIgnoreCase("clear");
         int amount = 0;
@@ -171,16 +197,16 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
         switch (stat) {
           case "wins": case "matches": case "ties": case "goals": case "winstreak": case "bestwinstreak":
-            data.set(stat, clear ? 0 : amount);
+            playerData.set(stat, clear ? 0 : amount);
             break;
 
           case "all":
-            data.set("wins", clear ? 0 : amount);
-            data.set("matches", clear ? 0 : amount);
-            data.set("ties", clear ? 0 : amount);
-            data.set("goals", clear ? 0 : amount);
-            data.set("winstreak", clear ? 0 : amount);
-            data.set("bestwinstreak", clear ? 0 : amount);
+            playerData.set("wins", clear ? 0 : amount);
+            playerData.set("matches", clear ? 0 : amount);
+            playerData.set("ties", clear ? 0 : amount);
+            playerData.set("goals", clear ? 0 : amount);
+            playerData.set("winstreak", clear ? 0 : amount);
+            playerData.set("bestwinstreak", clear ? 0 : amount);
             break;
 
           default:
@@ -438,7 +464,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     List<String> completions = new ArrayList<>();
 
     if (args.length == 1) {
-      completions.addAll(Arrays.asList("reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby", "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "help"));
+      completions.addAll(Arrays.asList(
+          "reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
+          "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "checkban", "help"
+      ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
         case "reload": completions.addAll(Arrays.asList("configs", "all")); break;
@@ -446,6 +475,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "forceleave":
         case "ban":
         case "unban":
+        case "checkban":
           plugin.getServer().getOnlinePlayers().forEach(p -> completions.add(p.getName()));
           break;
         case "setuparena":

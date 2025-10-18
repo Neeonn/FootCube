@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.HighScores;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
@@ -191,10 +192,9 @@ public class Organization {
 
     if (now < until) {
       long remainingSec = (until - now) / 1000;
-      long minutes = remainingSec / 60;
-      long seconds = remainingSec % 60;
+      String formattedTime = Utilities.formatTime(remainingSec);
 
-      logger.send(player, Lang.JOIN_BLOCKED.replace(new String[]{String.valueOf(minutes), String.valueOf(seconds)}));
+      logger.send(player, Lang.JOIN_BLOCKED.replace(new String[]{formattedTime}));
       return true;
     } else {
       leaveCooldowns.remove(uuid);

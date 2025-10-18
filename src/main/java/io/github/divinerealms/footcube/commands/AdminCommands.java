@@ -136,7 +136,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         playerData.set("ban", banUntil);
         dataManager.savePlayerData(target.getName());
 
-        formattedTime = String.format("%02dmin %02ds", seconds / 60, seconds);
+        formattedTime = Utilities.formatTime(seconds);
         logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na &e" + formattedTime + "&c.");
         break;
 
@@ -166,8 +166,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
         if (org.getLeaveCooldowns().containsKey(target.getUniqueId())) {
-          long secondsLeft = org.getLeaveCooldowns().get(target.getUniqueId()) / 1000L;
-          formattedTime = String.format("%02dmin %02ds", secondsLeft / 60, secondsLeft);
+          long secondsLeft = (org.getLeaveCooldowns().get(target.getUniqueId()) - System.currentTimeMillis()) / 1000L;
+          if (secondsLeft < 0) secondsLeft = 0;
+          formattedTime = Utilities.formatTime(secondsLeft);
           logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + formattedTime + "&c.");
         } else {
           logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");

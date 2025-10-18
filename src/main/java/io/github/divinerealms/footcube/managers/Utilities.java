@@ -61,6 +61,57 @@ public class Utilities {
     return totalSeconds;
   }
 
+  public static String formatTime(long totalSeconds) {
+    if (totalSeconds <= 0) return "0s";
+
+    final long SECONDS_IN_MINUTE = 60;
+    final long SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE;
+    final long SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR;
+
+    final long SECONDS_IN_MONTH = 30 * SECONDS_IN_DAY;
+    final long SECONDS_IN_YEAR = 365 * SECONDS_IN_DAY;
+
+    long seconds = totalSeconds;
+
+    long years = seconds / SECONDS_IN_YEAR;
+    seconds %= SECONDS_IN_YEAR;
+
+    long months = seconds / SECONDS_IN_MONTH;
+    seconds %= SECONDS_IN_MONTH;
+
+    long hours = seconds / SECONDS_IN_HOUR;
+    seconds %= SECONDS_IN_HOUR;
+
+    long minutes = seconds / SECONDS_IN_MINUTE;
+    seconds %= SECONDS_IN_MINUTE;
+
+    StringBuilder sb = new StringBuilder();
+
+    if (years > 0) sb.append(years).append("y");
+
+    if (months > 0) {
+      if (sb.length() > 0) sb.append(" ");
+      sb.append(months).append("mo");
+    }
+
+    if (hours > 0) {
+      if (sb.length() > 0) sb.append(" ");
+      sb.append(hours).append("h");
+    }
+
+    if (minutes > 0) {
+      if (sb.length() > 0) sb.append(" ");
+      sb.append(minutes).append("min");
+    }
+
+    if (seconds > 0 || sb.length() == 0) {
+      if (sb.length() > 0) sb.append(" ");
+      sb.append(seconds).append("s");
+    }
+
+    return sb.toString();
+  }
+
   public static void sendParticle(Player player, EnumParticle particle, Location loc, float offsetX, float offsetY, float offsetZ, float speed, int count) {
     sendParticle(player, particle, loc, offsetX, offsetY, offsetZ, speed, count, null);
   }

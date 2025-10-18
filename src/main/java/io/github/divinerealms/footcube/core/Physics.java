@@ -1,7 +1,6 @@
 package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
-import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
@@ -34,6 +33,7 @@ import java.util.stream.Collectors;
 
 @Getter
 public class Physics {
+  private final FCManager fcManager;
   private final Plugin plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
@@ -49,7 +49,6 @@ public class Physics {
   private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
   private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
   private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
-  private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
@@ -58,9 +57,6 @@ public class Physics {
   private double cubeJumpRightClick;
   private float soundVolume, soundPitch;
 
-  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
-  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
-  private static final String CONFIG_PARTICLES_BASE = "particles.";
   private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
@@ -70,6 +66,7 @@ public class Physics {
   @Getter public boolean hitDebugEnabled = false;
 
   public Physics(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.scheduler = plugin.getServer().getScheduler();
     this.org = fcManager.getOrg();
@@ -331,7 +328,7 @@ public class Physics {
       Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
 
       for (Player player : onlinePlayers) {
-        PlayerSettings settings = getPlayerSettings(player);
+        PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings == null || !settings.isParticlesEnabled()) continue;
 
         if (cube.getLocation().distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
@@ -345,41 +342,6 @@ public class Physics {
         }
       }
     }
-  }
-
-  public PlayerSettings getPlayerSettings(Player player) {
-    return playerSettings.get(player.getUniqueId());
-  }
-
-  public void preloadSettings(Player player, PlayerData playerData) {
-    PlayerSettings settings = getPlayerSettings(player);
-    if (settings == null) {
-      settings = new PlayerSettings();
-      playerSettings.put(player.getUniqueId(), settings);
-    }
-
-    if (playerData.has(CONFIG_PARTICLES_BASE + ".effect")) {
-      String effect = (String) playerData.get(CONFIG_PARTICLES_BASE + ".effect");
-      try {
-        EnumParticle particle = EnumParticle.valueOf(effect.split(":")[0]);
-        settings.setParticle(particle);
-
-        if (particle == EnumParticle.REDSTONE && effect.contains(":")) {
-          String colorName = effect.split(":")[1];
-          try {
-            settings.setCustomRedstoneColor(colorName);
-          } catch (IllegalArgumentException ignored) {}
-        }
-      } catch (IllegalArgumentException exception) {
-        plugin.getLogger().log(Level.WARNING, "Invalid particle effect found for player " + player.getName() + ": " + effect);
-      }
-    }
-
-    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
-    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
-    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
-    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
-    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
   }
 
   public void reload() {
@@ -414,7 +376,7 @@ public class Physics {
 
   public void removePlayer(Player player) {
     UUID uuid = player.getUniqueId();
-    playerSettings.remove(uuid);
+    fcManager.getPlayerSettings().remove(uuid);
     speed.remove(uuid);
     lastLocations.remove(uuid);
     charges.remove(uuid);
@@ -442,7 +404,7 @@ public class Physics {
     speed.clear();
     charges.clear();
     ballHitCooldowns.clear();
-    playerSettings.clear();
+    fcManager.getPlayerSettings().clear();
     lastAction.clear();
   }
 }

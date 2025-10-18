@@ -315,7 +315,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         String type = args[1].toLowerCase();
         playerData = dataManager.get(player);
         if (playerData == null) return true;
-        settings = physics.getPlayerSettings(player);
+        settings = fcManager.getPlayerSettings(player);
         switch (type) {
           case "kick":
             settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
@@ -346,7 +346,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         playerData = dataManager.get(player);
         if (playerData == null) return true;
 
-        settings = physics.getPlayerSettings(player);
+        settings = fcManager.getPlayerSettings(player);
         Sound sound = Sound.SUCCESSFUL_HIT;
         try {
           if (!args[2].equalsIgnoreCase("list")) sound = Sound.valueOf(args[2].toUpperCase());
@@ -410,7 +410,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         playerData = dataManager.get(player);
         if (playerData == null) return true;
 
-        settings = physics.getPlayerSettings(player);
+        settings = fcManager.getPlayerSettings(player);
         EnumParticle particle;
         try {
           particle = EnumParticle.valueOf(args[1].toUpperCase());

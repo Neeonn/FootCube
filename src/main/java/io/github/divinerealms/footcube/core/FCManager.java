@@ -11,19 +11,23 @@ import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.ListenerManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
-import io.github.divinerealms.footcube.utils.CubeCleaner;
-import io.github.divinerealms.footcube.utils.DisableCommands;
-import io.github.divinerealms.footcube.utils.FCPlaceholders;
-import io.github.divinerealms.footcube.utils.Logger;
+import io.github.divinerealms.footcube.utils.*;
 import lombok.Getter;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
+import net.minecraft.server.v1_8_R3.EnumParticle;
+import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 @Getter
@@ -52,6 +56,12 @@ public class FCManager {
 
   private boolean cubeCleanerRunning = false;
   private int cubeCleanerTaskID;
+
+  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
+  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
+  private static final String CONFIG_PARTICLES_BASE = "particles.";
+
+  private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
   public FCManager(FootCube plugin) throws IllegalStateException {
     this.plugin = plugin;
@@ -87,7 +97,7 @@ public class FCManager {
 
     plugin.getServer().getOnlinePlayers().forEach(player -> {
       PlayerData playerData = dataManager.get(player);
-      if (playerData != null) physics.preloadSettings(player, playerData);
+      if (playerData != null) preloadSettings(player, playerData);
     });
   }
 
@@ -186,6 +196,42 @@ public class FCManager {
 
   private void setDefaultIfMissing(FileConfiguration file, String path, Object value) {
     if (!file.isSet(path)) file.set(path, value);
+  }
+
+  public PlayerSettings getPlayerSettings(Player player) {
+    return playerSettings.get(player.getUniqueId());
+  }
+
+  public void preloadSettings(Player player, PlayerData playerData) {
+    PlayerSettings settings = getPlayerSettings(player);
+    if (settings == null) {
+      settings = new PlayerSettings();
+      playerSettings.put(player.getUniqueId(), settings);
+    }
+
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".effect")) {
+      String effect = (String) playerData.get(CONFIG_PARTICLES_BASE + ".effect");
+      try {
+        EnumParticle particle = EnumParticle.valueOf(effect.split(":")[0]);
+        settings.setParticle(particle);
+
+        if (particle == EnumParticle.REDSTONE && effect.contains(":")) {
+          String colorName = effect.split(":")[1];
+          try {
+            settings.setCustomRedstoneColor(colorName);
+          } catch (IllegalArgumentException ignored) {}
+        }
+      } catch (IllegalArgumentException exception) {
+        plugin.getLogger().log(Level.WARNING, "Invalid particle effect found for player " + player.getName() + ": " + effect);
+      }
+    }
+
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
+    if (playerData.has("ban")) org.getLeaveCooldowns().put(player.getUniqueId(), (Long) playerData.get("ban"));
   }
 
   public void saveAll() {

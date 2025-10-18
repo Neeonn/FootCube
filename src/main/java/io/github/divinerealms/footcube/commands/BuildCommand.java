@@ -3,7 +3,6 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.Bukkit;
@@ -18,16 +17,16 @@ import java.util.Collections;
 import java.util.List;
 
 public class BuildCommand implements CommandExecutor, TabCompleter {
+  private final FCManager fcManager;
   private final Organization org;
-  private final Physics physics;
   private final Logger logger;
 
   private static final String PERM_BUILD = "footcube.build";
   private static final String PERM_BUILD_OTHER = PERM_BUILD + ".other";
 
   public BuildCommand(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.org = fcManager.getOrg();
-    this.physics = fcManager.getPhysics();
     this.logger = fcManager.getLogger();
   }
 
@@ -38,7 +37,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
       if (!sender.hasPermission(PERM_BUILD)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_BUILD, label})); return true; }
 
       Player player = (Player) sender;
-      PlayerSettings settings = physics.getPlayerSettings(player);
+      PlayerSettings settings = fcManager.getPlayerSettings(player);
 
       if (org.isInGame(player)) { logger.send(sender, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
@@ -53,7 +52,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     Player target = Bukkit.getPlayerExact(args[0]);
     if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-    PlayerSettings settings = physics.getPlayerSettings(target);
+    PlayerSettings settings = fcManager.getPlayerSettings(target);
     if (org.isInGame(target)) { logger.send(sender, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{target.getDisplayName()})); return true; }
 
     settings.toggleBuild();

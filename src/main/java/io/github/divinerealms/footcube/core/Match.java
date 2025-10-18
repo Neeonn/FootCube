@@ -598,7 +598,7 @@ public class Match {
           });
 
       logger.send(p, goalMessage);
-      PlayerSettings settings = physics.getPlayerSettings(p);
+      PlayerSettings settings = fcManager.getPlayerSettings(p);
       if (settings.isGoalSoundEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);
 
       fcManager.getLogger().title(p, Lang.MATCH_GOAL_TITLE.replace(null),

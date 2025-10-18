@@ -29,6 +29,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 public class PlayerEvents implements Listener {
+  private final FCManager fcManager;
   private final Logger logger;
   private final Physics physics;
   private final Plugin plugin;
@@ -39,6 +40,7 @@ public class PlayerEvents implements Listener {
   private static final String PERM_BYPASS_DISABLED_COMMANDS = "footcube.bypass.disablecommands";
   
   public PlayerEvents(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
     this.physics = fcManager.getPhysics();
     this.plugin = fcManager.getPlugin();
@@ -75,7 +77,7 @@ public class PlayerEvents implements Listener {
     plugin.getServer().getScheduler().runTask(plugin, () -> {
       PlayerData playerData = dataManager.get(player);
       dataManager.addDefaults(playerData);
-      physics.preloadSettings(player, playerData);
+      fcManager.preloadSettings(player, playerData);
     });
   }
 
@@ -152,7 +154,7 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onBlockPlace(BlockPlaceEvent event) {
     Player player = event.getPlayer();
-    PlayerSettings settings = physics.getPlayerSettings(player);
+    PlayerSettings settings = fcManager.getPlayerSettings(player);
 
     if (org.isInGame(player) || !settings.isBuildEnabled()) event.setCancelled(true);
   }
@@ -160,7 +162,7 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onBlockBreak(BlockBreakEvent event) {
     Player player = event.getPlayer();
-    PlayerSettings settings = physics.getPlayerSettings(player);
+    PlayerSettings settings = fcManager.getPlayerSettings(player);
 
     if (org.isInGame(player) || !settings.isBuildEnabled()) event.setCancelled(true);
   }

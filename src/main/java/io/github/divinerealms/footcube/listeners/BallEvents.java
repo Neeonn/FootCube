@@ -21,6 +21,7 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
 public class BallEvents implements Listener {
+  private final FCManager fcManager;
   private final Physics physics;
   private final Organization org;
   private final Logger logger;
@@ -30,6 +31,7 @@ public class BallEvents implements Listener {
   private static final String PERM_HIT_DEBUG = "footcube.admin.hitdebug";
 
   public BallEvents(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.physics = fcManager.getPhysics();
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
@@ -67,7 +69,7 @@ public class BallEvents implements Listener {
     cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 
     scheduler.runTask(plugin, () -> {
-      PlayerSettings settings = physics.getPlayerSettings(player);
+      PlayerSettings settings = fcManager.getPlayerSettings(player);
       cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
       if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
     });

@@ -74,6 +74,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     Player player, target;
     Match match;
     PlayerData playerData;
+    long banUntil;
 
     switch (sub) {
       case "reload":
@@ -129,7 +130,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         }
 
         if (seconds <= 0) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " ban <player> <time>"})); return true; }
-        long banUntil = System.currentTimeMillis() + (seconds * 1000L);
+        banUntil = System.currentTimeMillis() + (seconds * 1000L);
         org.getLeaveCooldowns().put(target.getUniqueId(), banUntil);
 
         playerData = dataManager.get(target);
@@ -166,10 +167,24 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
         if (org.getLeaveCooldowns().containsKey(target.getUniqueId())) {
-          long secondsLeft = (org.getLeaveCooldowns().get(target.getUniqueId()) - System.currentTimeMillis()) / 1000L;
-          if (secondsLeft < 0) secondsLeft = 0;
-          formattedTime = Utilities.formatTime(secondsLeft);
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + formattedTime + "&c.");
+          banUntil = org.getLeaveCooldowns().get(target.getUniqueId());
+          long now = System.currentTimeMillis();
+
+          if (now >= banUntil) {
+            org.getLeaveCooldowns().remove(target.getUniqueId());
+
+            playerData = dataManager.get(target);
+            if (playerData != null) {
+              playerData.set("ban", null);
+              dataManager.savePlayerData(target.getName());
+            }
+
+            logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
+          } else {
+            long secondsLeft = (banUntil - now) / 1000L;
+            formattedTime = Utilities.formatTime(secondsLeft);
+            logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + formattedTime + "&c.");
+          }
         } else {
           logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
         }

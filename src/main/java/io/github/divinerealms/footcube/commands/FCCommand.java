@@ -320,17 +320,17 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           case "kick":
             settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
             playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
-            logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
           case "goal":
             settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
             playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
-            logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
           case "particles":
             settings.setParticlesEnabled(!settings.isParticlesEnabled());
             playerData.set("particles.enabled", settings.isParticlesEnabled());
-            logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.OR.replace(null) : Lang.OFF.replace(null)}));
+            logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
           default:
             logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"}));

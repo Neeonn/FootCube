@@ -482,7 +482,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
           "reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
-          "setpracticearea", "matchman", "hitdebug", "cd", "forceleave", "ban", "unban", "checkban", "help"
+          "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd", "forceleave",
+          "fl", "ban", "unban", "checkban", "help"
       ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {

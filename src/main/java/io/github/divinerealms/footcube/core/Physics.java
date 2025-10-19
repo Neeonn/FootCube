@@ -1,7 +1,6 @@
 package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
-import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -11,7 +10,10 @@ import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
-import org.bukkit.*;
+import org.bukkit.Color;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
 import org.bukkit.entity.Entity;
@@ -32,39 +34,41 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-@Getter
 public class Physics {
   private final FCManager fcManager;
   private final Plugin plugin;
   private final Organization org;
-  private final PlayerDataManager dataManager;
   private final Logger logger;
   private final FileConfiguration config;
   private final BukkitScheduler scheduler;
 
-  private final HashSet<Slime> cubes = new HashSet<>();
+  @Getter private final HashSet<Slime> cubes = new HashSet<>();
   private final Set<UUID> inactiveCubesIds = ConcurrentHashMap.newKeySet();
   private final Map<UUID, Vector> velocities = new HashMap<>();
-  private final Map<UUID, Long> kicked = new HashMap<>();
+  @Getter private final Map<UUID, Long> kicked = new HashMap<>();
   private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
-  private final Map<UUID, Double> charges = new ConcurrentHashMap<>();
-  private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
+  @Getter private final Map<UUID, Double> charges = new ConcurrentHashMap<>();
+  @Getter private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
   private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
   private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
 
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
-  private double hitRadius, hitRadiusSquared, minRadius, bounceThreshold, movementThreshold;
+  private double hitRadius;
+  private double hitRadiusSquared;
+  private double minRadius;
+  private double minRadiusSquared;
+  private double bounceThreshold;
   private double inactivityRadiusSquared;
-  private double cubeJumpRightClick;
+  @Getter private double cubeJumpRightClick;
   private float soundVolume, soundPitch;
 
   private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
-  private BukkitTask speedUpdateTask, activityUpdateTask;
+  private BukkitTask speedUpdateTask, activityUpdateTask, physicsTask, glowTask;
 
-  @Setter private boolean matchesEnabled = true;
+  @Getter @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
 
   public Physics(FCManager fcManager) {
@@ -72,12 +76,19 @@ public class Physics {
     this.plugin = fcManager.getPlugin();
     this.scheduler = plugin.getServer().getScheduler();
     this.org = fcManager.getOrg();
-    this.dataManager = fcManager.getDataManager();
     this.logger = fcManager.getLogger();
     this.config = fcManager.getConfigManager().getConfig("config.yml");
     this.reload();
-    this.startSpeedCalculation();
-    this.startActivityCheck();
+  }
+
+  private void startPhysicsTask() {
+    if (physicsTask != null) physicsTask.cancel();
+    physicsTask = scheduler.runTaskTimer(plugin, this::tick, 1L, 1L);
+  }
+
+  private void startGlowTask() {
+    if (glowTask != null) glowTask.cancel();
+    glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, 5L, 5L);
   }
 
   private void startActivityCheck() {
@@ -153,6 +164,7 @@ public class Physics {
     for (Entity entity : entities) if (entity instanceof Slime) ((Slime) entity).setHealth(0);
   }
 
+  // *** DEPRECATED ***
   public double getDistance(Location locA, Location locB) {
     return Math.sqrt(getDistanceSquared(locA, locB));
   }
@@ -200,6 +212,7 @@ public class Physics {
     return now - lastHit >= cooldown;
   }
 
+  // *** EXPERIMENTAL NEW FEATURE, NOT USED ATM ***
   public void showCooldownFeedback(Player player) {
     long now = System.currentTimeMillis();
     long cooldownDuration = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
@@ -217,7 +230,7 @@ public class Physics {
     });
   }
 
-  public void tick() {
+  private void tick() {
     long now = System.currentTimeMillis();
     kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
 
@@ -257,11 +270,11 @@ public class Physics {
         if (player.getGameMode() != GameMode.SURVIVAL) continue;
         if (isAFK(player)) continue;
 
-        double distanceSq = getDistanceSquared(cube.getLocation(), player.getLocation());
+        double distanceSquared = getDistanceSquared(cube.getLocation(), player.getLocation());
         double distance = -1;
 
-        if (distanceSq <= hitRadiusSquared) {
-          distance = Math.sqrt(distanceSq);
+        if (distanceSquared <= hitRadiusSquared) {
+          distance = Math.sqrt(distanceSquared);
 
           double speed = newV.length();
           if (distance <= minRadius && speed >= 0.5) newV.multiply(0.5 / speed);
@@ -273,43 +286,42 @@ public class Physics {
           if (power > 0.15) sound = true;
         }
 
-        double deltaSquared = (distance > -1) ? distance * distance : getDistanceSquared(cube.getLocation(), player.getLocation());
+        double newVSquared = newV.lengthSquared();
+        double proximityThresholdSquared = newVSquared * 1.69;
 
-        final double LOOKAHEAD_FACTOR_SQUARED = 1.69;
-        double newVLengthSquared = newV.lengthSquared();
+        if (distanceSquared < proximityThresholdSquared) {
+          double delta = (distance > -1) ? distance : Math.sqrt(distanceSquared);
+          double newVLength = Math.sqrt(newVSquared);
 
-        if (deltaSquared < newVLengthSquared * LOOKAHEAD_FACTOR_SQUARED) {
           Vector loc = cube.getLocation().toVector();
           Vector nextLoc = loc.clone().add(newV);
 
-          Vector pDir = player.getLocation().toVector().subtract(loc);
-
-          Vector cDir2D = newV.clone().setY(0);
-          Vector pDir2D = pDir.clone().setY(0);
-
           boolean rightDirection = true;
+          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0, player.getLocation().getZ() - loc.getZ());
+          Vector cDir = (new Vector(newV.getX(), 0, newV.getZ())).normalize();
 
-          if (cDir2D.lengthSquared() > 0.0001) rightDirection = pDir2D.dot(cDir2D) > 0;
+          int px = pDir.getX() < 0 ? -1 : 1;
+          int pz = pDir.getZ() < 0 ? -1 : 1;
+          int cx = cDir.getX() < 0 ? -1 : 1;
+          int cz = cDir.getZ() < 0 ? -1 : 1;
+
+          if (px != cx && pz != cz
+              || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ())
+              || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) {
+            rightDirection = false;
+          }
 
           if (rightDirection && loc.getY() < player.getLocation().getY() + 2
               && loc.getY() > player.getLocation().getY() - 1
               && nextLoc.getY() < player.getLocation().getY() + 2
               && nextLoc.getY() > player.getLocation().getY() - 1) {
-            if (newVLengthSquared > 0.0001) {
-              double dot = pDir.dot(newV);
-              double t = dot / newVLengthSquared;
-              t = Math.max(0, Math.min(1, t));
+            double a = newV.getZ() / newV.getX();
+            double b = loc.getZ() - a * loc.getX();
+            double numerator = a * player.getLocation().getX() - player.getLocation().getZ() + b;
+            double numeratorSquared = numerator * numerator;
+            double denominatorSquared = a * a + 1;
 
-              Vector projection = newV.clone().multiply(t);
-              Vector rejectionVector = projection.subtract(pDir);
-
-              double closestDistanceSquared = rejectionVector.lengthSquared();
-
-              if (closestDistanceSquared < minRadius * minRadius) {
-                double delta = (distance > -1) ? distance : Math.sqrt(deltaSquared);
-                newV.multiply(delta / newV.length());
-              }
-            }
+            if (numeratorSquared < minRadiusSquared * denominatorSquared) newV.multiply(delta / newVLength);
           }
         }
       }
@@ -335,15 +347,19 @@ public class Physics {
       velocities.put(id, newV);
     }
 
+    scheduleCubeRemoval(toRemove);
+  }
+
+  private void scheduleCubeRemoval(List<Slime> toRemove) {
     if (!toRemove.isEmpty()) {
-      Bukkit.getScheduler().runTaskLater(plugin, () -> toRemove.forEach(slime -> {
-        cubes.remove(slime);
-        if (!slime.isDead()) slime.remove();
+      scheduler.runTaskLater(plugin, () -> toRemove.forEach(cube -> {
+        cubes.remove(cube);
+        if (!cube.isDead()) cube.remove();
       }), 20L);
     }
   }
 
-  public void showCubeParticles() {
+  private void showCubeParticles() {
     Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
     if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
 
@@ -354,10 +370,10 @@ public class Physics {
       Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
 
       for (Player player : onlinePlayers) {
+        if (cube.getLocation().distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
+
         PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings == null || !settings.isParticlesEnabled()) continue;
-
-        if (cube.getLocation().distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
 
         EnumParticle particle = settings.getParticle();
         if (particle == EnumParticle.REDSTONE) {
@@ -370,7 +386,16 @@ public class Physics {
     }
   }
 
+  void cleanupTasks() {
+    if (physicsTask != null) { physicsTask.cancel(); physicsTask = null; }
+    if (glowTask != null) { glowTask.cancel(); glowTask = null; }
+    if (speedUpdateTask != null) { speedUpdateTask.cancel(); speedUpdateTask = null; }
+    if (activityUpdateTask != null) { activityUpdateTask.cancel(); activityUpdateTask = null; }
+  }
+
   public void reload() {
+    cleanupTasks();
+
     chargedHitCooldown = config.getLong("physics.cooldowns.charged-hit", 500);
     regularHitCooldown = config.getLong("physics.cooldowns.regular-hit", 150);
     afkThreshold = config.getLong("physics.afk-threshold", 60000);
@@ -385,8 +410,8 @@ public class Physics {
     hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
     hitRadiusSquared = hitRadius * hitRadius;
     minRadius = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
+    minRadiusSquared = minRadius * minRadius;
     bounceThreshold = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
-    movementThreshold = config.getDouble("physics.movement-threshold", 0.05);
 
     double inactivityRadius = config.getDouble("physics.distance-thresholds.inactivity-radius", 100);
     inactivityRadiusSquared = inactivityRadius * inactivityRadius;
@@ -396,6 +421,8 @@ public class Physics {
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
 
+    startPhysicsTask();
+    startGlowTask();
     startSpeedCalculation();
     startActivityCheck();
   }
@@ -421,8 +448,8 @@ public class Physics {
   }
 
   public void cleanup() {
-    if (speedUpdateTask != null) speedUpdateTask.cancel();
-    if (activityUpdateTask != null) activityUpdateTask.cancel();
+    cleanupTasks();
+
     cubes.clear();
     inactiveCubesIds.clear();
     velocities.clear();

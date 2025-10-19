@@ -165,6 +165,7 @@ public class Physics {
   }
 
   // *** DEPRECATED ***
+  @SuppressWarnings("unused")
   public double getDistance(Location locA, Location locB) {
     return Math.sqrt(getDistanceSquared(locA, locB));
   }
@@ -213,6 +214,7 @@ public class Physics {
   }
 
   // *** EXPERIMENTAL NEW FEATURE, NOT USED ATM ***
+  @SuppressWarnings("unused")
   public void showCooldownFeedback(Player player) {
     long now = System.currentTimeMillis();
     long cooldownDuration = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
@@ -386,7 +388,7 @@ public class Physics {
     }
   }
 
-  void cleanupTasks() {
+  public void cleanupTasks() {
     if (physicsTask != null) { physicsTask.cancel(); physicsTask = null; }
     if (glowTask != null) { glowTask.cancel(); glowTask = null; }
     if (speedUpdateTask != null) { speedUpdateTask.cancel(); speedUpdateTask = null; }

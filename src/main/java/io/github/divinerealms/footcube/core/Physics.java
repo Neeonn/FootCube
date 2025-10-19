@@ -7,9 +7,7 @@ import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.server.v1_8_R3.EntitySlime;
-import net.minecraft.server.v1_8_R3.EnumParticle;
-import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
+import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -146,12 +144,12 @@ public class Physics {
 
     EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
     try {
-      Field gField = PathfinderGoalSelector.class.getDeclaredField("b");
-      gField.setAccessible(true);
-      gField.set(nmsSlime.goalSelector, new java.util.LinkedList<>());
-      gField.set(nmsSlime.targetSelector, new java.util.LinkedList<>());
+      Field bField = PathfinderGoalSelector.class.getDeclaredField("b");
+      bField.setAccessible(true);
+      bField.set(nmsSlime.goalSelector, new LinkedList<>());
+      bField.set(nmsSlime.targetSelector, new LinkedList<>());
     } catch (Exception exception) {
-      plugin.getLogger().log(Level.SEVERE, "Error: ", exception);
+      plugin.getLogger().log(Level.SEVERE, "Error injecting NMS Pathfinder Goals:", exception);
     }
 
     cubes.add(cube);

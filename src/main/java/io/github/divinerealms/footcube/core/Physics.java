@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
+import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,6 +38,7 @@ public class Physics {
   private final Plugin plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
+  private final Logger logger;
   private final FileConfiguration config;
   private final BukkitScheduler scheduler;
 
@@ -71,6 +73,7 @@ public class Physics {
     this.scheduler = plugin.getServer().getScheduler();
     this.org = fcManager.getOrg();
     this.dataManager = fcManager.getDataManager();
+    this.logger = fcManager.getLogger();
     this.config = fcManager.getConfigManager().getConfig("config.yml");
     this.reload();
     this.startSpeedCalculation();
@@ -180,15 +183,6 @@ public class Physics {
     return RANDOM.nextDouble(minRandomKP, maxKP);
   }
 
-  public boolean canHitBall(Player player) {
-    long now = System.currentTimeMillis();
-    long cooldown = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
-    long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
-    if (now - lastHit < cooldown) return false;
-    ballHitCooldowns.put(player.getUniqueId(), now);
-    return true;
-  }
-
   public String onHitDebug(Player player, KickResult result) {
     return result.isChargedHit()
         ? Lang.HITDEBUG_CHARGED.replace(new String[]{
@@ -196,6 +190,31 @@ public class Physics {
             String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
         })
         : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
+  }
+
+  public boolean canHitBall(Player player) {
+    long now = System.currentTimeMillis();
+    long cooldown = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
+    long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
+
+    return now - lastHit >= cooldown;
+  }
+
+  public void showCooldownFeedback(Player player) {
+    long now = System.currentTimeMillis();
+    long cooldownDuration = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
+    long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
+
+    long timeRemainingMillis = cooldownDuration - (now - lastHit);
+    long timeRemaining = Math.max(0, timeRemainingMillis);
+
+    scheduler.runTask(plugin, () -> {
+      logger.sendActionBar(player, Lang.HIT_COOLDOWN_INDICATION.replace(new String[]{String.valueOf(timeRemaining)}));
+      Location baseLoc = player.getLocation().clone().add(0, 1.5, 0);
+      Location particleLocation = baseLoc.add(player.getLocation().getDirection().normalize().multiply(1.0));
+      Utilities.sendParticle(player, EnumParticle.SMOKE_NORMAL, particleLocation, 0.1F, 0.1F, 0.1F, 0.01F, 5);
+      player.playSound(player.getLocation(), Sound.NOTE_SNARE_DRUM, 2.0F, 0.8F);
+    });
   }
 
   public void tick() {
@@ -348,7 +367,7 @@ public class Physics {
     chargedHitCooldown = config.getLong("physics.cooldowns.charged-hit", 500);
     regularHitCooldown = config.getLong("physics.cooldowns.regular-hit", 150);
     afkThreshold = config.getLong("physics.afk-threshold", 60000);
-    speedCalcInterval = config.getLong("physics.speed-calculation-interval", 5L);
+    speedCalcInterval = config.getLong("physics.speed-calculation-interval", 5);
 
     maxKP = config.getDouble("physics.kick-power.max", 6.75);
     softCapMinFactor = config.getDouble("physics.kick-power.soft-cap-min-factor", 0.8);
@@ -360,12 +379,12 @@ public class Physics {
     hitRadiusSquared = hitRadius * hitRadius;
     minRadius = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
     bounceThreshold = config.getDouble("physics.distance-thresholds.bounce-threshold", 0.3);
-    movementThreshold = config.getDouble("physics.movement-threshold", 0.05D);
+    movementThreshold = config.getDouble("physics.movement-threshold", 0.05);
 
-    double inactivityRadius = config.getDouble("physics.distance-thresholds.inactivity-radius", 100D);
+    double inactivityRadius = config.getDouble("physics.distance-thresholds.inactivity-radius", 100);
     inactivityRadiusSquared = inactivityRadius * inactivityRadius;
 
-    cubeJumpRightClick = config.getDouble("physics.jump", 0.7D);
+    cubeJumpRightClick = config.getDouble("physics.jump", 0.7);
 
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);

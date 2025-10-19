@@ -59,8 +59,9 @@ public class BallEvents implements Listener {
 
     if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
     if (player.getGameMode() != GameMode.SURVIVAL) return;
-    if (!physics.canHitBall(player)) return;
+    if (!physics.canHitBall(player)) { physics.showCooldownFeedback(player); return; }
 
+    physics.getBallHitCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
     org.ballTouch(player);
     physics.recordPlayerAction(player);
 

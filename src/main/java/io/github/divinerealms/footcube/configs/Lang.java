@@ -15,6 +15,7 @@ public enum Lang {
   PLAYER_NOT_FOUND("player-not-found", "&cPlayer not found."),
   ON("toggle.on", "&aON"),
   OFF("toggle.off", "&cOFF"),
+  HIT_COOLDOWN_INDICATION("hit-cooldown-indication", "&6Ne možete udariti loptu još &e{0}ms"),
 
   RELOAD("reload", "{prefix-admin}FootCube reloaded!"),
   FC_TOGGLE("toggle.status", "{prefix-admin}FootCube Matches turned {0}"),

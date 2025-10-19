@@ -264,10 +264,14 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
-        Location spawnLoc = loc.add(dir.multiply(2.0));
-        spawnLoc.setY(loc.getY() + 2.5);
+        Location spawnLoc;
+        if (player.getGameMode() != GameMode.CREATIVE) {
+          spawnLoc = loc.add(dir.multiply(2.0));
+          spawnLoc.setY(loc.getY() + 2.5);
+        } else spawnLoc = loc;
+
         physics.spawnCube(spawnLoc);
-        logger.send(player, Lang.PREFIX.replace(null) + "&aCube spawned!");
+        logger.send(player, Lang.CUBE_SPAWN.replace(null));
         break;
 
       case "clearcube":

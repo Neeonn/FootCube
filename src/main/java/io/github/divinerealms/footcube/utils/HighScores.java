@@ -43,7 +43,7 @@ public class HighScores {
   public HighScores(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
-    this.utilities = fcManager.getUtilManager();
+    this.utilities = fcManager.getUtilities();
     this.playerDataManager = fcManager.getDataManager();
     this.scheduler = plugin.getServer().getScheduler();
   }

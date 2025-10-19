@@ -28,6 +28,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.UUID;
+
 public class PlayerEvents implements Listener {
   private final FCManager fcManager;
   private final Logger logger;
@@ -71,13 +73,18 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onJoin(PlayerJoinEvent event) {
     Player player = event.getPlayer();
+    final UUID playerUuid = player.getUniqueId();
+
     player.setExp(0);
     org.clearInventory(player);
 
-    plugin.getServer().getScheduler().runTask(plugin, () -> {
-      PlayerData playerData = dataManager.get(player);
+    plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+      Player asyncPlayer = plugin.getServer().getPlayer(playerUuid);
+      if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
+
+      PlayerData playerData = dataManager.get(asyncPlayer);
       dataManager.addDefaults(playerData);
-      fcManager.preloadSettings(player, playerData);
+      fcManager.preloadSettings(asyncPlayer, playerData);
     });
   }
 

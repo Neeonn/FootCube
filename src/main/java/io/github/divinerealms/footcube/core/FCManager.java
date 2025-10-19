@@ -21,11 +21,9 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.scheduler.BukkitScheduler;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -35,7 +33,7 @@ public class FCManager {
   private final FootCube plugin;
 
   private final Logger logger;
-  private final Utilities utilManager;
+  private final Utilities utilities;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
   private final Organization org;
@@ -43,16 +41,13 @@ public class FCManager {
 
   private final Physics physics;
   private final CubeCleaner cubeCleaner;
+  private final BukkitScheduler scheduler;
 
   private final List<String> registeredCommands = new ArrayList<>();
 
   private Economy economy;
   private Chat chat;
   private LuckPerms luckPerms;
-
-  private boolean physicsRunning = false;
-  private int physicsTaskID;
-  private int glowTaskID;
 
   private boolean cubeCleanerRunning = false;
   private int cubeCleanerTaskID;
@@ -75,12 +70,13 @@ public class FCManager {
     this.setupMessages();
     this.setupDependencies();
 
-    this.utilManager = new Utilities(this);
+    this.utilities = new Utilities(this);
     this.org = new Organization(this);
     this.listenerManager = new ListenerManager(this);
 
     this.physics = new Physics(this);
     this.cubeCleaner = new CubeCleaner(this);
+    this.scheduler = plugin.getServer().getScheduler();
 
     new FCPlaceholders(this).register();
     this.reload();
@@ -93,28 +89,27 @@ public class FCManager {
     registerCommands();
     initTasks();
     org.loadArenas();
-    getListenerManager().registerAll();
+    listenerManager.registerAll();
 
-    plugin.getServer().getOnlinePlayers().forEach(player -> {
-      PlayerData playerData = dataManager.get(player);
-      if (playerData != null) preloadSettings(player, playerData);
-    });
+    List<UUID> onlinePlayers = plugin.getServer().getOnlinePlayers().stream().map(Player::getUniqueId).collect(Collectors.toList());
+    scheduler.runTaskAsynchronously(plugin, () -> onlinePlayers.forEach(uuid -> {
+      Player asyncPlayer = plugin.getServer().getPlayer(uuid);
+      if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
+
+      PlayerData playerData = dataManager.get(asyncPlayer);
+      if (playerData != null) preloadSettings(asyncPlayer, playerData);
+    }));
   }
 
   public void initTasks() {
     shutdownTasks();
 
-    this.physicsRunning = false;
     this.cubeCleanerRunning = false;
-
     physics.reload();
-    this.physicsRunning = true;
-    this.physicsTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::tick, 1L, 1L).getTaskId();
-    this.glowTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, physics::showCubeParticles, 5L, 5L).getTaskId();
 
     if (cubeCleaner.practiceAreasSet()) {
       this.cubeCleanerRunning = true;
-      this.cubeCleanerTaskID = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+      this.cubeCleanerTaskID = scheduler.runTaskTimer(plugin, () -> {
         cubeCleaner.clearCubes();
         if (!cubeCleaner.isEmpty()) logger.broadcast(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(cubeCleaner.getAmount())}));
       }, 20L, cubeCleaner.getRemoveInterval()).getTaskId();
@@ -122,25 +117,20 @@ public class FCManager {
 
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
-    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+    scheduler.runTaskLaterAsynchronously(plugin, () -> {
       logger.info("&a✔ &2Updating &eHighScores&2...");
       org.getHighscores().update();
     }, 20L);
   }
 
   public void shutdownTasks() {
-    if (physicsRunning) {
-      plugin.getServer().getScheduler().cancelTask(physicsTaskID);
-      physics.removeCubes();
-      this.physicsRunning = false;
-    }
+    physics.cleanupTasks();
+    physics.removeCubes();
 
     if (cubeCleanerRunning) {
-      plugin.getServer().getScheduler().cancelTask(cubeCleanerTaskID);
+      scheduler.cancelTask(cubeCleanerTaskID);
       this.cubeCleanerRunning = false;
     }
-
-    plugin.getServer().getScheduler().cancelTask(glowTaskID);
   }
 
   public void registerCommands() {

@@ -10,6 +10,7 @@ import org.bukkit.plugin.Plugin;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 
 public class PlayerDataManager {
   private final Plugin plugin;
@@ -97,9 +98,8 @@ public class PlayerDataManager {
         try {
           savePlayerData(playerName);
           totalSaved++;
-        } catch (Exception e) {
-          logger.info("Failed to save player data for " + playerName);
-          e.printStackTrace();
+        } catch (Exception exception) {
+          plugin.getLogger().log(Level.SEVERE, "Failed to save player data for " + playerName, exception);
         }
         processed++;
       }
@@ -111,9 +111,8 @@ public class PlayerDataManager {
         try {
           configManager.saveConfig("player_uuids.yml");
           logger.info("Saved updated player UUIDs.");
-        } catch (Exception e) {
-          logger.info("Failed to save UUID config");
-          e.printStackTrace();
+        } catch (Exception exception) {
+          plugin.getLogger().log(Level.SEVERE, "Failed to save UUID config", exception);
         }
       }
 
@@ -133,9 +132,8 @@ public class PlayerDataManager {
         configManager.saveConfig("player_uuids.yml");
         uuidsChanged = false;
         logger.info("Saved all player UUIDs.");
-      } catch (Exception e) {
-        logger.info("Failed to save UUID config.");
-        e.printStackTrace();
+      } catch (Exception exception) {
+        plugin.getLogger().log(Level.SEVERE, "Failed to save UUID config.", exception);
       }
     }
 

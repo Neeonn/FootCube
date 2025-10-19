@@ -3,27 +3,27 @@ package io.github.divinerealms.footcube.managers;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.listeners.*;
-import org.bukkit.Server;
 import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.PluginManager;
 
 public class ListenerManager {
   private final FCManager fcManager;
   private final FootCube plugin;
-  private final Server server;
+  private final PluginManager pluginManager;
 
   public ListenerManager(FCManager fcManager) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
-    this.server = fcManager.getPlugin().getServer();
+    this.pluginManager = fcManager.getPlugin().getServer().getPluginManager();
   }
 
   public void registerAll() {
     unregisterAll();
 
-    server.getPluginManager().registerEvents(new ChunkCheckers(), plugin);
-    server.getPluginManager().registerEvents(new PlayerEvents(fcManager), plugin);
-    server.getPluginManager().registerEvents(new SignManipulation(fcManager), plugin);
-    server.getPluginManager().registerEvents(new BallEvents(fcManager), plugin);
+    pluginManager.registerEvents(new ChunkCheckers(), plugin);
+    pluginManager.registerEvents(new PlayerEvents(fcManager), plugin);
+    pluginManager.registerEvents(new SignManipulation(fcManager), plugin);
+    pluginManager.registerEvents(new BallEvents(fcManager), plugin);
 
     fcManager.getLogger().info("&a✔ &2Registered &e5 &2listeners.");
   }

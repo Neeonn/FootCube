@@ -273,36 +273,43 @@ public class Physics {
           if (power > 0.15) sound = true;
         }
 
-        double delta = (distance > -1) ? distance : getDistance(cube.getLocation(), player.getLocation());
+        double deltaSquared = (distance > -1) ? distance * distance : getDistanceSquared(cube.getLocation(), player.getLocation());
 
-        if (delta < newV.length() * 1.3) {
+        final double LOOKAHEAD_FACTOR_SQUARED = 1.69;
+        double newVLengthSquared = newV.lengthSquared();
+
+        if (deltaSquared < newVLengthSquared * LOOKAHEAD_FACTOR_SQUARED) {
           Vector loc = cube.getLocation().toVector();
           Vector nextLoc = loc.clone().add(newV);
 
+          Vector pDir = player.getLocation().toVector().subtract(loc);
+
+          Vector cDir2D = newV.clone().setY(0);
+          Vector pDir2D = pDir.clone().setY(0);
+
           boolean rightDirection = true;
-          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0, player.getLocation().getZ() - loc.getZ());
-          Vector cDir = (new Vector(newV.getX(), 0, newV.getZ())).normalize();
 
-          int px = pDir.getX() < 0 ? -1 : 1;
-          int pz = pDir.getZ() < 0 ? -1 : 1;
-          int cx = cDir.getX() < 0 ? -1 : 1;
-          int cz = cDir.getZ() < 0 ? -1 : 1;
-
-          if (px != cx && pz != cz
-              || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ())
-              || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) {
-            rightDirection = false;
-          }
+          if (cDir2D.lengthSquared() > 0.0001) rightDirection = pDir2D.dot(cDir2D) > 0;
 
           if (rightDirection && loc.getY() < player.getLocation().getY() + 2
               && loc.getY() > player.getLocation().getY() - 1
               && nextLoc.getY() < player.getLocation().getY() + 2
               && nextLoc.getY() > player.getLocation().getY() - 1) {
-            double a = newV.getZ() / newV.getX();
-            double b = loc.getZ() - a * loc.getX();
-            double D = Math.abs(a * player.getLocation().getX() - player.getLocation().getZ() + b) / Math.sqrt(a * a + 1);
+            if (newVLengthSquared > 0.0001) {
+              double dot = pDir.dot(newV);
+              double t = dot / newVLengthSquared;
+              t = Math.max(0, Math.min(1, t));
 
-            if (D < minRadius) newV.multiply(delta / newV.length());
+              Vector projection = newV.clone().multiply(t);
+              Vector rejectionVector = projection.subtract(pDir);
+
+              double closestDistanceSquared = rejectionVector.lengthSquared();
+
+              if (closestDistanceSquared < minRadius * minRadius) {
+                double delta = (distance > -1) ? distance : Math.sqrt(deltaSquared);
+                newV.multiply(delta / newV.length());
+              }
+            }
           }
         }
       }
@@ -424,6 +431,7 @@ public class Physics {
     charges.clear();
     ballHitCooldowns.clear();
     fcManager.getPlayerSettings().clear();
+    lastLocations.clear();
     lastAction.clear();
   }
 }

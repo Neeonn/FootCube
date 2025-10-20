@@ -27,6 +27,9 @@ public enum Lang {
 
   FORCE_LEAVE("force-leave", "{prefix-admin}Izbačen igrač {0}&f iz svih mečeva/lobbya."),
 
+  HITDEBUG_PLAYER_CHARGED("debug.hits-player.charged", "&8[&dCharged&8] &a{0}KP &8[&e&o{1}PW&8, &d&o{2}CH&8]"),
+  HITDEBUG_PLAYER_REGULAR("debug.hits-player.regular", "&8[&aRegular&8] &a{0}KP"),
+  HITDEBUG_PLAYER_COOLDOWN("debug.hits-player.cooldown", "&8 [&fCD: {0}{1}ms&8]"),
   HITDEBUG_CHARGED("debug.hits.charged", "{prefix}&dCharged &8| {0} &8| {1}KP &8| &e{2}PW&7, &d{3}CH"),
   HITDEBUG_REGULAR("debug.hits.regular", "{prefix}&aRegular &8| {0} &8| &a{1}KP"),
 

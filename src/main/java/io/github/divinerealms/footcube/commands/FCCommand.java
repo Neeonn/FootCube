@@ -314,7 +314,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       case "ts":
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
-        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"})); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles|hits> <value|list>"})); return true; }
 
         String type = args[1].toLowerCase();
         playerData = dataManager.get(player);
@@ -326,18 +326,30 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
             logger.send(player, Lang.TOGGLES_KICK.replace(new String[]{settings.isKickSoundEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
+
           case "goal":
             settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
             playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
             logger.send(player, Lang.TOGGLES_GOAL.replace(new String[]{settings.isGoalSoundEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
+
           case "particles":
             settings.setParticlesEnabled(!settings.isParticlesEnabled());
             playerData.set("particles.enabled", settings.isParticlesEnabled());
             logger.send(player, Lang.TOGGLES_PARTICLES.replace(new String[]{settings.isParticlesEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
+
+          case "hits":
+            boolean wasEnabled = physics.getCubeHits().contains(player.getUniqueId());
+
+            if (wasEnabled) physics.getCubeHits().remove(player.getUniqueId());
+            else physics.getCubeHits().add(player.getUniqueId());
+
+            logger.send(player, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{!wasEnabled ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
+            break;
+
           default:
-            logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles> <value|list>"}));
+            logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles|hits> <value|list>"}));
         }
         break;
 
@@ -497,7 +509,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           break;
         case "toggles":
         case "ts":
-          completions.addAll(Arrays.asList("kick", "goal", "particles")); break;
+          completions.addAll(Arrays.asList("kick", "goal", "particles", "hits")); break;
         case "setparticle":
           completions.add("list");
           completions.addAll(PlayerSettings.getAllowedParticles());

@@ -59,14 +59,17 @@ public class BallEvents implements Listener {
 
     if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
     if (player.getGameMode() != GameMode.SURVIVAL) return;
-//    if (!physics.canHitBall(player)) { physics.showCooldownFeedback(player); return; }
-    if (!physics.canHitBall(player)) return;
+
+    KickResult kickResult = physics.calculateKickPower(player);
+    boolean onCooldown = !physics.canHitBall(player);
+
+    if (physics.getCubeHits().contains(player.getUniqueId())) physics.showHits(player, kickResult);
+    if (onCooldown) return;
 
     physics.getBallHitCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
     org.ballTouch(player);
     physics.recordPlayerAction(player);
 
-    KickResult kickResult = physics.calculateKickPower(player);
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
     cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 

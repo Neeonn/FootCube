@@ -32,6 +32,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+/**
+ * Class that manages physics, movement, and collision detection for the FootCube ball.
+ * This class runs the core game loop on a 1-tick interval.
+ */
 public class Physics {
   private final FCManager fcManager;
   private final Plugin plugin;
@@ -40,27 +44,24 @@ public class Physics {
   private final FileConfiguration config;
   private final BukkitScheduler scheduler;
 
-  @Getter private final HashSet<Slime> cubes = new HashSet<>();
+  @Getter private final Set<Slime> cubes = ConcurrentHashMap.newKeySet();
   private final Set<UUID> inactiveCubesIds = ConcurrentHashMap.newKeySet();
-  private final Map<UUID, Vector> velocities = new HashMap<>();
-  @Getter private final Map<UUID, Long> kicked = new HashMap<>();
+  private final Map<UUID, Vector> velocities = new ConcurrentHashMap<>();
+  @Getter private final Map<UUID, Long> kicked = new ConcurrentHashMap<>();
   private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Double> charges = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
   private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
   private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
+  @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
 
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
-  private double hitRadius;
-  private double hitRadiusSquared;
-  private double minRadius;
-  private double minRadiusSquared;
-  private double bounceThreshold;
-  private double inactivityRadiusSquared;
+  private double hitRadiusSquared, minRadius, minRadiusSquared, bounceThreshold, inactivityRadiusSquared;
   @Getter private double cubeJumpRightClick;
   private float soundVolume, soundPitch;
 
+  // Particles are only shown if the player is 32 blocks away - ball visibility patch
   private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
@@ -79,16 +80,26 @@ public class Physics {
     this.reload();
   }
 
+  /**
+   * Starts the main physics loop running every tick.
+   */
   private void startPhysicsTask() {
     if (physicsTask != null) physicsTask.cancel();
     physicsTask = scheduler.runTaskTimer(plugin, this::tick, 1L, 1L);
   }
 
+  /**
+   * Starts the particle rendering task for cubes, runs every 5 ticks.
+   */
   private void startGlowTask() {
     if (glowTask != null) glowTask.cancel();
     glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, 5L, 5L);
   }
 
+  /**
+   * Starts the async activity check to mark cubes far from players as inactive.
+   * Runs every 5 ticks.
+   */
   private void startActivityCheck() {
     if (activityUpdateTask != null) activityUpdateTask.cancel();
 
@@ -112,6 +123,9 @@ public class Physics {
     }, 20L, 20L * 5);
   }
 
+  /**
+   * Starts the task to calculate player movement speed based on location changes.
+   */
   private void startSpeedCalculation() {
     if (speedUpdateTask != null) speedUpdateTask.cancel();
 
@@ -136,12 +150,19 @@ public class Physics {
     }, 1L, speedCalcInterval);
   }
 
+  /**
+   * Spawns a new ball at the given location and disables its AI.
+   * @param location The location to spawn the cube.
+   * @return The spawned entity.
+   */
   public Slime spawnCube(Location location) {
     Slime cube = (Slime) location.getWorld().spawnEntity(location, EntityType.SLIME);
     cube.setRemoveWhenFarAway(false);
     cube.setSize(1);
+    // Permanent jump effect that stops the cube from hopping.
     cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, -3, true), true);
 
+    // NMS Hack to prevent the ball from trying to reach the player.
     EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
     try {
       Field bField = PathfinderGoalSelector.class.getDeclaredField("b");
@@ -157,17 +178,19 @@ public class Physics {
     return cube;
   }
 
+  /**
+   * Removes all Slime entities in the main world.
+   * Used only on plugin reload.
+   */
   public void removeCubes() {
     List<Entity> entities = plugin.getServer().getWorlds().get(0).getEntities();
     for (Entity entity : entities) if (entity instanceof Slime) ((Slime) entity).setHealth(0);
   }
 
-  // *** DEPRECATED ***
-  @SuppressWarnings("unused")
-  public double getDistance(Location locA, Location locB) {
-    return Math.sqrt(getDistanceSquared(locA, locB));
-  }
-
+  /**
+   * Calculates a custom distance squared between a player (locA) and the ball (locB).
+   * The calculation includes an offset to account for player height and cube size.
+   */
   public double getDistanceSquared(Location locA, Location locB) {
     double dx = locA.getX() - locB.getX();
     double dy = (locA.getY() - 1) - locB.getY() - 1.5;
@@ -177,6 +200,11 @@ public class Physics {
     return dx * dx + dy * dy + dz * dz;
   }
 
+  /**
+   * Calculates the final kick power based on player speed and current charge level.
+   * @param player Player who initiated the calculation (who kicked the ball).
+   * @return Player's kick power
+   */
   public KickResult calculateKickPower(Player player) {
     boolean isCharged = player.isSneaking();
     double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * chargeMultiplier;
@@ -188,6 +216,11 @@ public class Physics {
     return new KickResult(power, charge, baseKickPower, finalKickPower, isCharged);
   }
 
+  /**
+   * Applies the soft cap to the calculated kick power.
+   * @param baseKickPower Initial kick power.
+   * @return Randomized capped kick power.
+   */
   private double capKickPower(double baseKickPower) {
     if (baseKickPower <= maxKP) return baseKickPower;
     double minRandomKP = maxKP * softCapMinFactor;
@@ -203,6 +236,11 @@ public class Physics {
         : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
   }
 
+  /**
+   * Check if the player is allowed to hit the ball based on hit cooldowns.
+   * @param player Player who is being checked (who kicked the ball).
+   * @return Remaining cooldown in milliseconds.
+   */
   public boolean canHitBall(Player player) {
     long now = System.currentTimeMillis();
     long cooldown = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
@@ -211,25 +249,32 @@ public class Physics {
     return now - lastHit >= cooldown;
   }
 
-  // *** EXPERIMENTAL NEW FEATURE, NOT USED ATM ***
-  @SuppressWarnings("unused")
-  public void showCooldownFeedback(Player player) {
-    long now = System.currentTimeMillis();
-    long cooldownDuration = player.isSneaking() ? chargedHitCooldown : regularHitCooldown;
-    long lastHit = ballHitCooldowns.getOrDefault(player.getUniqueId(), 0L);
+  public void showHits(Player player, KickResult kickResult) {
+    UUID playerId = player.getUniqueId();
+    boolean isChargedHit = kickResult.isChargedHit();
+    double finalKickPower = kickResult.getFinalKickPower();
 
-    long timeRemainingMillis = cooldownDuration - (now - lastHit);
-    long timeRemaining = Math.max(0, timeRemainingMillis);
+    long cooldownDuration = isChargedHit ? chargedHitCooldown : regularHitCooldown;
+    long lastHitTime = ballHitCooldowns.getOrDefault(playerId, 0L);
 
-    scheduler.runTask(plugin, () -> {
-      logger.sendActionBar(player, Lang.HIT_COOLDOWN_INDICATION.replace(new String[]{String.valueOf(timeRemaining)}));
-      Location baseLoc = player.getLocation().clone().add(0, 1.5, 0);
-      Location particleLocation = baseLoc.add(player.getLocation().getDirection().normalize().multiply(1.0));
-      Utilities.sendParticle(player, EnumParticle.SMOKE_NORMAL, particleLocation, 0.1F, 0.1F, 0.1F, 0.01F, 5);
-      player.playSound(player.getLocation(), Sound.NOTE_SNARE_DRUM, 2.0F, 0.8F);
-    });
+    long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
+    long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsedSinceLastHit);
+
+    scheduler.runTaskAsynchronously(plugin, () ->
+      logger.sendActionBar(player, (isChargedHit
+        ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
+            String.format("%.2f", finalKickPower),
+            String.format("%.2f", kickResult.getPower()),
+            String.format("%.2f", kickResult.getCharge())
+          })
+        : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{ String.format("%.2f", finalKickPower) })
+      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)})));
   }
 
+  /**
+   * The main physics loop, running every tick (20 times per second).
+   * This handles charge decay, collision detection, and vector manipulation.
+   */
   private void tick() {
     long now = System.currentTimeMillis();
     kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
@@ -263,14 +308,16 @@ public class Physics {
       boolean sound = false;
       boolean kicked = false;
 
-      List<Entity> nearby = cube.getNearbyEntities(hitRadius + 0.1, 1, hitRadius + 0.1);
-      for (Entity entity : nearby) {
-        if (!(entity instanceof Player)) continue;
-        Player player = (Player) entity;
+      Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+      if (onlinePlayers.isEmpty()) continue;
+
+      for (Player player : onlinePlayers) {
         if (player.getGameMode() != GameMode.SURVIVAL) continue;
         if (isAFK(player)) continue;
 
         double distanceSquared = getDistanceSquared(cube.getLocation(), player.getLocation());
+        if (distanceSquared > hitRadiusSquared) continue;
+
         double distance = -1;
 
         if (distanceSquared <= hitRadiusSquared) {
@@ -315,6 +362,9 @@ public class Physics {
               && loc.getY() > player.getLocation().getY() - 1
               && nextLoc.getY() < player.getLocation().getY() + 2
               && nextLoc.getY() > player.getLocation().getY() - 1) {
+            double velocityX = newV.getX();
+            if (Math.abs(velocityX) < 1e-6) continue;
+
             double a = newV.getZ() / newV.getX();
             double b = loc.getZ() - a * loc.getX();
             double numerator = a * player.getLocation().getX() - player.getLocation().getZ() + b;
@@ -350,6 +400,12 @@ public class Physics {
     scheduleCubeRemoval(toRemove);
   }
 
+  /**
+   * Schedules the removal of dead cubes 20 ticks later (1 second).
+   * This delay is added to help mitigate the issues where the cube is dead but a final interaction is processed,
+   * and to provide a graceful death animation instead of instant removal.
+   * @param toRemove List of dead cubes that need to be cleaned up.
+   */
   private void scheduleCubeRemoval(List<Slime> toRemove) {
     if (!toRemove.isEmpty()) {
       scheduler.runTaskLater(plugin, () -> toRemove.forEach(cube -> {
@@ -359,6 +415,10 @@ public class Physics {
     }
   }
 
+  /**
+   * Renders particle trail that follows the cube for players that are far away.
+   * This is implemented to tackle the issue of render distance for entities in 1.8.8
+   */
   private void showCubeParticles() {
     Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
     if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
@@ -407,7 +467,7 @@ public class Physics {
     basePower = config.getDouble("physics.kick-power.base-power", 0.4);
     chargeRecoveryRate = config.getDouble("physics.charge-recovery-rate", 0.945);
 
-    hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
+    double hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
     hitRadiusSquared = hitRadius * hitRadius;
     minRadius = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
     minRadiusSquared = minRadius * minRadius;
@@ -436,6 +496,7 @@ public class Physics {
     kicked.remove(uuid);
     ballHitCooldowns.remove(uuid);
     lastAction.remove(uuid);
+    cubeHits.remove(uuid);
   }
 
   public void recordPlayerAction(Player player) {
@@ -460,5 +521,6 @@ public class Physics {
     fcManager.getPlayerSettings().clear();
     lastLocations.clear();
     lastAction.clear();
+    cubeHits.clear();
   }
 }

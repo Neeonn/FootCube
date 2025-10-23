@@ -20,6 +20,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
+import java.util.UUID;
+
 public class BallEvents implements Listener {
   private final FCManager fcManager;
   private final Physics physics;
@@ -54,6 +56,7 @@ public class BallEvents implements Listener {
 
     if (!(event.getDamager() instanceof Player)) return;
     Player player = (Player) event.getDamager();
+    UUID playerId = player.getUniqueId();
 
     event.setCancelled(true);
 
@@ -63,17 +66,18 @@ public class BallEvents implements Listener {
     KickResult kickResult = physics.calculateKickPower(player);
     boolean onCooldown = !physics.canHitBall(player);
 
-    if (physics.getCubeHits().contains(player.getUniqueId())) physics.showHits(player, kickResult);
+    if (physics.getCubeHits().contains(playerId)) physics.showHits(player, kickResult);
     if (onCooldown) return;
 
-    physics.getBallHitCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
-    org.ballTouch(player);
+    physics.getBallHitCooldowns().put(playerId, System.currentTimeMillis());
     physics.recordPlayerAction(player);
+    org.ballTouch(player);
 
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 
     scheduler.runTask(plugin, () -> {
+      cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
+
       PlayerSettings settings = fcManager.getPlayerSettings(player);
       cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
       if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
@@ -87,18 +91,22 @@ public class BallEvents implements Listener {
     if (!(event.getRightClicked() instanceof Slime)) return;
 
     Player player = event.getPlayer();
+    UUID playerId = player.getUniqueId();
     Slime cube = (Slime) event.getRightClicked();
 
     if (player.getGameMode() != GameMode.SURVIVAL) return;
     if (!physics.getCubes().contains(cube)) return;
-    if (physics.getKicked().containsKey(player.getUniqueId())) return;
+    if (physics.getKicked().containsKey(playerId)) return;
 
-    long now = System.currentTimeMillis();
-    cube.setVelocity(cube.getVelocity().add(new Vector(0, physics.getCubeJumpRightClick(), 0)));
-    physics.getKicked().put(player.getUniqueId(), now);
-
+    physics.getKicked().put(playerId, System.currentTimeMillis());
+    physics.recordPlayerAction(player);
     org.ballTouch(player);
-    scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F));
-    physics.recordPlayerAction(event.getPlayer());
+
+    Vector rise = new Vector(0, physics.getCubeJumpRightClick(), 0);
+
+    scheduler.runTask(plugin, () -> {
+      cube.setVelocity(cube.getVelocity().add(rise));
+      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F);
+    });
   }
 }

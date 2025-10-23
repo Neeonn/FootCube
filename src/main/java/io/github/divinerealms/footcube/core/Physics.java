@@ -60,6 +60,7 @@ public class Physics {
 
   private static final long PHYSICS_TASK_INTERVAL_TICKS = 1L;
   private static final long GLOW_TASK_INTERVAL_TICKS = 5L;
+  private static final long PLAYER_LIST_UPDATE_INTERVAL_TICKS = 20L;
   private static final long ACTIVITY_UPDATE_INTERVAL_TICKS = 100L;
   private static final long ACTIVITY_UPDATE_DELAY_TICKS = 20L;
   private static final long CUBE_REMOVAL_DELAY_TICKS = 20L;
@@ -106,7 +107,9 @@ public class Physics {
 
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
-  private BukkitTask speedUpdateTask, activityUpdateTask, physicsTask, glowTask;
+  private BukkitTask speedUpdateTask, activityUpdateTask, physicsTask, glowTask, playerListUpdateTask;
+
+  private volatile Collection<? extends Player> cachedOnlinePlayers = Collections.emptyList();
 
   @Getter @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -141,6 +144,14 @@ public class Physics {
     glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS);
   }
 
+  private void startPlayerListUpdateTask() {
+    if (playerListUpdateTask != null) playerListUpdateTask.cancel();
+
+    playerListUpdateTask = scheduler.runTaskTimer(plugin, () -> {
+      cachedOnlinePlayers = plugin.getServer().getOnlinePlayers();
+    }, PHYSICS_TASK_INTERVAL_TICKS, PLAYER_LIST_UPDATE_INTERVAL_TICKS);
+  }
+
   /**
    * Starts the async activity check to mark cubes far from players as inactive.
    * Runs every 5 ticks.
@@ -152,7 +163,7 @@ public class Physics {
       if (cubes.isEmpty()) { inactiveCubesIds.clear(); return; }
 
       Set<UUID> currentlyActiveCubes = ConcurrentHashMap.newKeySet();
-      Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+      Collection<? extends Player> onlinePlayers = cachedOnlinePlayers;
       double threshold = inactivityRadiusSquared;
 
       for (Player player : onlinePlayers) {
@@ -180,7 +191,7 @@ public class Physics {
     if (speedUpdateTask != null) speedUpdateTask.cancel();
 
     speedUpdateTask = scheduler.runTaskTimer(plugin, () -> {
-      for (Player player : plugin.getServer().getOnlinePlayers()) {
+      for (Player player : cachedOnlinePlayers) {
         UUID uuid = player.getUniqueId();
         if (!isAllowedToInteract(player)) { lastLocations.remove(uuid); continue; }
 
@@ -326,7 +337,7 @@ public class Physics {
    * This handles charge decay, collision detection, and vector manipulation.
    */
   private void tick() {
-    Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+    Collection<? extends Player> onlinePlayers = cachedOnlinePlayers;
     if (onlinePlayers.isEmpty() && cubes.isEmpty()) return;
 
     kicked.entrySet().removeIf(uuidLongEntry -> System.currentTimeMillis() > uuidLongEntry.getValue() + KICKED_TIMEOUT_MS);
@@ -462,7 +473,7 @@ public class Physics {
    * This is implemented to tackle the issue of render distance for entities in 1.8.8
    */
   private void showCubeParticles() {
-    Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+    Collection<? extends Player> onlinePlayers = cachedOnlinePlayers;
     if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
 
     for (Slime cube : cubes) {
@@ -493,6 +504,7 @@ public class Physics {
     if (glowTask != null) { glowTask.cancel(); glowTask = null; }
     if (speedUpdateTask != null) { speedUpdateTask.cancel(); speedUpdateTask = null; }
     if (activityUpdateTask != null) { activityUpdateTask.cancel(); activityUpdateTask = null; }
+    if (playerListUpdateTask != null) { playerListUpdateTask.cancel(); playerListUpdateTask = null; }
   }
 
   public void reload() {
@@ -537,6 +549,7 @@ public class Physics {
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
 
+    startPlayerListUpdateTask();
     startPhysicsTask();
     startGlowTask();
     startSpeedCalculation();
@@ -579,5 +592,6 @@ public class Physics {
     lastLocations.clear();
     lastAction.clear();
     cubeHits.clear();
+    cachedOnlinePlayers = Collections.emptyList();
   }
 }

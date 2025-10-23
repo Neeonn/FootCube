@@ -7,7 +7,9 @@ import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.server.v1_8_R3.*;
+import net.minecraft.server.v1_8_R3.EntitySlime;
+import net.minecraft.server.v1_8_R3.EnumParticle;
+import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -30,7 +32,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 /**
  * Class that manages physics, movement, and collision detection for the FootCube ball.
@@ -46,6 +47,7 @@ public class Physics {
 
   @Getter private final Set<Slime> cubes = ConcurrentHashMap.newKeySet();
   private final Set<UUID> inactiveCubesIds = ConcurrentHashMap.newKeySet();
+  private final Set<Slime> cubesToRemove = ConcurrentHashMap.newKeySet();
   private final Map<UUID, Vector> velocities = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Long> kicked = new ConcurrentHashMap<>();
   private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
@@ -54,15 +56,54 @@ public class Physics {
   private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
   private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
   @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
+  private final Set<GameMode> allowedInteractionModes = ConcurrentHashMap.newKeySet();
+
+  private static final long PHYSICS_TASK_INTERVAL_TICKS = 1L;
+  private static final long GLOW_TASK_INTERVAL_TICKS = 5L;
+  private static final long ACTIVITY_UPDATE_INTERVAL_TICKS = 100L;
+  private static final long ACTIVITY_UPDATE_DELAY_TICKS = 20L;
+  private static final long CUBE_REMOVAL_DELAY_TICKS = 20L;
+
+  private static final int SLIME_SIZE = 1;
+  private static final int JUMP_POTION_DURATION = Integer.MAX_VALUE;
+  private static final int JUMP_POTION_AMPLIFIER = -3;
+
+  private static final double KICKED_TIMEOUT_MS = 1000L;
+  private static final double BALL_TOUCH_Y_OFFSET = 1.0;
+  private static final double CUBE_HITBOX_ADJUSTMENT = 1.5;
+  private static final double KICK_POWER_SPEED_MULTIPLIER = 2.0;
+  private static final double CHARGE_BASE_VALUE = 1.0;
+
+  private static final double MIN_SPEED_FOR_DAMPENING = 0.5;
+  private static final double VELOCITY_DAMPENING_FACTOR = 0.5;
+  private static final double PLAYER_SPEED_TOUCH_DIVISOR = 3.0;
+  private static final double CUBE_SPEED_TOUCH_DIVISOR = 6.0;
+  private static final double MIN_SOUND_POWER = 0.15;
+  private static final double PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED = 1.69;
+
+  private static final double VECTOR_CHANGE_THRESHOLD = 0.1;
+  private static final double VERTICAL_BOUNCE_THRESHOLD = 0.05;
+  private static final double TOLERANCE_VELOCITY_CHECK = 1.0E-6;
+
+  private static final int PLAYER_HEAD_LEVEL = 2;
+  private static final int PLAYER_FOOT_LEVEL = 1;
+
+  private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32.0 * 32.0;
+  private static final double PARTICLE_Y_OFFSET = 0.25;
+  private static final float REDSTONE_PARTICLE_OFFSET = 0.01F;
+  private static final float REDSTONE_PARTICLE_SPEED = 0.01F;
+  private static final int REDSTONE_PARTICLE_COUNT = 8;
+  private static final float GENERIC_PARTICLE_OFFSET = 0.01F;
+  private static final float GENERIC_PARTICLE_SPEED = 0.1F;
+  private static final int GENERIC_PARTICLE_COUNT = 10;
 
   private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
   private double hitRadiusSquared, minRadius, minRadiusSquared, bounceThreshold, inactivityRadiusSquared;
   @Getter private double cubeJumpRightClick;
+  private double wallBounceFactor, airDragFactor;
   private float soundVolume, soundPitch;
 
-  // Particles are only shown if the player is 32 blocks away - ball visibility patch
-  private static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
   private BukkitTask speedUpdateTask, activityUpdateTask, physicsTask, glowTask;
@@ -80,12 +121,16 @@ public class Physics {
     this.reload();
   }
 
+  public boolean isAllowedToInteract(Player player) {
+    return allowedInteractionModes.contains(player.getGameMode());
+  }
+
   /**
    * Starts the main physics loop running every tick.
    */
   private void startPhysicsTask() {
     if (physicsTask != null) physicsTask.cancel();
-    physicsTask = scheduler.runTaskTimer(plugin, this::tick, 1L, 1L);
+    physicsTask = scheduler.runTaskTimer(plugin, this::tick, PHYSICS_TASK_INTERVAL_TICKS, PHYSICS_TASK_INTERVAL_TICKS);
   }
 
   /**
@@ -93,7 +138,7 @@ public class Physics {
    */
   private void startGlowTask() {
     if (glowTask != null) glowTask.cancel();
-    glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, 5L, 5L);
+    glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS);
   }
 
   /**
@@ -106,21 +151,26 @@ public class Physics {
     activityUpdateTask = scheduler.runTaskTimerAsynchronously(plugin, () -> {
       if (cubes.isEmpty()) { inactiveCubesIds.clear(); return; }
 
-      List<UUID> activeCubes = new ArrayList<>();
+      Set<UUID> currentlyActiveCubes = ConcurrentHashMap.newKeySet();
       Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
       double threshold = inactivityRadiusSquared;
 
-      for (Slime cube : cubes) {
-        if (cube.isDead()) continue;
-
-        boolean isNearPlayer = onlinePlayers.stream().anyMatch(player -> player.getLocation().distanceSquared(cube.getLocation()) <= threshold);
-        if (isNearPlayer) activeCubes.add(cube.getUniqueId());
+      for (Player player : onlinePlayers) {
+        Location playerLoc = player.getLocation();
+        for (Slime cube : cubes) {
+          if (cube.isDead()) return;
+          if (playerLoc.distanceSquared(cube.getLocation()) <= threshold) {
+            currentlyActiveCubes.add(cube.getUniqueId());
+          }
+        }
       }
 
-      Set<UUID> allCubeIds = cubes.stream().map(Entity::getUniqueId).collect(Collectors.toSet());
       inactiveCubesIds.clear();
-      allCubeIds.stream().filter(id -> !activeCubes.contains(id)).forEach(inactiveCubesIds::add);
-    }, 20L, 20L * 5);
+      for (Slime cube : cubes) {
+        UUID uuid = cube.getUniqueId();
+        if (!currentlyActiveCubes.contains(uuid)) inactiveCubesIds.add(uuid);
+      }
+    }, ACTIVITY_UPDATE_DELAY_TICKS, ACTIVITY_UPDATE_INTERVAL_TICKS);
   }
 
   /**
@@ -132,7 +182,7 @@ public class Physics {
     speedUpdateTask = scheduler.runTaskTimer(plugin, () -> {
       for (Player player : plugin.getServer().getOnlinePlayers()) {
         UUID uuid = player.getUniqueId();
-        if (player.getGameMode() != GameMode.SURVIVAL) { lastLocations.remove(uuid); continue; }
+        if (!isAllowedToInteract(player)) { lastLocations.remove(uuid); continue; }
 
         Location current = player.getLocation();
         Location last = lastLocations.put(uuid, current);
@@ -140,14 +190,14 @@ public class Physics {
         if (last == null) continue;
 
         double dx = current.getX() - last.getX();
-        double dy = (current.getY() - last.getY()) / 2;
+        double dy = (current.getY() - last.getY()) / KICK_POWER_SPEED_MULTIPLIER;
         double dz = current.getZ() - last.getZ();
 
         double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
         double normalizedSpeed = distanceTraveled / speedCalcInterval;
         speed.put(uuid, normalizedSpeed);
       }
-    }, 1L, speedCalcInterval);
+    }, PHYSICS_TASK_INTERVAL_TICKS, speedCalcInterval);
   }
 
   /**
@@ -158,9 +208,9 @@ public class Physics {
   public Slime spawnCube(Location location) {
     Slime cube = (Slime) location.getWorld().spawnEntity(location, EntityType.SLIME);
     cube.setRemoveWhenFarAway(false);
-    cube.setSize(1);
+    cube.setSize(SLIME_SIZE);
     // Permanent jump effect that stops the cube from hopping.
-    cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, -3, true), true);
+    cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, JUMP_POTION_DURATION, JUMP_POTION_AMPLIFIER, true), true);
 
     // NMS Hack to prevent the ball from trying to reach the player.
     EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
@@ -193,7 +243,7 @@ public class Physics {
    */
   public double getDistanceSquared(Location locA, Location locB) {
     double dx = locA.getX() - locB.getX();
-    double dy = (locA.getY() - 1) - locB.getY() - 1.5;
+    double dy = (locA.getY() - BALL_TOUCH_Y_OFFSET) - locB.getY() - CUBE_HITBOX_ADJUSTMENT;
     if (dy < 0) dy = 0;
     double dz = locA.getZ() - locB.getZ();
 
@@ -207,9 +257,9 @@ public class Physics {
    */
   public KickResult calculateKickPower(Player player) {
     boolean isCharged = player.isSneaking();
-    double charge = 1 + charges.getOrDefault(player.getUniqueId(), 0D) * chargeMultiplier;
-    double speed = this.speed.getOrDefault(player.getUniqueId(), 0.5D);
-    double power = speed * 2 + basePower;
+    double charge = CHARGE_BASE_VALUE + charges.getOrDefault(player.getUniqueId(), 0D) * chargeMultiplier;
+    double speed = this.speed.getOrDefault(player.getUniqueId(), MIN_SPEED_FOR_DAMPENING);
+    double power = speed * KICK_POWER_SPEED_MULTIPLIER + basePower;
     double baseKickPower = isCharged ? charge * power : power;
     double finalKickPower = capKickPower(baseKickPower);
 
@@ -276,44 +326,37 @@ public class Physics {
    * This handles charge decay, collision detection, and vector manipulation.
    */
   private void tick() {
-    long now = System.currentTimeMillis();
-    kicked.entrySet().removeIf(uuidLongEntry -> now > uuidLongEntry.getValue() + 1000L);
+    Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
+    if (onlinePlayers.isEmpty() && cubes.isEmpty()) return;
 
-    for (Map.Entry<UUID, Double> entry : charges.entrySet()) {
+    kicked.entrySet().removeIf(uuidLongEntry -> System.currentTimeMillis() > uuidLongEntry.getValue() + KICKED_TIMEOUT_MS);
+
+    Iterator<Map.Entry<UUID, Double>> iterator = charges.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<UUID, Double> entry = iterator.next();
       UUID uuid = entry.getKey();
-      Player player = plugin.getServer().getPlayer(uuid);
-      if (player == null || !player.isOnline()) { charges.remove(uuid); continue; }
+
+      Player player = null;
+      for (Player p : onlinePlayers) { if (p.getUniqueId().equals(uuid)) { player = p; break; } }
+      if (player == null || !isAllowedToInteract(player)) { iterator.remove(); continue; }
 
       Double charge = entry.getValue();
-      double nextCharge = 1 - (1 - charge) * chargeRecoveryRate;
+      double nextCharge = CHARGE_BASE_VALUE - (CHARGE_BASE_VALUE - charge) * chargeRecoveryRate;
       charges.put(uuid, nextCharge);
       player.setExp((float) nextCharge);
     }
 
-    List<Slime> toRemove = new ArrayList<>();
-    if (cubes.isEmpty()) return;
-
     for (Slime cube : cubes) {
-      if (cube.isDead()) {
-        toRemove.add(cube);
-        continue;
-      }
+      UUID cubeId = cube.getUniqueId();
+      if (cube.isDead()) { cubesToRemove.add(cube); continue; }
+      if (inactiveCubesIds.contains(cubeId)) { cubesToRemove.add(cube); continue; }
 
-      UUID id = cube.getUniqueId();
-      if (inactiveCubesIds.contains(id)) continue;
-
-      Vector oldV = velocities.getOrDefault(id, cube.getVelocity());
+      Vector oldV = velocities.getOrDefault(cubeId, cube.getVelocity());
       Vector newV = cube.getVelocity().clone();
-
-      boolean sound = false;
-      boolean kicked = false;
-
-      Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
-      if (onlinePlayers.isEmpty()) return;
+      boolean kicked = false, sound = false;
 
       for (Player player : onlinePlayers) {
-        if (player.getGameMode() != GameMode.SURVIVAL) continue;
-        if (isAFK(player)) continue;
+        if (!isAllowedToInteract(player) || isAFK(player)) continue;
 
         double distanceSquared = getDistanceSquared(cube.getLocation(), player.getLocation());
         if (distanceSquared > hitRadiusSquared) continue;
@@ -324,17 +367,17 @@ public class Physics {
           distance = Math.sqrt(distanceSquared);
 
           double speed = newV.length();
-          if (distance <= minRadius && speed >= 0.5) newV.multiply(0.5 / speed);
+          if (distance <= minRadius && speed >= MIN_SPEED_FOR_DAMPENING) newV.multiply(VELOCITY_DAMPENING_FACTOR / speed);
+          double power = this.speed.getOrDefault(player.getUniqueId(), 0D) / PLAYER_SPEED_TOUCH_DIVISOR + oldV.length() / CUBE_SPEED_TOUCH_DIVISOR;
 
-          double power = this.speed.getOrDefault(player.getUniqueId(), 0D) / 3 + oldV.length() / 6;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
           org.ballTouch(player);
           kicked = true;
-          if (power > 0.15) sound = true;
+          if (power > MIN_SOUND_POWER) sound = true;
         }
 
         double newVSquared = newV.lengthSquared();
-        double proximityThresholdSquared = newVSquared * 1.69;
+        double proximityThresholdSquared = newVSquared * PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
 
         if (distanceSquared < proximityThresholdSquared) {
           double delta = (distance > -1) ? distance : Math.sqrt(distanceSquared);
@@ -358,18 +401,18 @@ public class Physics {
             rightDirection = false;
           }
 
-          if (rightDirection && loc.getY() < player.getLocation().getY() + 2
-              && loc.getY() > player.getLocation().getY() - 1
-              && nextLoc.getY() < player.getLocation().getY() + 2
-              && nextLoc.getY() > player.getLocation().getY() - 1) {
+          if (rightDirection && loc.getY() < player.getLocation().getY() + PLAYER_HEAD_LEVEL
+              && loc.getY() > player.getLocation().getY() - PLAYER_FOOT_LEVEL
+              && nextLoc.getY() < player.getLocation().getY() + PLAYER_HEAD_LEVEL
+              && nextLoc.getY() > player.getLocation().getY() - PLAYER_FOOT_LEVEL) {
             double velocityX = newV.getX();
-            if (Math.abs(velocityX) < 1e-6) continue;
+            if (Math.abs(velocityX) < TOLERANCE_VELOCITY_CHECK) continue;
 
             double a = newV.getZ() / newV.getX();
             double b = loc.getZ() - a * loc.getX();
             double numerator = a * player.getLocation().getX() - player.getLocation().getZ() + b;
             double numeratorSquared = numerator * numerator;
-            double denominatorSquared = a * a + 1;
+            double denominatorSquared = a * a + CHARGE_BASE_VALUE;
 
             if (numeratorSquared < minRadiusSquared * denominatorSquared) newV.multiply(delta / newVLength);
           }
@@ -377,42 +420,41 @@ public class Physics {
       }
 
       if (newV.getX() == 0) {
-        newV.setX(-oldV.getX() * 0.8);
+        newV.setX(-oldV.getX() * wallBounceFactor);
         if (Math.abs(oldV.getX()) > bounceThreshold) sound = true;
-      } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < 0.1) newV.setX(oldV.getX() * 0.98);
+      } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < VECTOR_CHANGE_THRESHOLD) newV.setX(oldV.getX() * airDragFactor);
 
       if (newV.getZ() == 0) {
-        newV.setZ(-oldV.getZ() * 0.8);
+        newV.setZ(-oldV.getZ() * wallBounceFactor);
         if (Math.abs(oldV.getZ()) > bounceThreshold) sound = true;
-      } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < 0.1) newV.setZ(oldV.getZ() * 0.98);
+      } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < VECTOR_CHANGE_THRESHOLD) newV.setZ(oldV.getZ() * airDragFactor);
 
-      if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - 0.05) {
-        newV.setY(-oldV.getY() * 0.8);
+      if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - VERTICAL_BOUNCE_THRESHOLD) {
+        newV.setY(-oldV.getY() * wallBounceFactor);
         if (Math.abs(oldV.getY()) > bounceThreshold) sound = true;
       }
 
       if (sound) scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch));
 
       cube.setVelocity(newV);
-      velocities.put(id, newV);
+      velocities.put(cubeId, newV);
     }
 
-    scheduleCubeRemoval(toRemove);
+    scheduleCubeRemoval();
   }
 
   /**
    * Schedules the removal of dead cubes 20 ticks later (1 second).
    * This delay is added to help mitigate the issues where the cube is dead but a final interaction is processed,
    * and to provide a graceful death animation instead of instant removal.
-   * @param toRemove List of dead cubes that need to be cleaned up.
    */
-  private void scheduleCubeRemoval(List<Slime> toRemove) {
-    if (!toRemove.isEmpty()) {
-      scheduler.runTaskLater(plugin, () -> toRemove.forEach(cube -> {
-        cubes.remove(cube);
-        if (!cube.isDead()) cube.remove();
-      }), 20L);
-    }
+  private void scheduleCubeRemoval() {
+    if (cubesToRemove.isEmpty()) return;
+
+    scheduler.runTaskLater(plugin, () -> cubesToRemove.forEach(cube -> {
+      cubes.remove(cube);
+      if (!cube.isDead()) cube.remove();
+    }), CUBE_REMOVAL_DELAY_TICKS);
   }
 
   /**
@@ -427,7 +469,7 @@ public class Physics {
       if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
       if (inactiveCubesIds.contains(cube.getUniqueId())) continue;
 
-      Location cubeLocation = cube.getLocation().clone().add(0, 0.25, 0);
+      Location cubeLocation = cube.getLocation().clone().add(0, PARTICLE_Y_OFFSET, 0);
 
       for (Player player : onlinePlayers) {
         if (cube.getLocation().distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
@@ -438,9 +480,9 @@ public class Physics {
         EnumParticle particle = settings.getParticle();
         if (particle == EnumParticle.REDSTONE) {
           Color color = settings.getRedstoneColor();
-          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, 0.01F, 0.01F, 0.01F, 0.01F, 8, color);
+          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_SPEED, REDSTONE_PARTICLE_COUNT, color);
         } else {
-          Utilities.sendParticle(player, particle, cubeLocation, 0.01F, 0.01F, 0.01F, 0.1F, 10);
+          Utilities.sendParticle(player, particle, cubeLocation, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_SPEED, GENERIC_PARTICLE_COUNT);
         }
       }
     }
@@ -455,6 +497,18 @@ public class Physics {
 
   public void reload() {
     cleanupTasks();
+
+    allowedInteractionModes.clear();
+    List<String> modeNames = config.getStringList("physics.allowed-gamemodes");
+    if (modeNames.isEmpty()) modeNames.add("SURVIVAL");
+
+    for (String name : modeNames) {
+      try {
+        allowedInteractionModes.add(GameMode.valueOf(name.toUpperCase()));
+      } catch (IllegalArgumentException exception) {
+        plugin.getLogger().log(Level.WARNING, "Invalid GameMode specified in config: " + name + ". Ignoring.");
+      }
+    }
 
     chargedHitCooldown = config.getLong("physics.cooldowns.charged-hit", 500);
     regularHitCooldown = config.getLong("physics.cooldowns.regular-hit", 150);
@@ -477,6 +531,8 @@ public class Physics {
     inactivityRadiusSquared = inactivityRadius * inactivityRadius;
 
     cubeJumpRightClick = config.getDouble("physics.jump", 0.7);
+    wallBounceFactor = config.getDouble("physics.collision.wall-bounce-factor", 0.8);
+    airDragFactor = config.getDouble("physics.collision.air-drag-factor", 0.98);
 
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
@@ -513,6 +569,7 @@ public class Physics {
 
     cubes.clear();
     inactiveCubesIds.clear();
+    cubesToRemove.clear();
     velocities.clear();
     kicked.clear();
     speed.clear();

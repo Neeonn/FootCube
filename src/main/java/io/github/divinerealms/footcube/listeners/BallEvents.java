@@ -61,7 +61,7 @@ public class BallEvents implements Listener {
     event.setCancelled(true);
 
     if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
-    if (player.getGameMode() != GameMode.SURVIVAL) return;
+    if (!physics.isAllowedToInteract(player)) return;
 
     KickResult kickResult = physics.calculateKickPower(player);
     boolean onCooldown = !physics.canHitBall(player);
@@ -94,7 +94,7 @@ public class BallEvents implements Listener {
     UUID playerId = player.getUniqueId();
     Slime cube = (Slime) event.getRightClicked();
 
-    if (player.getGameMode() != GameMode.SURVIVAL) return;
+    if (!physics.isAllowedToInteract(player)) return;
     if (!physics.getCubes().contains(cube)) return;
     if (physics.getKicked().containsKey(playerId)) return;
 

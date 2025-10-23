@@ -147,9 +147,8 @@ public class Physics {
   private void startPlayerListUpdateTask() {
     if (playerListUpdateTask != null) playerListUpdateTask.cancel();
 
-    playerListUpdateTask = scheduler.runTaskTimer(plugin, () -> {
-      cachedOnlinePlayers = plugin.getServer().getOnlinePlayers();
-    }, PHYSICS_TASK_INTERVAL_TICKS, PLAYER_LIST_UPDATE_INTERVAL_TICKS);
+    playerListUpdateTask = scheduler.runTaskTimer(plugin, () -> cachedOnlinePlayers = plugin.getServer().getOnlinePlayers(),
+        PHYSICS_TASK_INTERVAL_TICKS, PLAYER_LIST_UPDATE_INTERVAL_TICKS);
   }
 
   /**

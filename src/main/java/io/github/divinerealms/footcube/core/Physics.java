@@ -309,7 +309,7 @@ public class Physics {
       boolean kicked = false;
 
       Collection<? extends Player> onlinePlayers = plugin.getServer().getOnlinePlayers();
-      if (onlinePlayers.isEmpty()) continue;
+      if (onlinePlayers.isEmpty()) return;
 
       for (Player player : onlinePlayers) {
         if (player.getGameMode() != GameMode.SURVIVAL) continue;

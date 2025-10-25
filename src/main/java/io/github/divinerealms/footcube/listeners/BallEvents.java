@@ -61,7 +61,7 @@ public class BallEvents implements Listener {
     event.setCancelled(true);
 
     if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
-    if (!physics.isAllowedToInteract(player)) return;
+    if (physics.notAllowedToInteract(player)) return;
 
     KickResult kickResult = physics.calculateKickPower(player);
     boolean onCooldown = !physics.canHitBall(player);
@@ -74,10 +74,9 @@ public class BallEvents implements Listener {
     org.ballTouch(player);
 
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
+    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 
     scheduler.runTask(plugin, () -> {
-      cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
-
       PlayerSettings settings = fcManager.getPlayerSettings(player);
       cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
       if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
@@ -94,7 +93,7 @@ public class BallEvents implements Listener {
     UUID playerId = player.getUniqueId();
     Slime cube = (Slime) event.getRightClicked();
 
-    if (!physics.isAllowedToInteract(player)) return;
+    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
     if (!physics.getCubes().contains(cube)) return;
     if (physics.getKicked().containsKey(playerId)) return;
 
@@ -103,10 +102,7 @@ public class BallEvents implements Listener {
     org.ballTouch(player);
 
     Vector rise = new Vector(0, physics.getCubeJumpRightClick(), 0);
-
-    scheduler.runTask(plugin, () -> {
-      cube.setVelocity(cube.getVelocity().add(rise));
-      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F);
-    });
+    cube.setVelocity(cube.getVelocity().add(rise));
+    scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F));
   }
 }

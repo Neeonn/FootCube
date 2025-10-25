@@ -10,10 +10,7 @@ import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
-import org.bukkit.Color;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
 import org.bukkit.entity.Entity;
@@ -47,18 +44,16 @@ public class Physics {
 
   @Getter private final Set<Slime> cubes = ConcurrentHashMap.newKeySet();
   private final Set<Slime> cubesToRemove = ConcurrentHashMap.newKeySet();
-  private final Map<UUID, Vector> velocities = new ConcurrentHashMap<>();
+  @Getter private final Map<UUID, Vector> velocities = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Long> kicked = new ConcurrentHashMap<>();
-  private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
+  @Getter private final Map<UUID, Double> speed = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Double> charges = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
-  private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
   private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
   @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
 
   private static final long PHYSICS_TASK_INTERVAL_TICKS = 1L;
   private static final long GLOW_TASK_INTERVAL_TICKS = 5L;
-  private static final long PLAYER_LIST_UPDATE_INTERVAL_TICKS = 20L;
   private static final long CUBE_REMOVAL_DELAY_TICKS = 20L;
 
   private static final int SLIME_SIZE = 1;
@@ -94,7 +89,7 @@ public class Physics {
   private static final float GENERIC_PARTICLE_SPEED = 0.1F;
   private static final int GENERIC_PARTICLE_COUNT = 10;
 
-  private long chargedHitCooldown, regularHitCooldown, afkThreshold, speedCalcInterval;
+  private long chargedHitCooldown, regularHitCooldown, afkThreshold;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
   private double hitRadiusSquared, minRadius, minRadiusSquared, bounceThreshold;
   @Getter private double cubeJumpRightClick;
@@ -103,9 +98,7 @@ public class Physics {
 
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
-  private BukkitTask speedUpdateTask, physicsTask, glowTask, playerListUpdateTask;
-
-  private volatile Collection<? extends Player> cachedOnlinePlayers = Collections.emptyList();
+  private BukkitTask physicsTask, glowTask;
 
   @Getter @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -138,40 +131,6 @@ public class Physics {
   private void startGlowTask() {
     if (glowTask != null) glowTask.cancel();
     glowTask = scheduler.runTaskTimer(plugin, this::showCubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS);
-  }
-
-  private void startPlayerListUpdateTask() {
-    if (playerListUpdateTask != null) playerListUpdateTask.cancel();
-
-    playerListUpdateTask = scheduler.runTaskTimer(plugin, () -> cachedOnlinePlayers = plugin.getServer().getOnlinePlayers(),
-        PHYSICS_TASK_INTERVAL_TICKS, PLAYER_LIST_UPDATE_INTERVAL_TICKS);
-  }
-
-  /**
-   * Starts the task to calculate player movement speed based on location changes.
-   */
-  private void startSpeedCalculation() {
-    if (speedUpdateTask != null) speedUpdateTask.cancel();
-
-    speedUpdateTask = scheduler.runTaskTimerAsynchronously(plugin, () -> {
-      for (Player player : cachedOnlinePlayers) {
-        UUID uuid = player.getUniqueId();
-        if (notAllowedToInteract(player)) { lastLocations.remove(uuid); continue; }
-
-        Location current = player.getLocation();
-        Location last = lastLocations.put(uuid, current);
-
-        if (last == null) continue;
-
-        double dx = current.getX() - last.getX();
-        double dy = (current.getY() - last.getY()) / KICK_POWER_SPEED_MULTIPLIER;
-        double dz = current.getZ() - last.getZ();
-
-        double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        double normalizedSpeed = distanceTraveled / speedCalcInterval;
-        speed.put(uuid, normalizedSpeed);
-      }
-    }, PHYSICS_TASK_INTERVAL_TICKS, speedCalcInterval);
   }
 
   /**
@@ -304,7 +263,7 @@ public class Physics {
    * This handles charge decay, collision detection, and vector manipulation.
    */
   private void tick() {
-    Collection<? extends Player> onlinePlayers = cachedOnlinePlayers;
+    Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
     if (onlinePlayers.isEmpty() && cubes.isEmpty()) return;
 
     kicked.entrySet().removeIf(uuidLongEntry -> System.currentTimeMillis() > uuidLongEntry.getValue() + KICKED_TIMEOUT_MS);
@@ -330,7 +289,9 @@ public class Physics {
 
       Vector oldV = velocities.getOrDefault(cubeId, cube.getVelocity());
       Vector newV = cube.getVelocity().clone();
+
       boolean kicked = false, sound = false;
+      boolean recentlyKicked = this.kicked.values().stream().anyMatch(lastKickTime -> System.currentTimeMillis() - lastKickTime < KICKED_TIMEOUT_MS);
 
       for (Player player : onlinePlayers) {
         if (notAllowedToInteract(player) || isAFK(player)) continue;
@@ -352,6 +313,8 @@ public class Physics {
           kicked = true;
           if (power > MIN_SOUND_POWER) sound = true;
         }
+
+        if (recentlyKicked) continue;
 
         double newVSquared = newV.lengthSquared();
         double proximityThresholdSquared = newVSquared * PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
@@ -439,7 +402,7 @@ public class Physics {
    * This is implemented to tackle the issue of render distance for entities in 1.8.8
    */
   private void showCubeParticles() {
-    Collection<? extends Player> onlinePlayers = cachedOnlinePlayers;
+    Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
     if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
 
     for (Slime cube : cubes) {
@@ -467,8 +430,6 @@ public class Physics {
   public void cleanupTasks() {
     if (physicsTask != null) { physicsTask.cancel(); physicsTask = null; }
     if (glowTask != null) { glowTask.cancel(); glowTask = null; }
-    if (speedUpdateTask != null) { speedUpdateTask.cancel(); speedUpdateTask = null; }
-    if (playerListUpdateTask != null) { playerListUpdateTask.cancel(); playerListUpdateTask = null; }
   }
 
   public void reload() {
@@ -477,7 +438,6 @@ public class Physics {
     chargedHitCooldown = config.getLong("physics.cooldowns.charged-hit", 500);
     regularHitCooldown = config.getLong("physics.cooldowns.regular-hit", 150);
     afkThreshold = config.getLong("physics.afk-threshold", 60000);
-    speedCalcInterval = config.getLong("physics.speed-calculation-interval", 5);
 
     maxKP = config.getDouble("physics.kick-power.max", 6.75);
     softCapMinFactor = config.getDouble("physics.kick-power.soft-cap-min-factor", 0.8);
@@ -498,17 +458,15 @@ public class Physics {
     soundVolume = (float) config.getDouble("physics.sound.volume", 0.5);
     soundPitch = (float) config.getDouble("physics.sound.pitch", 1.0);
 
-    startPlayerListUpdateTask();
-    startSpeedCalculation();
     startPhysicsTask();
     startGlowTask();
   }
 
   public void removePlayer(Player player) {
     UUID uuid = player.getUniqueId();
+    fcManager.getCachedPlayers().remove(player);
     fcManager.getPlayerSettings().remove(uuid);
     speed.remove(uuid);
-    lastLocations.remove(uuid);
     charges.remove(uuid);
     kicked.remove(uuid);
     ballHitCooldowns.remove(uuid);
@@ -536,9 +494,7 @@ public class Physics {
     charges.clear();
     ballHitCooldowns.clear();
     fcManager.getPlayerSettings().clear();
-    lastLocations.clear();
     lastAction.clear();
     cubeHits.clear();
-    cachedOnlinePlayers = Collections.emptyList();
   }
 }

@@ -77,6 +77,7 @@ public class PlayerEvents implements Listener {
 
     player.setExp(0);
     org.clearInventory(player);
+    fcManager.getCachedPlayers().add(player);
 
     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
       Player asyncPlayer = plugin.getServer().getPlayer(playerUuid);
@@ -97,12 +98,6 @@ public class PlayerEvents implements Listener {
 
     Match match = MatchHelper.getMatch(org, player);
     if (match != null) MatchHelper.leaveMatch(org, player, match, logger, true);
-  }
-
-  @EventHandler
-  public void onMove(PlayerMoveEvent event) {
-    if (event.getPlayer().getGameMode() != GameMode.SURVIVAL) return;
-    physics.recordPlayerAction(event.getPlayer());
   }
 
   @EventHandler

@@ -17,6 +17,7 @@ import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
 import net.minecraft.server.v1_8_R3.EnumParticle;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -45,6 +46,8 @@ public class FCManager {
 
   private final List<String> registeredCommands = new ArrayList<>();
 
+  private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
+
   private Economy economy;
   private Chat chat;
   private LuckPerms luckPerms;
@@ -61,7 +64,7 @@ public class FCManager {
   public FCManager(FootCube plugin) throws IllegalStateException {
     this.plugin = plugin;
     this.configManager = new ConfigManager(plugin, "");
-    this.logger = new Logger(plugin);
+    this.logger = new Logger(this);
     this.sendBanner();
 
     this.dataManager = new PlayerDataManager(this);
@@ -83,6 +86,7 @@ public class FCManager {
   }
 
   public void reload() {
+    initializeCachedPlayers();
     configManager.reloadAllConfigs();
     setupConfig();
     setupMessages();
@@ -90,8 +94,7 @@ public class FCManager {
     initTasks();
     org.loadArenas();
     listenerManager.registerAll();
-
-    List<UUID> onlinePlayers = plugin.getServer().getOnlinePlayers().stream().map(Player::getUniqueId).collect(Collectors.toList());
+    List<UUID> onlinePlayers = cachedPlayers.stream().map(Player::getUniqueId).collect(Collectors.toList());
     scheduler.runTaskAsynchronously(plugin, () -> onlinePlayers.forEach(uuid -> {
       Player asyncPlayer = plugin.getServer().getPlayer(uuid);
       if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
@@ -99,6 +102,12 @@ public class FCManager {
       PlayerData playerData = dataManager.get(asyncPlayer);
       if (playerData != null) preloadSettings(asyncPlayer, playerData);
     }));
+  }
+
+  private void initializeCachedPlayers() {
+    Collection<? extends Player> onlinePlayers = Bukkit.getOnlinePlayers();
+    cachedPlayers.clear();
+    cachedPlayers.addAll(onlinePlayers);
   }
 
   public void initTasks() {

@@ -8,6 +8,7 @@ import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
@@ -16,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
@@ -56,7 +58,6 @@ public class BallEvents implements Listener {
 
     if (!(event.getDamager() instanceof Player)) return;
     Player player = (Player) event.getDamager();
-    UUID playerId = player.getUniqueId();
 
     event.setCancelled(true);
 
@@ -66,6 +67,7 @@ public class BallEvents implements Listener {
     KickResult kickResult = physics.calculateKickPower(player);
     boolean onCooldown = !physics.canHitBall(player);
 
+    UUID playerId = player.getUniqueId();
     if (physics.getCubeHits().contains(playerId)) physics.showHits(player, kickResult);
     if (onCooldown) return;
 
@@ -74,7 +76,10 @@ public class BallEvents implements Listener {
     org.ballTouch(player);
 
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
+    Vector oldV = physics.getVelocities().getOrDefault(cube.getUniqueId(), cube.getVelocity().clone());
+    Vector newV = oldV.add(kick);
+    cube.setVelocity(newV);
+    physics.getVelocities().put(cube.getUniqueId(), newV);
 
     scheduler.runTask(plugin, () -> {
       PlayerSettings settings = fcManager.getPlayerSettings(player);
@@ -102,7 +107,27 @@ public class BallEvents implements Listener {
     org.ballTouch(player);
 
     Vector rise = new Vector(0, physics.getCubeJumpRightClick(), 0);
-    cube.setVelocity(cube.getVelocity().add(rise));
+    Vector oldV = physics.getVelocities().getOrDefault(cube.getUniqueId(), cube.getVelocity().clone());
+    Vector newV = oldV.add(rise);
+    cube.setVelocity(newV);
+    physics.getVelocities().put(cube.getUniqueId(), newV);
+
     scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F));
+  }
+
+  @EventHandler
+  public void playerMove(PlayerMoveEvent event) {
+    Player player = event.getPlayer();
+    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
+
+    Location to = event.getTo();
+    Location from = event.getFrom();
+
+    double x = Math.abs(to.getX() - from.getX());
+    double y = Math.abs(to.getY() - from.getY()) / 2;
+    double z = Math.abs(to.getZ() - from.getZ());
+
+    physics.recordPlayerAction(event.getPlayer());
+    physics.getSpeed().put(player.getUniqueId(), Math.sqrt(x * x + y * y + z * z));
   }
 }

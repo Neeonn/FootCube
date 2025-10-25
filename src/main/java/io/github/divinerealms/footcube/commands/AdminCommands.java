@@ -406,7 +406,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           case "end":
             match.phase = 1;
 
-            for (Player p : plugin.getServer().getOnlinePlayers()) {
+            for (Player p : fcManager.getCachedPlayers()) {
               if (match.isInMatch(p)) {
                 MatchHelper.leaveMatch(org, p, match, logger, false);
                 p.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation());
@@ -493,7 +493,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "ban":
         case "unban":
         case "checkban":
-          plugin.getServer().getOnlinePlayers().forEach(p -> completions.add(p.getName()));
+          fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
           break;
         case "setuparena":
         case "set": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;

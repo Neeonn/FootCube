@@ -1,6 +1,7 @@
 package io.github.divinerealms.footcube.utils;
 
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.core.FCManager;
 import lombok.Getter;
 import net.minecraft.server.v1_8_R3.IChatBaseComponent;
 import net.minecraft.server.v1_8_R3.IChatBaseComponent.ChatSerializer;
@@ -12,17 +13,18 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 public class Logger {
+  private final FCManager fcManager;
   private final Server server;
   private final ConsoleCommandSender consoleSender;
   @Getter private final String consolePrefix;
 
-  public Logger(Plugin plugin) {
-    this.server = plugin.getServer();
+  public Logger(FCManager fcManager) {
+    this.fcManager = fcManager;
+    this.server = fcManager.getPlugin().getServer();
     this.consoleSender = this.server.getConsoleSender();
-    this.consolePrefix = ChatColor.GREEN + "[" + plugin.getDescription().getName() + "] " + ChatColor.DARK_GREEN;
+    this.consolePrefix = ChatColor.GREEN + "[" + fcManager.getPlugin().getDescription().getName() + "] " + ChatColor.DARK_GREEN;
   }
 
   public void info(String message) {
@@ -65,7 +67,7 @@ public class Logger {
     IChatBaseComponent iChatBaseComponent = ChatSerializer.a("{\"text\": \"" + message + "\"}");
     PacketPlayOutChat packetPlayOutChat = new PacketPlayOutChat(iChatBaseComponent, (byte)2);
 
-    for(Player player : server.getOnlinePlayers()) {
+    for(Player player : fcManager.getCachedPlayers()) {
       ((CraftPlayer)player).getHandle().playerConnection.sendPacket(packetPlayOutChat);
     }
   }

@@ -69,7 +69,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     List<String> completions = new ArrayList<>();
 
     if (args.length == 1) {
-      Bukkit.getOnlinePlayers().forEach(player -> completions.add(player.getName()));
+      fcManager.getCachedPlayers().forEach(player -> completions.add(player.getName()));
     }
 
     if (!completions.isEmpty()) {

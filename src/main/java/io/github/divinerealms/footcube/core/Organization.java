@@ -168,7 +168,7 @@ public class Organization {
         }
       }
 
-      for (Player p : this.plugin.getServer().getOnlinePlayers()) {
+      for (Player p : fcManager.getCachedPlayers()) {
         if (!isInGame(p)) {
           if (m.time.getScore() < 0) {
             logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT.replace(new String[]{String.valueOf(m.type)}));
@@ -312,7 +312,7 @@ public class Organization {
   }
 
   public boolean isOnlinePlayer(String s) {
-    for(Player p : this.plugin.getServer().getOnlinePlayers()) {
+    for(Player p : fcManager.getCachedPlayers()) {
       if (p.getName().equalsIgnoreCase(s)) {
         return true;
       }
@@ -487,7 +487,7 @@ public class Organization {
         }
       }
 
-      for (Player p : this.plugin.getServer().getOnlinePlayers()) {
+      for (Player p : fcManager.getCachedPlayers()) {
         if (!this.playingPlayers.contains(p.getName()) && !this.waitingPlayers.containsKey(p.getName())) {
           if (m.time.getScore() < 0) {
             logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT.replace(new String[]{String.valueOf(m.type)}));

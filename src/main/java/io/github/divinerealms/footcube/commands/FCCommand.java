@@ -503,7 +503,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           break;
         case "team":
         case "t":
-          for (Player p : plugin.getServer().getOnlinePlayers())
+          for (Player p : fcManager.getCachedPlayers())
             if (!p.equals(sender) && !org.isInGame(p) && !org.getTeam().containsKey(p) && !org.getTeamReverse().containsKey(p)) completions.add(p.getName());
           completions.addAll(Arrays.asList("accept", "decline", "cancel", "2v2", "3v3", "4v4"));
           break;

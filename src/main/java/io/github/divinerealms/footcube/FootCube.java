@@ -27,6 +27,7 @@ public class FootCube extends JavaPlugin {
       fcManager.shutdownTasks();
       getServer().getScheduler().cancelTasks(this);
       fcManager.getListenerManager().unregisterAll();
+      fcManager.getCachedPlayers().clear();
       fcManager.getLogger().info("&cSuccessfully disabled.");
     }
   }

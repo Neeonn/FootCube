@@ -44,8 +44,6 @@ public class FCManager {
   private final CubeCleaner cubeCleaner;
   private final BukkitScheduler scheduler;
 
-  private final List<String> registeredCommands = new ArrayList<>();
-
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
 
   private Economy economy;

@@ -18,7 +18,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
@@ -29,7 +28,6 @@ public class BallEvents implements Listener {
   private final Physics physics;
   private final Organization org;
   private final Logger logger;
-  private final Plugin plugin;
   private final BukkitScheduler scheduler;
 
   private static final String PERM_HIT_DEBUG = "footcube.admin.hitdebug";
@@ -39,8 +37,7 @@ public class BallEvents implements Listener {
     this.physics = fcManager.getPhysics();
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
-    this.plugin = fcManager.getPlugin();
-    this.scheduler = plugin.getServer().getScheduler();
+    this.scheduler = fcManager.getScheduler();
   }
 
   @EventHandler
@@ -76,18 +73,15 @@ public class BallEvents implements Listener {
     org.ballTouch(player);
 
     Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    Vector oldV = physics.getVelocities().getOrDefault(cube.getUniqueId(), cube.getVelocity().clone());
-    Vector newV = oldV.add(kick);
-    cube.setVelocity(newV);
-    physics.getVelocities().put(cube.getUniqueId(), newV);
+    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
 
-    scheduler.runTask(plugin, () -> {
+    scheduler.runTask(fcManager.getPlugin(), () -> {
+      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, physics.getSoundVolume(), physics.getSoundPitch());
+
       PlayerSettings settings = fcManager.getPlayerSettings(player);
-      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 0.5F, 1F);
-      if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), 1.5F, 1.5F);
+      if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), physics.getSoundVolume(), physics.getSoundPitch());
+      if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
     });
-
-    if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
   }
 
   @EventHandler
@@ -106,22 +100,19 @@ public class BallEvents implements Listener {
     physics.recordPlayerAction(player);
     org.ballTouch(player);
 
-    Vector rise = new Vector(0, physics.getCubeJumpRightClick(), 0);
-    Vector oldV = physics.getVelocities().getOrDefault(cube.getUniqueId(), cube.getVelocity().clone());
-    Vector newV = oldV.add(rise);
-    cube.setVelocity(newV);
-    physics.getVelocities().put(cube.getUniqueId(), newV);
-
-    scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, 1F, 1F));
+    cube.setVelocity(cube.getVelocity().add(new Vector(0, physics.getCubeJumpRightClick(), 0)));
+    scheduler.runTask(fcManager.getPlugin(), () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, physics.getSoundVolume(), physics.getSoundPitch()));
   }
 
   @EventHandler
   public void playerMove(PlayerMoveEvent event) {
-    Player player = event.getPlayer();
-    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
-
     Location to = event.getTo();
     Location from = event.getFrom();
+
+    if (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ()) return;
+
+    Player player = event.getPlayer();
+    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
 
     double x = Math.abs(to.getX() - from.getX());
     double y = Math.abs(to.getY() - from.getY()) / 2;

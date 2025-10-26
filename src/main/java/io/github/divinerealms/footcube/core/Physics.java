@@ -53,7 +53,7 @@ public class Physics {
   @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
 
   private static final long PHYSICS_TASK_INTERVAL_TICKS = 1L;
-  private static final long GLOW_TASK_INTERVAL_TICKS = 5L;
+  private static final long GLOW_TASK_INTERVAL_TICKS = 10L;
   private static final long CUBE_REMOVAL_DELAY_TICKS = 20L;
 
   private static final int SLIME_SIZE = 1;
@@ -91,10 +91,10 @@ public class Physics {
 
   private long chargedHitCooldown, regularHitCooldown, afkThreshold;
   private double maxKP, softCapMinFactor, chargeMultiplier, basePower, chargeRecoveryRate;
-  private double hitRadiusSquared, minRadius, minRadiusSquared, bounceThreshold;
+  private double hitRadius, hitRadiusSquared, minRadius, minRadiusSquared, bounceThreshold;
   @Getter private double cubeJumpRightClick;
   private double wallBounceFactor, airDragFactor;
-  private float soundVolume, soundPitch;
+  @Getter private float soundVolume, soundPitch;
 
   private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
@@ -216,11 +216,11 @@ public class Physics {
 
   public String onHitDebug(Player player, KickResult result) {
     return result.isChargedHit()
-        ? Lang.HITDEBUG_CHARGED.replace(new String[]{
-            player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
-            String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
-        })
-        : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
+      ? Lang.HITDEBUG_CHARGED.replace(new String[]{
+       player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
+       String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
+      })
+      : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
   }
 
   /**
@@ -247,15 +247,14 @@ public class Physics {
     long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
     long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsedSinceLastHit);
 
-    scheduler.runTaskAsynchronously(plugin, () ->
-      logger.sendActionBar(player, (isChargedHit
-        ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
-            String.format("%.2f", finalKickPower),
-            String.format("%.2f", kickResult.getPower()),
-            String.format("%.2f", kickResult.getCharge())
-          })
-        : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{ String.format("%.2f", finalKickPower) })
-      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)})));
+    logger.sendActionBar(player, (isChargedHit
+      ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
+          String.format("%.2f", finalKickPower),
+          String.format("%.2f", kickResult.getPower()),
+          String.format("%.2f", kickResult.getCharge())
+        })
+      : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{ String.format("%.2f", finalKickPower) })
+    ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)}));
   }
 
   /**
@@ -263,37 +262,40 @@ public class Physics {
    * This handles charge decay, collision detection, and vector manipulation.
    */
   private void tick() {
-    Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
-    if (onlinePlayers.isEmpty() && cubes.isEmpty()) return;
+    if (fcManager.getCachedPlayers().isEmpty() || cubes.isEmpty()) return;
 
     kicked.entrySet().removeIf(uuidLongEntry -> System.currentTimeMillis() > uuidLongEntry.getValue() + KICKED_TIMEOUT_MS);
 
-    Iterator<Map.Entry<UUID, Double>> iterator = charges.entrySet().iterator();
-    while (iterator.hasNext()) {
-      Map.Entry<UUID, Double> entry = iterator.next();
+    Iterator<Map.Entry<UUID, Double>> chargesIterator = charges.entrySet().iterator();
+    while (chargesIterator.hasNext()) {
+      Map.Entry<UUID, Double> entry = chargesIterator.next();
       UUID uuid = entry.getKey();
+      Player player = Bukkit.getPlayer(uuid);
+      if (player == null) { chargesIterator.remove(); continue; }
 
-      Player player = null;
-      for (Player p : onlinePlayers) { if (p.getUniqueId().equals(uuid)) { player = p; break; } }
-      if (player == null || notAllowedToInteract(player)) { iterator.remove(); continue; }
-
-      Double charge = entry.getValue();
-      double nextCharge = CHARGE_BASE_VALUE - (CHARGE_BASE_VALUE - charge) * chargeRecoveryRate;
-      charges.put(uuid, nextCharge);
+      double nextCharge = CHARGE_BASE_VALUE - (CHARGE_BASE_VALUE - entry.getValue()) * chargeRecoveryRate;
+      entry.setValue(nextCharge);
       player.setExp((float) nextCharge);
     }
 
     for (Slime cube : cubes) {
       UUID cubeId = cube.getUniqueId();
-      if (cube.isDead()) { cubesToRemove.add(cube); continue; }
+      if (cube.isDead()) {
+        cubesToRemove.add(cube);
+        continue;
+      }
 
       Vector oldV = velocities.getOrDefault(cubeId, cube.getVelocity());
       Vector newV = cube.getVelocity().clone();
 
       boolean kicked = false, sound = false;
-      boolean recentlyKicked = this.kicked.values().stream().anyMatch(lastKickTime -> System.currentTimeMillis() - lastKickTime < KICKED_TIMEOUT_MS);
 
-      for (Player player : onlinePlayers) {
+      double closeEnough = hitRadius + 0.1;
+      List<Entity> nearbyEntities = cube.getNearbyEntities(closeEnough, closeEnough, closeEnough);
+      for (Entity entity : nearbyEntities) {
+        if (!(entity instanceof Player)) continue;
+        Player player = (Player) entity;
+        UUID playerId = player.getUniqueId();
         if (notAllowedToInteract(player) || isAFK(player)) continue;
 
         double distanceSquared = getDistanceSquared(cube.getLocation(), player.getLocation());
@@ -303,18 +305,14 @@ public class Physics {
 
         if (distanceSquared <= hitRadiusSquared) {
           distance = Math.sqrt(distanceSquared);
-
           double speed = newV.length();
           if (distance <= minRadius && speed >= MIN_SPEED_FOR_DAMPENING) newV.multiply(VELOCITY_DAMPENING_FACTOR / speed);
-          double power = this.speed.getOrDefault(player.getUniqueId(), 0D) / PLAYER_SPEED_TOUCH_DIVISOR + oldV.length() / CUBE_SPEED_TOUCH_DIVISOR;
-
+          double power = this.speed.getOrDefault(playerId, 0D) / PLAYER_SPEED_TOUCH_DIVISOR + oldV.length() / CUBE_SPEED_TOUCH_DIVISOR;
           newV.add(player.getLocation().getDirection().setY(0).normalize().multiply(power));
           org.ballTouch(player);
           kicked = true;
           if (power > MIN_SOUND_POWER) sound = true;
         }
-
-        if (recentlyKicked) continue;
 
         double newVSquared = newV.lengthSquared();
         double proximityThresholdSquared = newVSquared * PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
@@ -327,7 +325,8 @@ public class Physics {
           Vector nextLoc = loc.clone().add(newV);
 
           boolean rightDirection = true;
-          Vector pDir = new Vector(player.getLocation().getX() - loc.getX(), 0, player.getLocation().getZ() - loc.getZ());
+          Location playerLocation = player.getLocation();
+          Vector pDir = new Vector(playerLocation.getX() - loc.getX(), 0, playerLocation.getZ() - loc.getZ());
           Vector cDir = (new Vector(newV.getX(), 0, newV.getZ())).normalize();
 
           int px = pDir.getX() < 0 ? -1 : 1;
@@ -337,20 +336,18 @@ public class Physics {
 
           if (px != cx && pz != cz
               || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ())
-              || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) {
-            rightDirection = false;
-          }
+              || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) rightDirection = false;
 
-          if (rightDirection && loc.getY() < player.getLocation().getY() + PLAYER_HEAD_LEVEL
-              && loc.getY() > player.getLocation().getY() - PLAYER_FOOT_LEVEL
-              && nextLoc.getY() < player.getLocation().getY() + PLAYER_HEAD_LEVEL
-              && nextLoc.getY() > player.getLocation().getY() - PLAYER_FOOT_LEVEL) {
+          if (rightDirection && loc.getY() < playerLocation.getY() + PLAYER_HEAD_LEVEL
+              && loc.getY() > playerLocation.getY() - PLAYER_FOOT_LEVEL
+              && nextLoc.getY() < playerLocation.getY() + PLAYER_HEAD_LEVEL
+              && nextLoc.getY() > playerLocation.getY() - PLAYER_FOOT_LEVEL) {
             double velocityX = newV.getX();
             if (Math.abs(velocityX) < TOLERANCE_VELOCITY_CHECK) continue;
 
             double a = newV.getZ() / newV.getX();
             double b = loc.getZ() - a * loc.getX();
-            double numerator = a * player.getLocation().getX() - player.getLocation().getZ() + b;
+            double numerator = a * playerLocation.getX() - playerLocation.getZ() + b;
             double numeratorSquared = numerator * numerator;
             double denominatorSquared = a * a + CHARGE_BASE_VALUE;
 
@@ -374,8 +371,7 @@ public class Physics {
         if (Math.abs(oldV.getY()) > bounceThreshold) sound = true;
       }
 
-      if (sound) scheduler.runTask(plugin, () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch));
-
+      if (sound) cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, soundVolume, soundPitch);
       cube.setVelocity(newV);
       velocities.put(cubeId, newV);
     }
@@ -391,7 +387,10 @@ public class Physics {
   private void scheduleCubeRemoval() {
     if (cubesToRemove.isEmpty()) return;
 
-    scheduler.runTaskLater(plugin, () -> cubesToRemove.forEach(cube -> {
+    Set<Slime> toRemove = new HashSet<>(cubesToRemove);
+    cubesToRemove.clear();
+
+    scheduler.runTaskLater(plugin, () -> toRemove.forEach(cube -> {
       cubes.remove(cube);
       if (!cube.isDead()) cube.remove();
     }), CUBE_REMOVAL_DELAY_TICKS);
@@ -402,28 +401,34 @@ public class Physics {
    * This is implemented to tackle the issue of render distance for entities in 1.8.8
    */
   private void showCubeParticles() {
-    Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
-    if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
+    long start = System.nanoTime();
+    try {
+      Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
+      if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
 
-    for (Slime cube : cubes) {
-      if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
+      for (Slime cube : cubes) {
+        if (cube == null || cube.isDead() || cube.getLocation() == null) continue;
 
-      Location cubeLocation = cube.getLocation().clone().add(0, PARTICLE_Y_OFFSET, 0);
+        Location cubeLocation = cube.getLocation().clone().add(0, PARTICLE_Y_OFFSET, 0);
 
-      for (Player player : onlinePlayers) {
-        if (cube.getLocation().distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
+        for (Player player : onlinePlayers) {
+          if (cubeLocation.distanceSquared(player.getLocation()) < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
 
-        PlayerSettings settings = fcManager.getPlayerSettings(player);
-        if (settings == null || !settings.isParticlesEnabled()) continue;
+          PlayerSettings settings = fcManager.getPlayerSettings(player);
+          if (settings == null || !settings.isParticlesEnabled()) continue;
 
-        EnumParticle particle = settings.getParticle();
-        if (particle == EnumParticle.REDSTONE) {
-          Color color = settings.getRedstoneColor();
-          Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_SPEED, REDSTONE_PARTICLE_COUNT, color);
-        } else {
-          Utilities.sendParticle(player, particle, cubeLocation, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_SPEED, GENERIC_PARTICLE_COUNT);
+          EnumParticle particle = settings.getParticle();
+          if (particle == EnumParticle.REDSTONE) {
+            Color color = settings.getRedstoneColor();
+            Utilities.sendParticle(player, EnumParticle.REDSTONE, cubeLocation, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_OFFSET, REDSTONE_PARTICLE_SPEED, REDSTONE_PARTICLE_COUNT, color);
+          } else {
+            Utilities.sendParticle(player, particle, cubeLocation, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_OFFSET, GENERIC_PARTICLE_SPEED, GENERIC_PARTICLE_COUNT);
+          }
         }
       }
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#showCubeParticles() took " + ms + "ms");
     }
   }
 
@@ -445,7 +450,7 @@ public class Physics {
     basePower = config.getDouble("physics.kick-power.base-power", 0.4);
     chargeRecoveryRate = config.getDouble("physics.charge-recovery-rate", 0.945);
 
-    double hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
+    hitRadius = config.getDouble("physics.distance-thresholds.hit-radius", 1.2);
     hitRadiusSquared = hitRadius * hitRadius;
     minRadius = config.getDouble("physics.distance-thresholds.min-radius", 0.8);
     minRadiusSquared = minRadius * minRadius;

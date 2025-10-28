@@ -7,8 +7,6 @@ import net.luckperms.api.cacheddata.CachedMetaData;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import net.minecraft.server.v1_8_R3.PacketPlayOutWorldParticles;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -24,10 +22,6 @@ public class Utilities {
   public Utilities(FCManager fcManager) {
     plugin = fcManager.getPlugin();
     this.luckPerms = fcManager.getLuckPerms();
-  }
-
-  public static String color(String string) {
-    return ChatColor.translateAlternateColorCodes('&', string);
   }
 
   public CompletableFuture<String> getPrefixedName(UUID uuid,  String playerName) {
@@ -112,24 +106,16 @@ public class Utilities {
     return sb.toString();
   }
 
-  public static void sendParticle(Player player, EnumParticle particle, Location loc, float offsetX, float offsetY, float offsetZ, float speed, int count) {
-    sendParticle(player, particle, loc, offsetX, offsetY, offsetZ, speed, count, null);
-  }
+  public static void sendParticle(Player player, EnumParticle particle,
+                                  double x, double y, double z,
+                                  float offsetX, float offsetY, float offsetZ,
+                                  float speed, int count) {
+    if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) return;
 
-  public static void sendParticle(Player player, EnumParticle particle, Location loc, float offsetX, float offsetY, float offsetZ, float speed, int count, Color color) {
-    PacketPlayOutWorldParticles packet;
     try {
-      if (particle == EnumParticle.REDSTONE && color != null) {
-        float r = color.getRed() / 255f;
-        float g = color.getGreen() / 255f;
-        float b = color.getBlue() / 255f;
-        packet = new PacketPlayOutWorldParticles(particle, true, (float) loc.getX(), (float) loc.getY(), (float) loc.getZ(), r, g, b, 1.0f, 0);
-      } else if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
-        return;
-      } else {
-        packet = new PacketPlayOutWorldParticles(particle, true, (float) loc.getX(), (float) loc.getY(), (float) loc.getZ(), offsetX, offsetY, offsetZ, speed, count);
-      }
-
+      PacketPlayOutWorldParticles packet = new PacketPlayOutWorldParticles(particle, true,
+          (float) x, (float) y, (float) z,
+          offsetX, offsetY, offsetZ, speed, count);
       ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
     } catch (Exception exception) {
       plugin.getLogger().log(Level.SEVERE, "Error while trying to send particle", exception);

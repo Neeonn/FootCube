@@ -84,7 +84,6 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         switch (args[1].toLowerCase()) {
           case "configs":
             fcManager.getConfigManager().reloadAllConfigs();
-            physics.reload();
             logger.send(sender, Lang.RELOAD.replace(new String[]{"configs"}));
             return true;
 
@@ -490,14 +489,15 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "reload": completions.addAll(Arrays.asList("configs", "all")); break;
         case "statset":
         case "forceleave":
+        case "fl":
         case "ban":
         case "unban":
-        case "checkban":
-          fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
-          break;
+        case "checkban": fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName())); break;
         case "setuparena":
         case "set": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;
-        case "matchman": completions.addAll(Arrays.asList("start", "end", "speed")); break;
+        case "matchman":
+        case "mm": completions.addAll(Arrays.asList("start", "end", "speed")); break;
+        case "commanddisabler":
         case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
       }
     } else if (args.length == 3) {

@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
 import io.github.divinerealms.footcube.core.Physics;
+import io.github.divinerealms.footcube.core.PhysicsUtil;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.ChatColor;
@@ -162,7 +163,7 @@ public class SignManipulation implements Listener {
         Location location = player.getLocation();
         Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
         if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-          physics.spawnCube(player.getLocation().add(new Vector(0, 1, 0)));
+          PhysicsUtil.spawnCube(player.getLocation().add(new Vector(0, 1, 0)));
         } else {
           logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
         }

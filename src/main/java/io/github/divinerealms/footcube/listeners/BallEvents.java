@@ -4,12 +4,12 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
 import io.github.divinerealms.footcube.core.Physics;
+import io.github.divinerealms.footcube.core.PhysicsUtil;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
@@ -40,85 +40,153 @@ public class BallEvents implements Listener {
     this.scheduler = fcManager.getScheduler();
   }
 
+  /**
+   * Listens for the {@link EntityDamageEvent} and cancels the event if the damaged entity is a {@code Slime}
+   * that exists in the physics cube set.
+   * This method is primarily used to prevent damage to specific {@code Slime} entities tracked by the
+   * physics system. Additionally, it logs a warning if the execution time of this event handler exceeds 1 millisecond.
+   *
+   * @param event the {@code EntityDamageEvent} triggered when an entity takes damage
+   */
   @EventHandler
   public void disableDamage(EntityDamageEvent event) {
-    if (event.getEntity() instanceof Slime && physics.getCubes().contains((Slime) event.getEntity())) event.setCancelled(true);
+    long start = System.nanoTime();
+    try {
+      if (event.getEntity() instanceof Slime && physics.getCubes().contains((Slime) event.getEntity()))
+        event.setCancelled(true);
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#disableDamage() took " + ms + "ms");
+    }
   }
 
+  /**
+   * Listens for the {@link EntityDamageByEntityEvent} and processes hit detection logic when certain
+   * conditions are met. Specifically, it detects interactions where a player attacks a {@code Slime} that
+   * is registered within the physics system, cancels the event, and handles custom logic such as applying
+   * kick mechanics to the slime or preventing unauthorized interactions.
+   * This method also tracks player interactions, plays sounds, and logs execution time
+   * if the operation takes longer than 1 millisecond.
+   *
+   * @param event the {@code EntityDamageByEntityEvent} triggered when an entity is damaged by another entity
+   */
   @EventHandler
   public void hitDetection(EntityDamageByEntityEvent event) {
-    if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
-    if (!(event.getEntity() instanceof Slime)) return;
+    long start = System.nanoTime();
+    try {
+      if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
+      if (!(event.getEntity() instanceof Slime)) return;
 
-    Slime cube = (Slime) event.getEntity();
-    if (!physics.getCubes().contains(cube)) return;
+      Slime cube = (Slime) event.getEntity();
+      if (!physics.getCubes().contains(cube)) return;
 
-    if (!(event.getDamager() instanceof Player)) return;
-    Player player = (Player) event.getDamager();
+      if (!(event.getDamager() instanceof Player)) return;
+      Player player = (Player) event.getDamager();
 
-    event.setCancelled(true);
+      event.setCancelled(true);
 
-    if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
-    if (physics.notAllowedToInteract(player)) return;
+      if (player.getGameMode() == GameMode.CREATIVE) {
+        cube.setHealth(0);
+        logger.send(player, Lang.CUBE_CLEAR.replace(null));
+        return;
+      }
+      if (PhysicsUtil.notAllowedToInteract(player)) return;
 
-    KickResult kickResult = physics.calculateKickPower(player);
-    boolean onCooldown = !physics.canHitBall(player);
+      KickResult kickResult = PhysicsUtil.calculateKickPower(player);
+      boolean onCooldown = !PhysicsUtil.canHitBall(player);
 
-    UUID playerId = player.getUniqueId();
-    if (physics.getCubeHits().contains(playerId)) physics.showHits(player, kickResult);
-    if (onCooldown) return;
+      UUID playerId = player.getUniqueId();
+      if (physics.getCubeHits().contains(playerId)) PhysicsUtil.showHits(player, kickResult);
+      if (onCooldown) return;
 
-    physics.getBallHitCooldowns().put(playerId, System.currentTimeMillis());
-    physics.recordPlayerAction(player);
-    org.ballTouch(player);
+      physics.getBallHitCooldowns().put(playerId, System.currentTimeMillis());
+      PhysicsUtil.recordPlayerAction(player);
+      org.ballTouch(player);
 
-    Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(0.3);
-    cube.setVelocity(kickResult.isChargedHit() ? kick : cube.getVelocity().add(kick));
+      Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(PhysicsUtil.KICK_VERTICAL_BOOST);
 
-    scheduler.runTask(fcManager.getPlugin(), () -> {
-      cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, physics.getSoundVolume(), physics.getSoundPitch());
+      PhysicsUtil.queueHit(cube, kick, !kickResult.isChargedHit());
+      PhysicsUtil.queueSound(cube.getLocation());
 
-      PlayerSettings settings = fcManager.getPlayerSettings(player);
-      if (settings != null && settings.isKickSoundEnabled()) player.playSound(player.getLocation(), settings.getKickSound(), physics.getSoundVolume(), physics.getSoundPitch());
-      if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, physics.onHitDebug(player, kickResult));
-    });
+      scheduler.runTask(fcManager.getPlugin(), () -> {
+        PlayerSettings settings = fcManager.getPlayerSettings(player);
+        if (settings != null && settings.isKickSoundEnabled())
+          player.playSound(player.getLocation(), settings.getKickSound(), PhysicsUtil.SOUND_VOLUME, PhysicsUtil.SOUND_PITCH);
+        if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, PhysicsUtil.onHitDebug(player, kickResult));
+      });
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#hitDetection() took " + ms + "ms");
+    }
   }
 
+  /**
+   * Listens for the {@link PlayerInteractEntityEvent} and processes interactions
+   * where a player right-clicks a {@code Slime} that is part of the physics system.
+   * This method verifies interaction permissions, prevents duplicate actions,
+   * and applies a vertical boost to the slime entity. Additionally, it logs a
+   * warning if the execution time exceeds 1 millisecond.
+   *
+   * @param event the {@code PlayerInteractEntityEvent} triggered when a player
+   *              interacts with an entity
+   */
   @EventHandler
   public void rightClick(PlayerInteractEntityEvent event) {
-    if (!(event.getRightClicked() instanceof Slime)) return;
+    long start = System.nanoTime();
+    try {
+      if (!(event.getRightClicked() instanceof Slime)) return;
 
-    Player player = event.getPlayer();
-    UUID playerId = player.getUniqueId();
-    Slime cube = (Slime) event.getRightClicked();
+      Player player = event.getPlayer();
+      UUID playerId = player.getUniqueId();
+      Slime cube = (Slime) event.getRightClicked();
 
-    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
-    if (!physics.getCubes().contains(cube)) return;
-    if (physics.getKicked().containsKey(playerId)) return;
+      if (PhysicsUtil.notAllowedToInteract(player)) return;
+      if (!physics.getCubes().contains(cube)) return;
+      if (physics.getKicked().containsKey(playerId)) return;
 
-    physics.getKicked().put(playerId, System.currentTimeMillis());
-    physics.recordPlayerAction(player);
-    org.ballTouch(player);
+      physics.getKicked().put(playerId, System.currentTimeMillis());
+      PhysicsUtil.recordPlayerAction(player);
+      org.ballTouch(player);
 
-    cube.setVelocity(cube.getVelocity().add(new Vector(0, physics.getCubeJumpRightClick(), 0)));
-    scheduler.runTask(fcManager.getPlugin(), () -> cube.getWorld().playSound(cube.getLocation(), Sound.SLIME_WALK, physics.getSoundVolume(), physics.getSoundPitch()));
+      double verticalBoost = PhysicsUtil.CUBE_JUMP_RIGHT_CLICK;
+      PhysicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0), true);
+      PhysicsUtil.queueSound(cube.getLocation());
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#rightClick() took " + ms + "ms");
+    }
   }
 
+  /**
+   * Listens for the {@link PlayerMoveEvent} and handles player movement logic.
+   * This method calculates the speed of the player based on movement between the
+   * previous and current locations, checks for permission to interact, and updates
+   * the physics system accordingly. It also logs execution time if the method takes
+   * longer than 1 millisecond.
+   *
+   * @param event the {@code PlayerMoveEvent} triggered when a player moves
+   */
   @EventHandler
   public void playerMove(PlayerMoveEvent event) {
-    Location to = event.getTo();
-    Location from = event.getFrom();
+    long start = System.nanoTime();
+    try {
+      Location to = event.getTo(), from = event.getFrom();
+      if (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ()) return;
 
-    if (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ()) return;
+      Player player = event.getPlayer();
+      if (PhysicsUtil.notAllowedToInteract(player) || PhysicsUtil.isAFK(player)) return;
 
-    Player player = event.getPlayer();
-    if (physics.notAllowedToInteract(player) || physics.isAFK(player)) return;
+      double dx = to.getX() - from.getX();
+      double dy = to.getY() - from.getY();
+      double dz = to.getZ() - from.getZ();
+      double scaledDy = dy / PhysicsUtil.PLAYER_HEAD_LEVEL;
+      double speed = Math.sqrt(dx * dx + scaledDy * scaledDy + dz * dz);
 
-    double x = Math.abs(to.getX() - from.getX());
-    double y = Math.abs(to.getY() - from.getY()) / 2;
-    double z = Math.abs(to.getZ() - from.getZ());
-
-    physics.recordPlayerAction(event.getPlayer());
-    physics.getSpeed().put(player.getUniqueId(), Math.sqrt(x * x + y * y + z * z));
+      PhysicsUtil.recordPlayerAction(player);
+      physics.getSpeed().put(player.getUniqueId(), speed);
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#playerMove() took " + ms + "ms");
+    }
   }
 }

@@ -2,10 +2,7 @@ package io.github.divinerealms.footcube.listeners;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Match;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
+import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -94,7 +91,7 @@ public class PlayerEvents implements Listener {
     Player player = event.getPlayer();
 
     dataManager.unload(player);
-    physics.removePlayer(player);
+    PhysicsUtil.removePlayer(player);
 
     Match match = MatchHelper.getMatch(org, player);
     if (match != null) MatchHelper.leaveMatch(org, player, match, logger, true);
@@ -126,7 +123,7 @@ public class PlayerEvents implements Listener {
     Player player = event.getPlayer();
     if (event.isSneaking()) {
       physics.getCharges().put(player.getUniqueId(), 0D);
-      physics.recordPlayerAction(event.getPlayer());
+      PhysicsUtil.recordPlayerAction(event.getPlayer());
     } else {
       player.setExp(0F);
       physics.getCharges().remove(player.getUniqueId());

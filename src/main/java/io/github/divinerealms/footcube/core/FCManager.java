@@ -50,8 +50,8 @@ public class FCManager {
   private Chat chat;
   private LuckPerms luckPerms;
 
-  private boolean cubeCleanerRunning = false;
-  private int cubeCleanerTaskID;
+  private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false;
+  private int cubeCleanerTaskID, physicsTaskID, glowTaskID;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
@@ -76,6 +76,7 @@ public class FCManager {
     this.listenerManager = new ListenerManager(this);
 
     this.physics = new Physics(this);
+    PhysicsUtil.initialize(this);
     this.cubeCleaner = new CubeCleaner(this);
     this.scheduler = plugin.getServer().getScheduler();
 
@@ -112,8 +113,6 @@ public class FCManager {
     shutdownTasks();
 
     this.cubeCleanerRunning = false;
-    physics.reload();
-
     if (cubeCleaner.practiceAreasSet()) {
       this.cubeCleanerRunning = true;
       this.cubeCleanerTaskID = scheduler.runTaskTimer(plugin, () -> {
@@ -121,6 +120,12 @@ public class FCManager {
         if (!cubeCleaner.isEmpty()) logger.broadcast(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(cubeCleaner.getAmount())}));
       }, 20L, cubeCleaner.getRemoveInterval()).getTaskId();
     }
+
+    this.physicsRunning = true;
+    this.physicsTaskID = scheduler.runTaskTimer(plugin, physics::update, PhysicsUtil.PHYSICS_TASK_INTERVAL_TICKS, PhysicsUtil.PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
+
+    this.glowRunning = true;
+    this.glowTaskID = scheduler.runTaskTimer(plugin, physics::showCubeParticles, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
@@ -131,8 +136,17 @@ public class FCManager {
   }
 
   public void shutdownTasks() {
-    physics.cleanupTasks();
-    physics.removeCubes();
+    if (physicsRunning) {
+      scheduler.cancelTask(physicsTaskID);
+      this.physicsRunning = false;
+    }
+
+    if (glowRunning) {
+      scheduler.cancelTask(glowTaskID);
+      this.glowRunning = false;
+    }
+
+    PhysicsUtil.removeCubes();
 
     if (cubeCleanerRunning) {
       scheduler.cancelTask(cubeCleanerTaskID);

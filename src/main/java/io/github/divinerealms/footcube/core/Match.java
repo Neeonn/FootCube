@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 public class Match {
   private final FCManager fcManager;
   private final Logger logger;
-  private final Physics physics;
   public int matchID;
   public int type;
   public int phase;
@@ -70,7 +69,6 @@ public class Match {
     this.logger = fcManager.getLogger();
     this.matchID = id;
     this.organization = fcManager.getOrg();
-    this.physics = fcManager.getPhysics();
     this.type = t;
     this.blue = b;
     this.red = r;
@@ -373,7 +371,7 @@ public class Match {
         }
 
         this.phase = 3;
-        this.cube = physics.spawnCube(this.mid);
+        this.cube = PhysicsUtil.spawnCube(this.mid);
         Random random = new Random();
         double vertical = 0.3 * random.nextDouble() + 0.2;
         double horizontal = 0.3 * random.nextDouble() + 0.3;
@@ -405,7 +403,7 @@ public class Match {
     }
 
     if (this.phase == 3 && this.cube.isDead()) {
-      this.cube = physics.spawnCube(this.mid);
+      this.cube = PhysicsUtil.spawnCube(this.mid);
       Random random = new Random();
       double vertical = 0.3 * random.nextDouble() + 0.2;
       double horizontal = 0.3 * random.nextDouble() + 0.3;

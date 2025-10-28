@@ -3,10 +3,7 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Match;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
+import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
@@ -270,7 +267,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           spawnLoc.setY(loc.getY() + 2.5);
         } else spawnLoc = loc;
 
-        physics.spawnCube(spawnLoc);
+        PhysicsUtil.spawnCube(spawnLoc);
         logger.send(player, Lang.CUBE_SPAWN.replace(null));
         break;
 

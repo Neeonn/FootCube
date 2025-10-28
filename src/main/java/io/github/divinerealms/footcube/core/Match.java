@@ -243,14 +243,15 @@ public class Match {
   }
 
   public void kick(Player p) {
-    if (this.isRed.containsKey(p)) {
-      if (this.isRed.get(p)) {
-        this.assistRed = this.lastKickRed;
-        this.lastKickRed = p;
-      } else {
-        this.assistBlue = this.lastKickBlue;
-        this.lastKickBlue = p;
-      }
+    if (!this.isRed.containsKey(p)) return;
+
+    boolean red = this.isRed.get(p);
+    if (red) {
+      if (this.lastKickRed != null && !this.lastKickRed.equals(p)) this.assistRed = this.lastKickRed;
+      this.lastKickRed = p;
+    } else {
+      if (this.lastKickBlue != null && !this.lastKickBlue.equals(p)) this.assistBlue = this.lastKickBlue;
+      this.lastKickBlue = p;
     }
   }
 
@@ -542,17 +543,17 @@ public class Match {
       this.blueGoals.setScore(this.blueGoals.getScore() + 1);
     }
 
-    boolean ownGoal = false;
-
-    if (scorer == null) {
-      List<Player> opposing = red ? bluePlayers : redPlayers;
-      if (!opposing.isEmpty()) {
-        scorer = opposing.get(new Random().nextInt(opposing.size()));
-        ownGoal = true;
-      } else return;
+    boolean ownGoal;
+    if (scorer != null) {
+      boolean isScoreRed = this.isRed.getOrDefault(scorer, false);
+      ownGoal = (isScoreRed != red);
+    } else {
+      List<Player> opposing = red ? this.bluePlayers : this.redPlayers;
+      if (!opposing.isEmpty()) scorer = opposing.get(new Random().nextInt(opposing.size()));
+      ownGoal = true;
     }
 
-    PlayerData data = fcManager.getDataManager().get(scorer);
+    if (scorer == null) return;
     if (ownGoal) {
       int ogCount = ownGoals.getOrDefault(scorer.getUniqueId(), 0) + 1;
       ownGoals.put(scorer.getUniqueId(), ogCount);
@@ -570,13 +571,21 @@ public class Match {
       }
     }
 
+    PlayerData data = fcManager.getDataManager().get(scorer);
     if (data != null && !this.takePlace.contains(scorer) && !ownGoal) {
       if (this.type != 2) data.add("goals");
       fcManager.getEconomy().depositPlayer(scorer.getPlayer(), 10);
-      if (this.goals.containsKey(scorer)) this.goals.put(scorer, this.goals.get(scorer) + 1);
-      else this.goals.put(scorer, 1);
+      this.goals.put(scorer, this.goals.getOrDefault(scorer, 0) + 1);
 
       logger.send(scorer, Lang.MATCH_SCORE_CREDITS.replace(null));
+
+      if (assister != null && assister != scorer && this.isRed.getOrDefault(assister, false) == this.isRed.getOrDefault(scorer, false)) {
+        PlayerData assistData = fcManager.getDataManager().get(assister);
+        if (assistData != null && this.type != 2) assistData.add("assists");
+        fcManager.getEconomy().depositPlayer(assister, 5);
+        logger.send(assister, Lang.MATCH_ASSIST_CREDITS.replace(null));
+      }
+
       if (this.goals.get(scorer) == 3) {
         logger.send(scorer, Lang.MATCH_SCORE_HATTRICK.replace(null));
         fcManager.getEconomy().depositPlayer(scorer.getPlayer(), 100);

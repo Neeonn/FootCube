@@ -161,6 +161,7 @@ public enum Lang {
   MATCH_TIED("match.tied", "{prefix}&aTime's up! The game is tied"),
   MATCH_TIED_CREDITS("match.tied-credits", "{prefix}&aYou got 5 credits for ending tied"),
   MATCH_SCORE_CREDITS("match.score-credits", "{prefix}&aYou got 10 credits for scoring"),
+  MATCH_ASSIST_CREDITS("match.assist-credits", "{prefix}&aYou got 5 credits for assisting"),
   MATCH_SCORE_HATTRICK("match.score-hattrick", "{prefix}&6&lYou get 100 credits bonus for making a hat-trick"),
   MATCH_GOAL("match.goal", String.join(System.lineSeparator(), "{prefix}&6&lGOAL!!! &a{0} scored a goal for the {1} team from {2} blocks away and got assisted by {3}")),
   MATCH_GOAL_ASSIST("match.goal-assist", "Asistent: {0}"),

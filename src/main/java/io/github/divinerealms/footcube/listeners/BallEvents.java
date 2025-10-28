@@ -10,6 +10,7 @@ import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
@@ -23,6 +24,22 @@ import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
+/**
+ * The {@code BallEvents} class listens for various game events and implements
+ * custom behavior for interactions involving specific physics-enabled entities,
+ * namely {@code Slime} instances. It processes entity damage, player interactions,
+ * and movement events, applying custom mechanics in a physics-oriented system.
+ * This class is used within the Footcube plugin to manage player interactions
+ * with physics-enabled entities while ensuring proper authorization, reducing event
+ * abuse, and logging performance information for debugging purposes.
+ * Implements the {@link Listener} interface, enabling it to respond to Bukkit
+ * events.
+ * The primary functions include:
+ * - Disabling damage for certain tracked entities
+ * - Enabling hit detection and custom mechanics
+ * - Tracking player interactions and movement
+ * Performance-critical operations are logged if execution exceeds a threshold.
+ */
 public class BallEvents implements Listener {
   private final FCManager fcManager;
   private final Physics physics;
@@ -85,11 +102,7 @@ public class BallEvents implements Listener {
 
       event.setCancelled(true);
 
-      if (player.getGameMode() == GameMode.CREATIVE) {
-        cube.setHealth(0);
-        logger.send(player, Lang.CUBE_CLEAR.replace(null));
-        return;
-      }
+      if (player.getGameMode() == GameMode.CREATIVE) { cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return; }
       if (PhysicsUtil.notAllowedToInteract(player)) return;
 
       KickResult kickResult = PhysicsUtil.calculateKickPower(player);
@@ -103,16 +116,16 @@ public class BallEvents implements Listener {
       PhysicsUtil.recordPlayerAction(player);
       org.ballTouch(player);
 
-      Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(PhysicsUtil.KICK_VERTICAL_BOOST);
+      Location playerLocation = player.getLocation();
+      Vector kick = playerLocation.getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(PhysicsUtil.KICK_VERTICAL_BOOST);
 
       PhysicsUtil.queueHit(cube, kick, !kickResult.isChargedHit());
-      PhysicsUtil.queueSound(cube.getLocation());
+      PhysicsUtil.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.75F, 1.0F);
 
       scheduler.runTask(fcManager.getPlugin(), () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
-        if (settings != null && settings.isKickSoundEnabled())
-          player.playSound(player.getLocation(), settings.getKickSound(), PhysicsUtil.SOUND_VOLUME, PhysicsUtil.SOUND_PITCH);
-        if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, PhysicsUtil.onHitDebug(player, kickResult));
+        if (settings != null && settings.isKickSoundEnabled()) PhysicsUtil.queueSound(player, settings.getKickSound(), PhysicsUtil.SOUND_VOLUME, PhysicsUtil.SOUND_PITCH);
+        if (physics.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, playerLocation, 100, PhysicsUtil.onHitDebug(player, kickResult));
       });
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
@@ -150,7 +163,7 @@ public class BallEvents implements Listener {
 
       double verticalBoost = PhysicsUtil.CUBE_JUMP_RIGHT_CLICK;
       PhysicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0), true);
-      PhysicsUtil.queueSound(cube.getLocation());
+      PhysicsUtil.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.25F, 1.0F);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#rightClick() took " + ms + "ms");

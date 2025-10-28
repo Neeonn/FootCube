@@ -21,6 +21,7 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * The Physics class is responsible for managing and simulating physics-related behavior in the game.
@@ -46,8 +47,8 @@ public class Physics {
   @Getter private final Map<UUID, Long> ballHitCooldowns = new ConcurrentHashMap<>();
   @Getter private final Map<UUID, Long> lastAction = new ConcurrentHashMap<>();
   @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
-  @Getter private final List<Location> soundQueue = Collections.synchronizedList(new ArrayList<>());
-  @Getter private final Queue<HitAction> hitQueue = new ArrayDeque<>();
+  @Getter private final Queue<SoundAction> soundQueue = new ConcurrentLinkedQueue<>();
+  @Getter private final Queue<HitAction> hitQueue = new ConcurrentLinkedQueue<>();
 
   @Getter @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -226,10 +227,28 @@ public class Physics {
   private void scheduleSound() {
     if (soundQueue.isEmpty()) return;
 
-    List<Location> toPlay = new ArrayList<>(soundQueue);
+    Queue<SoundAction> toPlay = new ArrayDeque<>(soundQueue);
     soundQueue.clear();
 
-    scheduler.runTask(plugin, () -> toPlay.forEach(loc -> loc.getWorld().playSound(loc, Sound.SLIME_WALK, PhysicsUtil.SOUND_VOLUME, PhysicsUtil.SOUND_PITCH)));
+    scheduler.runTask(plugin, () -> toPlay.forEach(action -> {
+      Location location;
+      Sound sound = action.getSound();
+      float volume = action.getVolume();
+      float pitch = action.getPitch();
+
+      if (action.isPlayerTargeted()) {
+        Player player = action.getPlayer();
+        if (player == null || !player.isOnline()) return;
+
+        location = player.getLocation();
+        player.playSound(location, sound, volume, pitch);
+      } else {
+        location = action.getLocation();
+        if (location == null) return;
+
+        location.getWorld().playSound(location, sound, volume, pitch);
+      }
+    }));
   }
 
   /**
@@ -243,10 +262,8 @@ public class Physics {
       Slime cube = action.getCube();
       if (cube.isDead()) continue;
 
-      if (action.isAdditive()) cube.setVelocity(cube.getVelocity().add(action.getVelocity()));
-      else cube.setVelocity(action.getVelocity());
-
-      velocities.put(cube.getUniqueId(), action.isAdditive() ? cube.getVelocity().clone() : action.getVelocity().clone());
+      Vector appliedVelocity = action.isAdditive() ? cube.getVelocity().add(action.getVelocity()) : action.getVelocity();
+      cube.setVelocity(appliedVelocity);
     }
 
     hitQueue.clear();
@@ -362,11 +379,39 @@ public class Physics {
     }
   }
 
+  /**
+   * Represents an action that occurs when a "Slime" entity (referred to as a cube) is hit within the physics system.
+   * This class stores information about the entity being hit, the velocity applied during the hit,
+   * and whether the velocity from this action is additive or should replace the current velocity.
+   * This class is designed to be immutable, ensuring thread-safety when used in concurrent environments.
+   */
   @Getter
   @AllArgsConstructor
   static class HitAction {
     private final Slime cube;
     private final Vector velocity;
     private final boolean additive;
+  }
+
+  /**
+   * Represents an action to play a sound at a given location. This class encapsulates
+   * all the necessary information such as the location, player-specific targeting,
+   * sound type, volume, and pitch.
+   * Instances of this class can optionally target a specific player. When targeting a player, the sound
+   * will be directed towards that player; otherwise, it will act as a general sound event for all nearby players.
+   * The sound properties (volume and pitch) define how the sound is experienced during playback.
+   */
+  @Getter
+  @AllArgsConstructor
+  static class SoundAction {
+    private final Location location;
+    private final Player player;
+    private final Sound sound;
+    private final float volume;
+    private final float pitch;
+
+    public boolean isPlayerTargeted() {
+      return player != null;
+    }
   }
 }

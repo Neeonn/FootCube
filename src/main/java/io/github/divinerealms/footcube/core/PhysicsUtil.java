@@ -8,6 +8,7 @@ import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftSlime;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -115,8 +116,34 @@ public class PhysicsUtil {
    *
    * @param location The location to be added to the sound queue. Must not be null.
    */
+  public static void queueSound(Location location, Sound sound, float volume, float pitch) {
+    if (location == null || sound == null) return;
+    physics.getSoundQueue().offer(new Physics.SoundAction(location, null, sound, volume, pitch));
+  }
+
+  /**
+   * Adds a sound action to the sound queue for a specific player.
+   * This method queues the specified sound to be played at the player's location with the given volume and pitch.
+   * If the player or sound is null, the method exits without queuing any action.
+   *
+   * @param player The player at whose location the sound will be played. Must not be null.
+   * @param sound The sound to be played. Must not be null.
+   * @param volume The volume level of the sound. A float value where higher values indicate louder sounds.
+   * @param pitch The pitch of the sound. A float value where higher values indicate a higher pitch.
+   */
+  public static void queueSound(Player player, Sound sound, float volume, float pitch) {
+    if (player == null || sound == null) return;
+    physics.getSoundQueue().offer(new Physics.SoundAction(null, player, sound, volume, pitch));
+  }
+
+  /**
+   * Adds the specified location to the sound queue for further processing.
+   * This method queues a sound at the given location using default sound type, volume, and pitch values.
+   *
+   * @param location The location where the sound will be queued. Must not be null.
+   */
   public static void queueSound(Location location) {
-    if (location != null) physics.getSoundQueue().add(location.clone());
+    queueSound(location, Sound.SLIME_WALK, 0.1F, SOUND_PITCH);
   }
 
   /**

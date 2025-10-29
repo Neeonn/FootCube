@@ -250,7 +250,7 @@ public class FCManager {
     dataManager.saveAll();
   }
 
-  private void sendBanner() {
+  public void sendBanner() {
     String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + plugin.getDescription().getAuthors().stream().map(String::valueOf).collect(Collectors.joining(", ")) + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
 
     for (String line : banner) {

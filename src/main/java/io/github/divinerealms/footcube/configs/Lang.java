@@ -9,6 +9,16 @@ public enum Lang {
   PREFIX("prefix", "&7[&eFC&7]"),
   PREFIX_ADMIN("prefix-admin", "&7[&cAdmin&7]"),
 
+  BANNER_PLAYER("banner.player", String.join(System.lineSeparator(),
+      "&9        __",
+      "&3     .&9'&f\"'..\"&9'&3.      &e&l{0}&7, version: &6{1}",
+      "&b    :.&f_.\"\"._&b.:     &7Authors: &d&l{2}",
+      "&3    : &r &f\\_/&3 &3 :",
+      "&b     '.&f/  \\&b.'      &9&nhttps://github.com/Neeonn/FootCube",
+      "&9        \"\"",
+      "&r &r",
+      "{prefix}&aKucajte &e/fc help &aza listu dostupnih komandi.")),
+
   NO_PERM("no-perm", "{prefix}&cNemate dozvolu (&4{0}&c) za komandu &6/&e{1}&c!"),
   UNKNOWN_COMMAND("unknown-command", "{prefix}&cNepoznata komanda."),
   USAGE("usage", "{prefix}Usage: /{0}"),

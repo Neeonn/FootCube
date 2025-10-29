@@ -55,7 +55,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    if (args.length == 0) { sendHelp(sender); return true; }
+    if (args.length == 0) { sendBanner(sender); return true; }
 
     String sub = args[0].toLowerCase();
     Player player;
@@ -467,7 +467,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         logger.send(player, Lang.SET_PARTICLE.replace(new String[]{particle.name()}));
         break;
 
-      default: sendHelp(sender); break;
+      case "help":
+      case "h": sendHelp(sender); break;
+      default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
     return true;
@@ -475,6 +477,18 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   private void sendHelp(CommandSender sender) {
     logger.send(sender, Lang.HELP.replace(null));
+  }
+
+  private void sendBanner(CommandSender sender) {
+    if (sender instanceof Player) {
+      logger.send(sender, Lang.BANNER_PLAYER.replace(new String[]{
+          plugin.getName(), plugin.getDescription().getVersion(),
+          plugin.getDescription().getAuthors().stream().map(String::valueOf).collect(Collectors.joining(", "))
+      }));
+    } else {
+      fcManager.sendBanner();
+      logger.send(sender, "&aKucajte &e/fc help &aza listu dostupnih komandi.");
+    }
   }
 
   private boolean inGameOnly(CommandSender sender) {

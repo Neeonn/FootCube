@@ -68,7 +68,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    if (args.length == 0) { sendHelp(sender); return true; }
+    if (args.length == 0) { logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); return true; }
 
     String sub = args[0].toLowerCase(), formattedTime;
     Player player, target;
@@ -459,7 +459,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         logger.send(sender, Lang.FORCE_LEAVE.replace(new String[]{target.getDisplayName()}));
         break;
 
-      default: sendHelp(sender); break;
+      case "help":
+      case "h": sendHelp(sender); break;
+      default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
     return true;

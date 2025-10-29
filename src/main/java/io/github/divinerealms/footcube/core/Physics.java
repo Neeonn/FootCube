@@ -49,6 +49,7 @@ public class Physics {
   @Getter private final Set<UUID> cubeHits = ConcurrentHashMap.newKeySet();
   @Getter private final Queue<SoundAction> soundQueue = new ConcurrentLinkedQueue<>();
   @Getter private final Queue<HitAction> hitQueue = new ConcurrentLinkedQueue<>();
+  @Getter private final Map<UUID, Long> buttonCooldowns = new ConcurrentHashMap<>();
 
   @Getter @Setter private boolean matchesEnabled = true;
   @Getter public boolean hitDebugEnabled = false;
@@ -370,6 +371,7 @@ public class Physics {
       cubeHits.clear();
       soundQueue.clear();
       hitQueue.clear();
+      buttonCooldowns.clear();
       matchesEnabled = true;
       hitDebugEnabled = false;
       tickCounter = 0;

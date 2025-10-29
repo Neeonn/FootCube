@@ -151,7 +151,7 @@ public class HighScores {
       int ties = (int) data.get("ties");
       int goals = (int) data.get("goals");
       int assists = (int) data.get("assists");
-      int ownGoals = (int) data.get("ownGoals");
+      int ownGoals = (int) data.get("owngoals");
       int bestWinStreak = (int) data.get("bestwinstreak");
 
       double multiplier = 1.0 - Math.pow(0.9, matches);

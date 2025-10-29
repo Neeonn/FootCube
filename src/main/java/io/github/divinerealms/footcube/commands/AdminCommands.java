@@ -14,18 +14,22 @@ import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.MatchHelper;
 import net.luckperms.api.node.types.PermissionNode;
+import org.bukkit.DyeColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.material.Button;
+import org.bukkit.material.Wool;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class AdminCommands implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
@@ -51,6 +55,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   private static final String PERM_COMMAND_DISABLER = PERM_MAIN + ".commanddisabler";
   private static final String PERM_MATCHMAN = PERM_MAIN + ".matchman";
   private static final String PERM_FORCE_LEAVE = PERM_MAIN + ".forceleave";
+  private static final String PERM_SETBUTON = PERM_MAIN + ".setbutton";
 
   public AdminCommands(FCManager fcManager, DisableCommands disableCommands) {
     this.fcManager = fcManager;
@@ -70,7 +75,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) { logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); return true; }
 
-    String sub = args[0].toLowerCase(), formattedTime;
+    String sub = args[0].toLowerCase(), formattedTime, type;
     Player player, target;
     Match match;
     PlayerData playerData;
@@ -221,7 +226,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             playerData.set("ties", clear ? 0 : amount);
             playerData.set("goals", clear ? 0 : amount);
             playerData.set("assists", clear ? 0 : amount);
-            playerData.set("ownGoals", clear ? 0 : amount);
+            playerData.set("owngoals", clear ? 0 : amount);
             playerData.set("winstreak", clear ? 0 : amount);
             playerData.set("bestwinstreak", clear ? 0 : amount);
             break;
@@ -241,7 +246,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
 
         player = (Player) sender;
-        String type = args[1].toLowerCase();
+        type = args[1].toLowerCase();
         if (!Arrays.asList("2v2", "3v3", "4v4").contains(type)) { logger.send(sender, "&cInvalid type. Use 2v2, 3v3, or 4v4."); return true; }
         if (org.getSetupGuy() != null) { logger.send(sender, Lang.SETUP_ARENA_ALREADY_SOMEONE.replace(new String[]{org.getSetupGuy()})); return true; }
 
@@ -459,6 +464,47 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         logger.send(sender, Lang.FORCE_LEAVE.replace(new String[]{target.getDisplayName()}));
         break;
 
+      case "setbutton":
+      case "sb":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!sender.hasPermission(PERM_SETBUTON)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <spawn|clearcube>"})); return true; }
+
+        player = (Player) sender;
+        Block targetBlock = player.getTargetBlock((Set<Material>) null, 5);
+        if (targetBlock == null || targetBlock.getType() == Material.AIR) { logger.send(player, Lang.SET_BLOCK_TOO_FAR.replace(null)); return true; }
+
+        targetBlock.setType(Material.WOOL);
+        BlockState targetBlockState = targetBlock.getState();
+        type = args[1].toLowerCase();
+        switch (type) {
+          case "spawn":
+            targetBlockState.setData(new Wool(DyeColor.LIME));
+            break;
+
+          case "clearcube":
+            targetBlockState.setData(new Wool(DyeColor.RED));
+            break;
+
+          default:
+            logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <spawn|clearcube>"}));
+            return true;
+        }
+
+        targetBlockState.update(true);
+
+        Block aboveTargetBlock = targetBlock.getRelative(BlockFace.UP);
+        aboveTargetBlock.setType(Material.STONE_BUTTON);
+
+        BlockState aboveTargetBlockState = aboveTargetBlock.getState();
+        Button buttonData = new Button();
+        buttonData.setFacingDirection(BlockFace.UP);
+        aboveTargetBlockState.setData(buttonData);
+        aboveTargetBlockState.update(true);
+
+        logger.send(player, Lang.SET_BLOCK_SUCCESS.replace(new String[]{type}));
+        break;
+
       case "help":
       case "h": sendHelp(sender); break;
       default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
@@ -486,7 +532,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       completions.addAll(Arrays.asList(
           "reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
           "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd", "forceleave",
-          "fl", "ban", "unban", "checkban", "help"
+          "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
       ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
@@ -503,10 +549,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "mm": completions.addAll(Arrays.asList("start", "end", "speed")); break;
         case "commanddisabler":
         case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
+        case "setbutton":
+        case "sb": completions.addAll(Arrays.asList("spawn", "clearcube")); break;
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
-      else if (args[0].equalsIgnoreCase("statset")) completions.addAll(Arrays.asList("wins", "matches", "goals", "assists", "ownGoals", "winstreak", "bestwinstreak"));
+      else if (args[0].equalsIgnoreCase("statset")) completions.addAll(Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak", "bestwinstreak"));
     }
 
     if (!completions.isEmpty()) {

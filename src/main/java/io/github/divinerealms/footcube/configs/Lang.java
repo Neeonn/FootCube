@@ -242,6 +242,11 @@ public enum Lang {
   SET_BUILD_MODE("set.build-mode.self", "{prefix}Build mod {0}&f!"),
   SET_BUILD_MODE_OTHER("set.build-mode.other", "{prefix}Build mod za &b{0}&f je {1}&f!"),
 
+  SET_BLOCK_TOO_FAR("set.block.too-far", "{prefix-admin}&cMoraš gledati u blok koji je najviše 5 blokova udaljen od tebe."),
+  SET_BLOCK_SUCCESS("set.block.success", "{prefix-admin}&aUspešno postavljeno &e{0} &adugme!"),
+
+  BLOCK_INTERACT_COOLDOWN("block-interact-cooldown", "{prefix}&cSačekajte &e{0} pre ponovnog korišćenja."),
+
   MATCHES_LIST_NO_MATCHES("matches.list.no-matches", "&cTrenutno nema aktivnih mečeva..."),
   MATCHES_LIST_WAITING("matches.list.waiting", "&8&oČekamo igrače..."),
   MATCHES_LIST_STARTING("matches.list.starting", "&ePočinje za &c{0}s"),

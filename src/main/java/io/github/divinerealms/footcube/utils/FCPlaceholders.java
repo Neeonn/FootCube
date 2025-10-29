@@ -117,7 +117,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
           if ("name".equals(parts[3])) return highScores.topAssistsNames[rank];
           if ("value".equals(parts[3])) return String.valueOf(highScores.mostAssists[rank]);
           break;
-        case "ownGoals":
+        case "owngoals":
           if ("name".equals(parts[3])) return highScores.topOwnGoalsNames[rank];
           if ("value".equals(parts[3])) return String.valueOf(highScores.mostOwnGoals[rank]);
           break;

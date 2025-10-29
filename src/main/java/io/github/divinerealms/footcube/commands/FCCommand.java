@@ -258,6 +258,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
         if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
         if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+        if (PhysicsUtil.cantSpawnYet(player)) return true;
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
@@ -268,6 +269,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         } else spawnLoc = loc;
 
         PhysicsUtil.spawnCube(spawnLoc);
+        PhysicsUtil.setSpawnCooldownMs(player);
         logger.send(player, Lang.CUBE_SPAWN.replace(null));
         break;
 

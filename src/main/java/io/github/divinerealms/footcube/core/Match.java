@@ -558,7 +558,7 @@ public class Match {
       PlayerData ownGoalData = fcManager.getDataManager().get(scorer);
       int ogCount = ownGoals.getOrDefault(scorer.getUniqueId(), 0) + 1;
       ownGoals.put(scorer.getUniqueId(), ogCount);
-      ownGoalData.add("ownGoals");
+      ownGoalData.add("owngoals");
 
       fcManager.getEconomy().withdrawPlayer(scorer, 200);
       logger.send(scorer, Lang.MATCH_SCORE_OWN_GOAL.replace(null));

@@ -1,6 +1,7 @@
 package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.experimental.UtilityClass;
@@ -109,6 +110,7 @@ public class PhysicsUtil {
 
   // --- Utility ---
   public static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
+  public static final long SPAWN_COOLDOWN_MS = 3_000L;
 
   /**
    * Adds the specified location to the sound queue for further processing.
@@ -404,5 +406,20 @@ public class PhysicsUtil {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#onHitDebug() took " + ms + "ms");
     }
+  }
+
+  public static boolean cantSpawnYet(Player player) {
+    UUID playerId = player.getUniqueId();
+    long now = System.currentTimeMillis(), last = physics.getButtonCooldowns().getOrDefault(playerId, 0L), diff = now - last;
+    if (diff < PhysicsUtil.SPAWN_COOLDOWN_MS) {
+      long remainingMs = SPAWN_COOLDOWN_MS - diff, seconds = remainingMs / 1000;
+      logger.send(player, Lang.BLOCK_INTERACT_COOLDOWN.replace(new String[]{Utilities.formatTime(seconds)}));
+      return true;
+    }
+    return false;
+  }
+
+  public static void setSpawnCooldownMs(Player player) {
+    physics.getButtonCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
   }
 }

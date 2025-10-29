@@ -159,7 +159,9 @@ public class SignManipulation implements Listener {
 
         default: break;
       }
-    } else if (block.getType() == Material.SIGN) {
+    }
+
+    if (block.getType() == Material.SIGN_POST || block.getType() == Material.WALL_SIGN) {
       Sign sign = (Sign) block.getState();
       if (sign.getLine(0) == null || !sign.getLine(0).equalsIgnoreCase("[FootCube]")) return;
 

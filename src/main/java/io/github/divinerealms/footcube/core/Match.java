@@ -249,9 +249,13 @@ public class Match {
     if (red) {
       if (this.lastKickRed != null && !this.lastKickRed.equals(p)) this.assistRed = this.lastKickRed;
       this.lastKickRed = p;
+      this.lastKickBlue = null;
+      this.assistBlue = null;
     } else {
       if (this.lastKickBlue != null && !this.lastKickBlue.equals(p)) this.assistBlue = this.lastKickBlue;
       this.lastKickBlue = p;
+      this.lastKickRed = null;
+      this.assistRed = null;
     }
   }
 

@@ -389,6 +389,8 @@ public class Organization {
     double winsPerMatch = (matches > 0) ? (double) wins / matches : 0;
 
     int goals = (int) data.get("goals");
+    int assists = (int) data.get("assists");
+    int ownGoals = (int) data.get("ownGoals");
     double goalsPerMatch = (matches > 0) ? (double) goals / matches : 0;
 
     double multiplier = 1.0 - Math.pow(0.9, matches);
@@ -433,7 +435,7 @@ public class Organization {
     logger.send(asker, Lang.STATS.replace(new String[]{
         playerName, String.valueOf(matches), String.valueOf(wins), String.valueOf(losses),
         String.valueOf(ties), String.format("%.2f", winsPerMatch), String.valueOf(bestWinStreak),
-        String.valueOf(goals), String.format("%.2f", goalsPerMatch), String.format("%.2f", skillLevel), rang
+        String.valueOf(goals), String.format("%.2f", goalsPerMatch), String.valueOf(assists), String.format("%.2f", skillLevel), rang, String.valueOf(ownGoals)
     }));
   }
 

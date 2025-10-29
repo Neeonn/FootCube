@@ -211,7 +211,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         }
 
         switch (stat) {
-          case "wins": case "matches": case "ties": case "goals": case "winstreak": case "bestwinstreak":
+          case "wins": case "matches": case "ties": case "goals": case "assists": case "owngoals": case "winstreak": case "bestwinstreak":
             playerData.set(stat, clear ? 0 : amount);
             break;
 
@@ -220,6 +220,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             playerData.set("matches", clear ? 0 : amount);
             playerData.set("ties", clear ? 0 : amount);
             playerData.set("goals", clear ? 0 : amount);
+            playerData.set("assists", clear ? 0 : amount);
+            playerData.set("ownGoals", clear ? 0 : amount);
             playerData.set("winstreak", clear ? 0 : amount);
             playerData.set("bestwinstreak", clear ? 0 : amount);
             break;
@@ -502,6 +504,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
+      else if (args[0].equalsIgnoreCase("statset")) completions.addAll(Arrays.asList("wins", "matches", "goals", "assists", "ownGoals", "winstreak", "bestwinstreak"));
     }
 
     if (!completions.isEmpty()) {

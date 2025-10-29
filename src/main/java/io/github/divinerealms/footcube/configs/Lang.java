@@ -177,6 +177,8 @@ public enum Lang {
   BEST_HEADER("best.header", String.join(System.lineSeparator(), "{prefix}&6All FootCube highscores:", "&bBest ratings:")),
   BEST_ENTRY("best.entry", "&7{0}. {1} - {2}"),
   BEST_GOALS("best.most-goals", "&bMost goals:"),
+  BEST_ASSISTS("best.most-assists", "&bMost assists:"),
+  BEST_OWN_GOALS("best.most-own-goals", "&bMost own goals:"),
   BEST_WINS("best.most-wins", "&bMost wins:"),
   BEST_WINSTREAK("best.winstreak", "&bLongest win streak:"),
 

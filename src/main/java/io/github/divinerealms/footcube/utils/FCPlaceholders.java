@@ -87,6 +87,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
       if (highScores == null
           || highScores.topSkillNames == null
           || highScores.topGoalsNames == null
+          || highScores.topAssistsNames == null
           || highScores.topWinsNames == null
           || highScores.topStreakNames == null) return "---";
 
@@ -112,6 +113,14 @@ public class FCPlaceholders extends PlaceholderExpansion {
           if ("name".equals(parts[3])) return highScores.topGoalsNames[rank];
           if ("value".equals(parts[3])) return String.valueOf(highScores.mostGoals[rank]);
           break;
+        case "assists":
+          if ("name".equals(parts[3])) return highScores.topAssistsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highScores.mostAssists[rank]);
+          break;
+        case "ownGoals":
+          if ("name".equals(parts[3])) return highScores.topOwnGoalsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highScores.mostOwnGoals[rank]);
+          break;
         case "wins":
           if ("name".equals(parts[3])) return highScores.topWinsNames[rank];
           if ("value".equals(parts[3])) return String.valueOf(highScores.mostWins[rank]);
@@ -135,6 +144,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
       int ties = (int) data.get("ties");
       int losses = matches - wins - ties;
       int goals = (int) data.get("goals");
+      int assists = (int) data.get("assists");
       int bestWinStreak = (int) data.get("bestwinstreak");
 
       double winsPerMatch = matches > 0 ? (double) wins / matches : 0;
@@ -183,6 +193,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
         case "ties": return String.valueOf(ties);
         case "winspermatch": return String.format("%.2f", winsPerMatch);
         case "goals": return String.valueOf(goals);
+        case "assists": return String.valueOf(assists);
         case "goalspermatch": return String.format("%.2f", goalsPerMatch);
         case "bestwinstreak": return String.valueOf(bestWinStreak);
         case "skill": return String.format("%.2f", skillLevel);

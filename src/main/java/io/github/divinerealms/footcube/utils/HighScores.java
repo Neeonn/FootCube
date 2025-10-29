@@ -27,11 +27,15 @@ public class HighScores {
 
   double[] bestRatings;
   int[] mostGoals;
+  int[] mostAssists;
+  int[] mostOwnGoals;
   int[] mostWins;
   int[] longestStreak;
 
   String[] topSkillNames;
   String[] topGoalsNames;
+  String[] topAssistsNames;
+  String[] topOwnGoalsNames;
   String[] topWinsNames;
   String[] topStreakNames;
 
@@ -68,6 +72,10 @@ public class HighScores {
     showTopCategory(player, topSkillNames, bestRatings);
     logger.send(player, Lang.BEST_GOALS.replace(null));
     showTopCategory(player, topGoalsNames, mostGoals);
+    logger.send(player, Lang.BEST_ASSISTS.replace(null));
+    showTopCategory(player, topAssistsNames, mostAssists);
+    logger.send(player, Lang.BEST_OWN_GOALS.replace(null));
+    showTopCategory(player, topOwnGoalsNames, mostOwnGoals);
     logger.send(player, Lang.BEST_WINS.replace(null));
     showTopCategory(player, topWinsNames, mostWins);
     logger.send(player, Lang.BEST_WINSTREAK.replace(null));
@@ -97,13 +105,17 @@ public class HighScores {
   public void update() {
     bestRatings = new double[3];
     mostGoals = new int[3];
+    mostAssists = new int[3];
+    mostOwnGoals = new int[3];
     mostWins = new int[3];
     longestStreak = new int[3];
 
-    topSkillNames = new String[]{"---", "---", "---"};
-    topGoalsNames = new String[]{"---", "---", "---"};
-    topWinsNames = new String[]{"---", "---", "---"};
-    topStreakNames = new String[]{"---", "---", "---"};
+    topSkillNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
+    topGoalsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
+    topAssistsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
+    topOwnGoalsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
+    topWinsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
+    topStreakNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
 
     File playerFolder = new File(plugin.getDataFolder(), "players");
     File[] files = playerFolder.listFiles((dir, name) -> name.endsWith(".yml"));
@@ -138,6 +150,8 @@ public class HighScores {
       int wins = (int) data.get("wins");
       int ties = (int) data.get("ties");
       int goals = (int) data.get("goals");
+      int assists = (int) data.get("assists");
+      int ownGoals = (int) data.get("ownGoals");
       int bestWinStreak = (int) data.get("bestwinstreak");
 
       double multiplier = 1.0 - Math.pow(0.9, matches);
@@ -158,6 +172,8 @@ public class HighScores {
 
       nameFutures.add(insertTop3(bestRatings, topSkillNames, skillLevel, uuid, playerName));
       nameFutures.add(insertTop3(mostGoals, topGoalsNames, goals, uuid, playerName));
+      nameFutures.add(insertTop3(mostAssists, topAssistsNames, assists, uuid, playerName));
+      nameFutures.add(insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, uuid, playerName));
       nameFutures.add(insertTop3(mostWins, topWinsNames, wins, uuid, playerName));
       nameFutures.add(insertTop3(longestStreak, topStreakNames, bestWinStreak, uuid, playerName));
 

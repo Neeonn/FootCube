@@ -66,7 +66,7 @@ public class PhysicsUtil {
   public static final double CHARGE_RECOVERY_RATE = 0.945;
   public static final double MIN_SPEED_FOR_DAMPENING = 0.5;
   public static final double MIN_SOUND_POWER = 0.15;
-  public static final double KICK_VERTICAL_BOOST = 0.3;
+  public static final double KICK_VERTICAL_BOOST = 0.2; // def 0.3
   public static final int EXP_UPDATE_INTERVAL_TICKS = 3;
 
   // --- Distance & Collision Thresholds ---
@@ -153,11 +153,10 @@ public class PhysicsUtil {
    *
    * @param cube The Slime entity that is being hit. Must not be null and must be alive.
    * @param velocity The Vector defining the direction and magnitude of the hit's velocity. Must not be null.
-   * @param additive If true, the velocity is added to the slime's current velocity. If false, the velocity replaces the current velocity.
    */
-  public static void queueHit(Slime cube, Vector velocity, boolean additive) {
+  public static void queueHit(Slime cube, Vector velocity) {
     if (cube == null || cube.isDead() || velocity == null) return;
-    physics.getHitQueue().offer(new Physics.HitAction(cube, velocity, additive));
+    physics.getHitQueue().offer(new Physics.HitAction(cube, velocity));
   }
 
   /**

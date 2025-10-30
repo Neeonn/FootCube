@@ -263,7 +263,7 @@ public class Physics {
       Slime cube = action.getCube();
       if (cube.isDead()) continue;
 
-      Vector appliedVelocity = action.isAdditive() ? cube.getVelocity().add(action.getVelocity()) : action.getVelocity();
+      Vector appliedVelocity = cube.getVelocity().add(action.getVelocity());
       cube.setVelocity(appliedVelocity);
     }
 
@@ -392,7 +392,6 @@ public class Physics {
   static class HitAction {
     private final Slime cube;
     private final Vector velocity;
-    private final boolean additive;
   }
 
   /**

@@ -119,7 +119,7 @@ public class BallEvents implements Listener {
       Location playerLocation = player.getLocation();
       Vector kick = playerLocation.getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(PhysicsUtil.KICK_VERTICAL_BOOST);
 
-      PhysicsUtil.queueHit(cube, kick, !kickResult.isChargedHit());
+      PhysicsUtil.queueHit(cube, kick);
       PhysicsUtil.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.75F, 1.0F);
 
       scheduler.runTask(fcManager.getPlugin(), () -> {
@@ -162,7 +162,7 @@ public class BallEvents implements Listener {
       org.ballTouch(player);
 
       double verticalBoost = PhysicsUtil.CUBE_JUMP_RIGHT_CLICK;
-      PhysicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0), true);
+      PhysicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0));
       PhysicsUtil.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.25F, 1.0F);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;

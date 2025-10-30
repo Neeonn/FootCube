@@ -5,7 +5,7 @@ authors:
   - SmileyCraft
   - neonsh
 description: Soccer/Football in MineCraft
-depend: [Vault, LuckPerms]
+depend: [Vault, LuckPerms, ProtocolLib]
 softdepend: [PlaceholderAPI]
 
 commands:

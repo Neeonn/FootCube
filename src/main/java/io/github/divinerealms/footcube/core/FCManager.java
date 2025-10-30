@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 
 @Getter
 public class FCManager {
+  @Getter private static FCManager instance;
+
   private final FootCube plugin;
 
   private final Logger logger;
@@ -49,6 +51,7 @@ public class FCManager {
   private Economy economy;
   private Chat chat;
   private LuckPerms luckPerms;
+  private CubeTracker cubeTracker;
 
   private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false;
   private int cubeCleanerTaskID, physicsTaskID, glowTaskID;
@@ -60,6 +63,8 @@ public class FCManager {
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
 
   public FCManager(FootCube plugin) throws IllegalStateException {
+    instance = this;
+
     this.plugin = plugin;
     this.configManager = new ConfigManager(plugin, "");
     this.logger = new Logger(this);
@@ -127,6 +132,9 @@ public class FCManager {
     this.glowRunning = true;
     this.glowTaskID = scheduler.runTaskTimer(plugin, physics::showCubeParticles, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
+    this.cubeTracker = new CubeTracker(plugin, physics.getCubes());
+    this.cubeTracker.startTracking();
+
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
     scheduler.runTaskLaterAsynchronously(plugin, () -> {
@@ -152,6 +160,8 @@ public class FCManager {
       scheduler.cancelTask(cubeCleanerTaskID);
       this.cubeCleanerRunning = false;
     }
+
+    if (cubeTracker != null) cubeTracker.stopTracking();
   }
 
   public void registerCommands() {
@@ -201,6 +211,12 @@ public class FCManager {
     RegisteredServiceProvider<Chat> chatRsp = plugin.getServer().getServicesManager().getRegistration(Chat.class);
     this.chat = chatRsp == null ? null : chatRsp.getProvider();
     if (chat == null) throw new IllegalStateException("Vault not found!");
+
+    if (plugin.getServer().getPluginManager().getPlugin("ProtocolLib") == null) {
+      logger.info("&cProtocolLib not found! Disabling FootCube.");
+      plugin.getServer().getPluginManager().disablePlugin(this.plugin);
+      return;
+    }
 
     logger.info("&a✔ &2Hooked into &dLuckPerms &2and &dVault &2successfully!");
   }

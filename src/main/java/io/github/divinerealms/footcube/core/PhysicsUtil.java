@@ -2,6 +2,7 @@ package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.utils.CubeTracker;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.experimental.UtilityClass;
@@ -102,7 +103,7 @@ public class PhysicsUtil {
   public static final float SOUND_PITCH = 1.0F;
 
   // --- Particle Defaults ---
-  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32.0 * 32.0;
+  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 64 * 64;
   public static final double PARTICLE_Y_OFFSET = 0.25;
   public static final float GENERIC_PARTICLE_OFFSET = 0.01F;
   public static final float GENERIC_PARTICLE_SPEED = 0.1F;
@@ -282,6 +283,10 @@ public class PhysicsUtil {
       }
 
       physics.getCubes().add(cube);
+      CubeTracker cubeTracker = FCManager.getInstance().getCubeTracker();
+      if (cubeTracker != null) cubeTracker.registerCube(cube);
+      else plugin.getLogger().warning("CubeTracker is null! Long-range tracking will not work.");
+
       return cube;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;

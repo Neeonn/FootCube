@@ -144,6 +144,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
       int ties = (int) data.get("ties");
       int losses = matches - wins - ties;
       int goals = (int) data.get("goals");
+      int ownGoals = (int) data.get("owngoals");
       int assists = (int) data.get("assists");
       int bestWinStreak = (int) data.get("bestwinstreak");
 
@@ -193,6 +194,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
         case "ties": return String.valueOf(ties);
         case "winspermatch": return String.format("%.2f", winsPerMatch);
         case "goals": return String.valueOf(goals);
+        case "owngoals": return String.valueOf(ownGoals);
         case "assists": return String.valueOf(assists);
         case "goalspermatch": return String.format("%.2f", goalsPerMatch);
         case "bestwinstreak": return String.valueOf(bestWinStreak);

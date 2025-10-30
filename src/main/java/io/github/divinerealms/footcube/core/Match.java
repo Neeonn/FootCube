@@ -4,7 +4,6 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.utils.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -242,8 +241,9 @@ public class Match {
     if (this.phase > 2) p.setScoreboard(this.sb);
   }
 
-  public void kick(Player p) {
+  public void kick(Player p, TouchType type) {
     if (!this.isRed.containsKey(p)) return;
+    if (type != TouchType.HIT) return;
 
     boolean red = this.isRed.get(p);
     if (red) {

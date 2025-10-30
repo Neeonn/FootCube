@@ -1,8 +1,7 @@
-package io.github.divinerealms.footcube.utils;
+package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
-import io.github.divinerealms.footcube.core.Match;
-import io.github.divinerealms.footcube.core.Organization;
+import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;

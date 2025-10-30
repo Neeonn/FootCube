@@ -7,7 +7,6 @@ import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.HighScores;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.utils.MatchHelper;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -232,10 +231,10 @@ public class Organization {
     this.waitingPlayers.remove(player.getName());
   }
 
-  public void ballTouch(Player player) {
-    for (Match match : this.matches2v2) match.kick(player);
-    for (Match match : this.matches3v3) match.kick(player);
-    for (Match match : this.matches4v4) match.kick(player);
+  public void ballTouch(Player player, TouchType type) {
+    for (Match match : this.matches2v2) match.kick(player, type);
+    for (Match match : this.matches3v3) match.kick(player, type);
+    for (Match match : this.matches4v4) match.kick(player, type);
   }
 
   public ItemStack createComplexItem(Material material, String name, String[] lore) {

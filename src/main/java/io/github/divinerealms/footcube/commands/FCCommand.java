@@ -6,7 +6,7 @@ import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.utils.MatchHelper;
+import io.github.divinerealms.footcube.core.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Difficulty;

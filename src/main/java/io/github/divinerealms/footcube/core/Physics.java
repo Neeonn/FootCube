@@ -124,7 +124,7 @@ public class Physics {
               newV.multiply(PhysicsUtil.VELOCITY_DAMPENING_FACTOR / speed);
             double power = this.speed.getOrDefault(playerId, 0D) / PhysicsUtil.PLAYER_SPEED_TOUCH_DIVISOR + oldV.length() / PhysicsUtil.CUBE_SPEED_TOUCH_DIVISOR;
             newV.add(playerLoc.getDirection().setY(0).normalize().multiply(power));
-            org.ballTouch(player);
+            org.ballTouch(player, TouchType.MOVE);
             kicked = true;
             if (power > PhysicsUtil.MIN_SOUND_POWER) sound = true;
           }

@@ -1,10 +1,7 @@
 package io.github.divinerealms.footcube.listeners;
 
 import io.github.divinerealms.footcube.configs.Lang;
-import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
-import io.github.divinerealms.footcube.core.PhysicsUtil;
+import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
@@ -114,7 +111,7 @@ public class BallEvents implements Listener {
 
       physics.getBallHitCooldowns().put(playerId, System.currentTimeMillis());
       PhysicsUtil.recordPlayerAction(player);
-      org.ballTouch(player);
+      org.ballTouch(player, TouchType.HIT);
 
       Location playerLocation = player.getLocation();
       Vector kick = playerLocation.getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(PhysicsUtil.KICK_VERTICAL_BOOST);
@@ -159,11 +156,11 @@ public class BallEvents implements Listener {
 
       physics.getKicked().put(playerId, System.currentTimeMillis());
       PhysicsUtil.recordPlayerAction(player);
-      org.ballTouch(player);
+      org.ballTouch(player, TouchType.HIT);
 
       double verticalBoost = PhysicsUtil.CUBE_JUMP_RIGHT_CLICK;
       PhysicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0));
-      PhysicsUtil.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.25F, 1.0F);
+      PhysicsUtil.queueSound(cube.getLocation());
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#rightClick() took " + ms + "ms");

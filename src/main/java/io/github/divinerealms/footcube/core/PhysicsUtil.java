@@ -146,7 +146,7 @@ public class PhysicsUtil {
    * @param location The location where the sound will be queued. Must not be null.
    */
   public static void queueSound(Location location) {
-    queueSound(location, Sound.SLIME_WALK, 0.1F, SOUND_PITCH);
+    queueSound(location, Sound.SLIME_WALK, SOUND_VOLUME, SOUND_PITCH);
   }
 
   /**

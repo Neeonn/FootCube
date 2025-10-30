@@ -91,7 +91,7 @@ public class Organization {
     arenas.options().copyDefaults(true);
     configManager.saveConfig("arenas.yml");
 
-    this.updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(this.plugin, this::update, 1L, 1L);
+    this.updateTaskId = plugin.getServer().getScheduler().runTaskTimer(this.plugin, this::update, 1L, 1L).getTaskId();
   }
 
   public void matchStart(int type) {

@@ -295,9 +295,11 @@ public class Match {
       } else {
         boolean rare = true;
 
-        for (Player p : this.bluePlayers) {
+        Iterator<Player> bluePlayersIterator = this.bluePlayers.iterator();
+        while (bluePlayersIterator.hasNext()) {
+          Player p = bluePlayersIterator.next();
           if (!this.teamers.contains(p)) {
-            this.bluePlayers.remove(p);
+            bluePlayersIterator.remove();
             this.redPlayers.add(p);
             this.isRed.put(p, true);
             p.teleport(this.red);
@@ -310,9 +312,11 @@ public class Match {
         }
 
         if (rare) {
-          for (Player p : this.redPlayers) {
+          Iterator<Player> redPlayersIterator = this.redPlayers.iterator();
+          while (redPlayersIterator.hasNext()) {
+            Player p = redPlayersIterator.next();
             if (!this.teamers.contains(p)) {
-              this.redPlayers.remove(p);
+              redPlayersIterator.remove();
               this.bluePlayers.add(p);
               this.isRed.put(p, true);
               p.teleport(this.blue);
@@ -339,14 +343,14 @@ public class Match {
 
       Location l = this.cube.getLocation();
       if (this.x) {
-        if ((this.redAboveBlue && l.getBlockX() >= this.red.getBlockX() || !this.redAboveBlue && this.red.getBlockX() >= l.getBlockX()) && l.getY() < this.red.getY() + (double)3.0F && l.getZ() < this.red.getZ() + (double)4.0F && l.getZ() > this.red.getZ() - (double)4.0F) {
+        if ((this.redAboveBlue && l.getBlockX() >= this.red.getBlockX() || !this.redAboveBlue && this.red.getBlockX() >= l.getBlockX()) && l.getY() < this.red.getY() + (double)3 && l.getZ() < this.red.getZ() + (double)4 && l.getZ() > this.red.getZ() - (double)4) {
           this.score(false);
-        } else if ((this.redAboveBlue && l.getBlockX() <= this.blue.getBlockX() || !this.redAboveBlue && this.blue.getBlockX() <= l.getBlockX()) && l.getY() < this.blue.getY() + (double)3.0F && l.getZ() < this.blue.getZ() + (double)4.0F && l.getZ() > this.blue.getZ() - (double)4.0F) {
+        } else if ((this.redAboveBlue && l.getBlockX() <= this.blue.getBlockX() || !this.redAboveBlue && this.blue.getBlockX() <= l.getBlockX()) && l.getY() < this.blue.getY() + (double)3 && l.getZ() < this.blue.getZ() + (double)4 && l.getZ() > this.blue.getZ() - (double)4) {
           this.score(true);
         }
-      } else if ((this.redAboveBlue && l.getBlockZ() >= this.red.getBlockZ() || !this.redAboveBlue && this.red.getBlockZ() >= l.getBlockZ()) && l.getY() < this.red.getY() + (double)3.0F && l.getX() < this.red.getX() + (double)4.0F && l.getX() > this.red.getX() - (double)4.0F) {
+      } else if ((this.redAboveBlue && l.getBlockZ() >= this.red.getBlockZ() || !this.redAboveBlue && this.red.getBlockZ() >= l.getBlockZ()) && l.getY() < this.red.getY() + (double)3 && l.getX() < this.red.getX() + (double)4 && l.getX() > this.red.getX() - (double)4) {
         this.score(false);
-      } else if ((this.redAboveBlue && l.getBlockZ() <= this.blue.getBlockZ() || !this.redAboveBlue && this.blue.getBlockZ() <= l.getBlockZ()) && l.getY() < this.blue.getY() + (double)3.0F && l.getX() < this.blue.getX() + (double)4.0F && l.getX() > this.blue.getX() - (double)4.0F) {
+      } else if ((this.redAboveBlue && l.getBlockZ() <= this.blue.getBlockZ() || !this.redAboveBlue && this.blue.getBlockZ() <= l.getBlockZ()) && l.getY() < this.blue.getY() + (double)3 && l.getX() < this.blue.getX() + (double)4 && l.getX() > this.blue.getX() - (double)4) {
         this.score(true);
       }
     }
@@ -381,13 +385,13 @@ public class Match {
         double vertical = 0.3 * random.nextDouble() + 0.2;
         double horizontal = 0.3 * random.nextDouble() + 0.3;
         if (random.nextBoolean()) {
-          horizontal *= -1.0F;
+          horizontal *= -1;
         }
 
         if (this.x) {
-          this.cube.setVelocity(new Vector(0.0F, vertical, horizontal));
+          this.cube.setVelocity(new Vector(0, vertical, horizontal));
         } else {
-          this.cube.setVelocity(new Vector(horizontal, vertical, 0.0F));
+          this.cube.setVelocity(new Vector(horizontal, vertical, 0));
         }
 
         for (Player p : this.isRed.keySet()) {
@@ -398,11 +402,11 @@ public class Match {
             p.teleport(this.blue);
           }
 
-          p.playSound(p.getLocation(), Sound.EXPLODE, 1.0F, 1.0F);
+          p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
         }
       } else if (this.countdown <= 10) {
         for (Player p : this.isRed.keySet()) {
-          p.playSound(p.getLocation(), Sound.NOTE_STICKS, 1.0F, 1.0F);
+          p.playSound(p.getLocation(), Sound.NOTE_STICKS, 1, 1);
         }
       }
     }
@@ -413,13 +417,13 @@ public class Match {
       double vertical = 0.3 * random.nextDouble() + 0.2;
       double horizontal = 0.3 * random.nextDouble() + 0.3;
       if (random.nextBoolean()) {
-        horizontal *= -1.0F;
+        horizontal *= -1;
       }
 
       if (this.x) {
-        this.cube.setVelocity(new Vector(0.0F, vertical, horizontal));
+        this.cube.setVelocity(new Vector(0, vertical, horizontal));
       } else {
-        this.cube.setVelocity(new Vector(horizontal, vertical, 0.0F));
+        this.cube.setVelocity(new Vector(horizontal, vertical, 0));
       }
 
       for(Player p : this.isRed.keySet()) {
@@ -430,7 +434,7 @@ public class Match {
           p.teleport(this.blue);
         }
 
-        p.playSound(p.getLocation(), Sound.EXPLODE, 1.0F, 1.0F);
+        p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
       }
     }
 
@@ -458,10 +462,10 @@ public class Match {
               }
             }
 
-            fcManager.getEconomy().depositPlayer(p.getPlayer(), 15.0F);
+            fcManager.getEconomy().depositPlayer(p.getPlayer(), 15);
             logger.send(p, Lang.MATCH_WIN_CREDITS.replace(null));
             if ((int) data.get("winstreak") % 5 == 0) {
-              fcManager.getEconomy().depositPlayer(p.getPlayer(), 100.0F);
+              fcManager.getEconomy().depositPlayer(p.getPlayer(), 100);
               logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
             }
             p.setExp(0);
@@ -481,10 +485,10 @@ public class Match {
               }
             }
 
-            fcManager.getEconomy().depositPlayer(p.getPlayer(), 15.0F);
+            fcManager.getEconomy().depositPlayer(p.getPlayer(), 15);
             logger.send(p, Lang.MATCH_WIN_CREDITS.replace(null));
             if ((int) data.get("winstreak") % 5 == 0) {
-              fcManager.getEconomy().depositPlayer(p.getPlayer(), 100.0F);
+              fcManager.getEconomy().depositPlayer(p.getPlayer(), 100);
               logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
             }
           } else {
@@ -499,14 +503,14 @@ public class Match {
               data.add("ties");
               data.set("winstreak", 0);
             }
-            fcManager.getEconomy().depositPlayer(p.getPlayer(), 5.0F);
+            fcManager.getEconomy().depositPlayer(p.getPlayer(), 5);
             logger.send(p, Lang.MATCH_TIED_CREDITS.replace(null));
           }
         }
       }
 
       this.phase = 1;
-      this.cube.setHealth(0.0F);
+      this.cube.setHealth(0F);
       this.organization.undoTakePlace(this);
       this.scoreRed = 0;
       this.scoreBlue = 0;
@@ -533,11 +537,10 @@ public class Match {
     this.phase = 4;
     this.tickToSec = 20;
     this.countdown = 5;
-    this.cube.setHealth(0.0);
+    this.cube.setHealth(0);
 
-    Player scorer = red ? this.lastKickRed : this.lastKickBlue;
     Player assister = red ? this.assistRed : this.assistBlue;
-    String team = red ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
+    String scoringTeamName = red ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
 
     if (red) {
       ++this.scoreRed;
@@ -547,54 +550,74 @@ public class Match {
       this.blueGoals.setScore(this.blueGoals.getScore() + 1);
     }
 
-    boolean ownGoal;
-    if (scorer != null) {
-      boolean isScoreRed = this.isRed.getOrDefault(scorer, false);
-      ownGoal = (isScoreRed != red);
-    } else {
-      List<Player> opposing = red ? this.bluePlayers : this.redPlayers;
-      if (!opposing.isEmpty()) scorer = opposing.get(new Random().nextInt(opposing.size()));
-      ownGoal = true;
+    boolean ownGoal = false;
+    Player playerResponsible = null;
+    if (red && this.lastKickRed != null) {
+      playerResponsible = this.lastKickRed;
+    } else if (!red && this.lastKickBlue != null) {
+      playerResponsible = this.lastKickBlue;
+    }
+
+    if (playerResponsible == null) {
+      if (red && this.lastKickBlue != null) {
+        playerResponsible = this.lastKickBlue;
+      } else if (!red && this.lastKickRed != null) {
+        playerResponsible = this.lastKickRed;
+      }
+    }
+
+    if (playerResponsible != null) {
+      boolean lastKickerIsRed = this.isRed.getOrDefault(playerResponsible, false);
+      ownGoal = (lastKickerIsRed != red);
+    }
+
+    Player scorer = playerResponsible;
+    if (scorer == null) {
+      List<Player> winningTeam = red ? this.redPlayers : this.bluePlayers;
+      if (!winningTeam.isEmpty()) scorer = winningTeam.get(new Random().nextInt(winningTeam.size()));
     }
 
     if (scorer == null) return;
-    if (ownGoal) {
-      PlayerData ownGoalData = fcManager.getDataManager().get(scorer);
-      int ogCount = ownGoals.getOrDefault(scorer.getUniqueId(), 0) + 1;
-      ownGoals.put(scorer.getUniqueId(), ogCount);
-      ownGoalData.add("owngoals");
 
-      fcManager.getEconomy().withdrawPlayer(scorer, 200);
-      logger.send(scorer, Lang.MATCH_SCORE_OWN_GOAL.replace(null));
+    if (playerResponsible != null) {
+      if (ownGoal) {
+        PlayerData ownGoalData = fcManager.getDataManager().get(playerResponsible);
+        int ogCount = ownGoals.getOrDefault(playerResponsible.getUniqueId(), 0) + 1;
+        ownGoals.put(playerResponsible.getUniqueId(), ogCount);
+        ownGoalData.add("owngoals");
 
-      if (ogCount >= 3) {
-        MatchHelper.leaveMatch(organization, scorer, this, logger, true);
+        fcManager.getEconomy().withdrawPlayer(playerResponsible, 200);
+        logger.send(playerResponsible, Lang.MATCH_SCORE_OWN_GOAL.replace(null));
 
-        long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
-        organization.getLeaveCooldowns().put(scorer.getUniqueId(), banUntil);
+        if (ogCount >= 3) {
+          MatchHelper.leaveMatch(organization, playerResponsible, this, logger, true);
 
-        for (Player player : this.isRed.keySet()) logger.send(player, Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{scorer.getDisplayName()}));
-      }
-    }
+          long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
+          organization.getLeaveCooldowns().put(playerResponsible.getUniqueId(), banUntil);
 
-    PlayerData data = fcManager.getDataManager().get(scorer);
-    if (data != null && !this.takePlace.contains(scorer) && !ownGoal) {
-      if (this.type != 2) data.add("goals");
-      fcManager.getEconomy().depositPlayer(scorer.getPlayer(), 10);
-      this.goals.put(scorer, this.goals.getOrDefault(scorer, 0) + 1);
-
-      logger.send(scorer, Lang.MATCH_SCORE_CREDITS.replace(null));
-
-      if (assister != null && assister != scorer && this.isRed.getOrDefault(assister, false) == this.isRed.getOrDefault(scorer, false)) {
-        PlayerData assistData = fcManager.getDataManager().get(assister);
-        if (assistData != null && this.type != 2) assistData.add("assists");
-        fcManager.getEconomy().depositPlayer(assister, 5);
-        logger.send(assister, Lang.MATCH_ASSIST_CREDITS.replace(null));
+          for (Player player : this.isRed.keySet()) logger.send(player, Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{playerResponsible.getDisplayName()}));
+        }
       }
 
-      if (this.goals.get(scorer) == 3) {
-        logger.send(scorer, Lang.MATCH_SCORE_HATTRICK.replace(null));
-        fcManager.getEconomy().depositPlayer(scorer.getPlayer(), 100);
+      PlayerData data = fcManager.getDataManager().get(playerResponsible);
+      if (data != null && !this.takePlace.contains(playerResponsible) && !ownGoal) {
+        if (this.type != 2) data.add("goals");
+        fcManager.getEconomy().depositPlayer(playerResponsible.getPlayer(), 10);
+        this.goals.put(playerResponsible, this.goals.getOrDefault(playerResponsible, 0) + 1);
+
+        logger.send(playerResponsible, Lang.MATCH_SCORE_CREDITS.replace(null));
+
+        if (assister != null && assister != playerResponsible && this.isRed.getOrDefault(assister, false) == this.isRed.getOrDefault(playerResponsible, false)) {
+          PlayerData assistData = fcManager.getDataManager().get(assister);
+          if (assistData != null && this.type != 2) assistData.add("assists");
+          fcManager.getEconomy().depositPlayer(assister, 5);
+          logger.send(assister, Lang.MATCH_ASSIST_CREDITS.replace(null));
+        }
+
+        if (this.goals.get(playerResponsible) == 3) {
+          logger.send(playerResponsible, Lang.MATCH_SCORE_HATTRICK.replace(null));
+          fcManager.getEconomy().depositPlayer(playerResponsible.getPlayer(), 100);
+        }
       }
     }
 
@@ -602,21 +625,27 @@ public class Match {
       Location goalLocation = red ? this.blue : this.red;
       double distanceToGoal = scorer.getLocation().distance(goalLocation);
 
+      String displayPrefixName = (playerResponsible != null)
+          ? fcManager.getChat().getPlayerPrefix(playerResponsible) + playerResponsible.getName()
+          : fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName();
+
       String goalMessage = ownGoal
-          ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(), team})
+          ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{displayPrefixName, scoringTeamName})
           : Lang.MATCH_GOAL.replace(new String[]{
-              fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName(),
-          team, String.format("%.0f", distanceToGoal),
-          assister != null && assister != scorer ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{fcManager.getChat().getPlayerPrefix(assister) + assister.getName()}) : ""
-          });
+          displayPrefixName,
+          scoringTeamName,
+          String.format("%.0f", distanceToGoal),
+          assister != null && assister != playerResponsible ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{fcManager.getChat().getPlayerPrefix(assister) + assister.getName()}) : ""
+      });
 
       logger.send(p, goalMessage);
       PlayerSettings settings = fcManager.getPlayerSettings(p);
-      if (settings.isGoalSoundEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1.0F, 1.0F);
+      if (settings.isGoalSoundEnabled()) p.playSound(p.getLocation(), settings.getGoalSound(), 1, 1);
 
-      fcManager.getLogger().title(p, Lang.MATCH_GOAL_TITLE.replace(null),
+      String part = red ? "&c" : "&9";
+      fcManager.getLogger().title(p, (ownGoal ? Lang.MATCH_OWN_GOAL_TITLE.replace(null) : Lang.MATCH_GOAL_TITLE.replace(null)),
           Lang.MATCH_GOAL_SUBTITLE.replace(new String[]{
-              fcManager.getChat().getPlayerPrefix(scorer) + scorer.getName() + (red ? "§c" : "§9")
+              part + displayPrefixName + part
           }), 10, 30, 10);
 
       if (this.time.getScore() > 0) {
@@ -625,24 +654,30 @@ public class Match {
       } else {
         this.organization.endMatch(p);
         p.setScoreboard(this.sbm.getNewScoreboard());
-        if (data != null && this.isRed.get(p) == red && !this.takePlace.contains(p)) {
+
+        PlayerData playerData = fcManager.getDataManager().get(p);
+        boolean playerIsRed = this.isRed.getOrDefault(p, false);
+
+        if (playerData != null && playerIsRed == red && !this.takePlace.contains(p)) {
           if (this.type != 2) {
-            data.add("wins");
-            data.add("winstreak");
-            if ((int) data.get("winstreak") > (int) data.get("bestwinstreak")) {
-              data.set("bestwinstreak", data.get("winstreak"));
+            playerData.add("wins");
+            playerData.add("winstreak");
+            if ((int) playerData.get("winstreak") > (int) playerData.get("bestwinstreak")) {
+              playerData.set("bestwinstreak", playerData.get("winstreak"));
             }
           }
 
           fcManager.getEconomy().depositPlayer(p.getPlayer(), 15);
           logger.send(p, Lang.MATCH_WIN_CREDITS.replace(null));
-          if ((int) data.get("winstreak") % 5 == 0) {
+          if ((int) playerData.get("winstreak") % 5 == 0) {
             fcManager.getEconomy().depositPlayer(p.getPlayer(), 100);
-            logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
+            logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(playerData.get("winstreak"))}));
           }
-        } else if (data != null && !this.takePlace.contains(p) && this.type != 2) data.set("winstreak", 0);
+        } else if (playerData != null && !this.takePlace.contains(p) && this.type != 2) {
+          playerData.set("winstreak", 0);
+        }
 
-        logger.send(p, Lang.MATCH_WIN_TEAM.replace(new String[]{team}));
+        logger.send(p, Lang.MATCH_WIN_TEAM.replace(new String[]{scoringTeamName}));
         p.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation());
         this.organization.clearInventory(p);
       }

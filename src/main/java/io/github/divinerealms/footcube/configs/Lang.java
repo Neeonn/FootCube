@@ -176,6 +176,7 @@ public enum Lang {
   MATCH_GOAL("match.goal", String.join(System.lineSeparator(), "{prefix}&6&lGOAL!!! &a{0} scored a goal for the {1} team from {2} blocks away and got assisted by {3}")),
   MATCH_GOAL_ASSIST("match.goal-assist", "Asistent: {0}"),
   MATCH_GOAL_TITLE("match.goal-title", "&6&lGOOOOLL!"),
+  MATCH_OWN_GOAL_TITLE("match.own-goal-title", "&c&lAUTOGOL!"),
   MATCH_GOAL_SUBTITLE("match.goal-subtitle", "&a{0} scored!"),
   MATCH_SCORE_STATS("match.score-stats", String.join(System.lineSeparator(), "&aIt is now {0}-{1} Red-Blue", "&aThe match will continue in 10 seconds")),
   MATCH_WIN_TEAM("match.winning-team", "&aThe {0} team has won the match"),

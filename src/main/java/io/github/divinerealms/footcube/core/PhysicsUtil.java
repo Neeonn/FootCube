@@ -2,7 +2,6 @@ package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.Utilities;
-import io.github.divinerealms.footcube.utils.CubeTracker;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.experimental.UtilityClass;
@@ -283,10 +282,6 @@ public class PhysicsUtil {
       }
 
       physics.getCubes().add(cube);
-      CubeTracker cubeTracker = FCManager.getInstance().getCubeTracker();
-      if (cubeTracker != null) cubeTracker.registerCube(cube);
-      else plugin.getLogger().warning("CubeTracker is null! Long-range tracking will not work.");
-
       return cube;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;

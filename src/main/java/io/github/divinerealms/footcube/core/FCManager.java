@@ -51,7 +51,6 @@ public class FCManager {
   private Economy economy;
   private Chat chat;
   private LuckPerms luckPerms;
-  private CubeTracker cubeTracker;
 
   private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false;
   private int cubeCleanerTaskID, physicsTaskID, glowTaskID;
@@ -132,9 +131,6 @@ public class FCManager {
     this.glowRunning = true;
     this.glowTaskID = scheduler.runTaskTimer(plugin, physics::showCubeParticles, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
-    this.cubeTracker = new CubeTracker(plugin, physics.getCubes());
-    this.cubeTracker.startTracking();
-
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
     scheduler.runTaskLaterAsynchronously(plugin, () -> {
@@ -160,8 +156,6 @@ public class FCManager {
       scheduler.cancelTask(cubeCleanerTaskID);
       this.cubeCleanerRunning = false;
     }
-
-    if (cubeTracker != null) cubeTracker.stopTracking();
   }
 
   public void registerCommands() {

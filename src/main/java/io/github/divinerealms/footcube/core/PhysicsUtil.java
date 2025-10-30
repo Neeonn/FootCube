@@ -395,10 +395,11 @@ public class PhysicsUtil {
   public static String onHitDebug(Player player, KickResult result) {
     long start = System.nanoTime();
     try {
+      String coloredKickPower = result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a";
       return result.isChargedHit()
           ? Lang.HITDEBUG_CHARGED.replace(new String[]{
-          player.getDisplayName(), (result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a") + String.format("%.2f", result.getFinalKickPower()),
-          String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
+          player.getDisplayName(), coloredKickPower + String.format("%.2f", result.getFinalKickPower()),
+          String.format("%.2f", result.getBaseKickPower()), String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
       })
           : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
     } finally {

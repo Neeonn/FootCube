@@ -383,8 +383,11 @@ public class Physics {
           double dy = playerLoc.getY() - y;
           double dz = playerLoc.getZ() - z;
 
+          double distanceSquared = dx * dx + dy * dy + dz * dz;
           // Skip players already close enough to see the cube directly.
-          if ((dx * dx + dy * dy + dz * dz) < PhysicsUtil.DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
+          if (distanceSquared < PhysicsUtil.DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
+          // Skip players too far away (beyond 160 blocks).
+          if (distanceSquared > PhysicsUtil.MAX_PARTICLE_DISTANCE_SQUARED) continue;
 
           PlayerSettings settings = playerSettings.get(playerId);
           if (settings == null || !settings.isParticlesEnabled()) continue;

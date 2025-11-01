@@ -36,6 +36,7 @@ public class SignManipulation implements Listener {
   private final Logger logger;
   private final Organization org;
   private final Physics physics;
+  private final PhysicsUtil physicsUtil;
   private final FileConfiguration arenas;
 
   private static final String PERM_PLAY = "footcube.play";
@@ -45,6 +46,7 @@ public class SignManipulation implements Listener {
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
     this.physics = fcManager.getPhysics();
+    this.physicsUtil = fcManager.getPhysicsUtil();
     ConfigManager configManager = fcManager.getConfigManager();
     this.arenas = configManager.getConfig("arenas.yml");
   }
@@ -132,11 +134,11 @@ public class SignManipulation implements Listener {
       Location playerLocation = player.getLocation();
       switch (color) {
         case LIME:
-          if (PhysicsUtil.cantSpawnYet(player)) return;
+          if (physicsUtil.cantSpawnYet(player)) return;
           Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100, 100);
           if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-            PhysicsUtil.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
-            PhysicsUtil.setSpawnCooldownMs(player);
+            physicsUtil.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
+            physicsUtil.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));
           } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
           break;
@@ -214,12 +216,12 @@ public class SignManipulation implements Listener {
           break;
 
         case "cube":
-          if (PhysicsUtil.cantSpawnYet(player)) return;
+          if (physicsUtil.cantSpawnYet(player)) return;
           Location location = player.getLocation();
           Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
           if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-            PhysicsUtil.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
-            PhysicsUtil.setSpawnCooldownMs(player);
+            physicsUtil.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
+            physicsUtil.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));
           } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
           break;

@@ -3,6 +3,7 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
+import io.github.divinerealms.footcube.core.PhysicsUtil;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.Bukkit;
@@ -20,6 +21,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final Organization org;
   private final Logger logger;
+  private final PhysicsUtil physicsUtil;
 
   private static final String PERM_BUILD = "footcube.build";
   private static final String PERM_BUILD_OTHER = PERM_BUILD + ".other";
@@ -28,6 +30,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     this.fcManager = fcManager;
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
+    this.physicsUtil = fcManager.getPhysicsUtil();
   }
 
   @Override
@@ -59,6 +62,8 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
     logger.send(target, Lang.SET_BUILD_MODE.replace(new String[]{status}));
     logger.send(sender, Lang.SET_BUILD_MODE_OTHER.replace(new String[]{target.getDisplayName(), status}));
+
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return true;
   }
 
@@ -78,6 +83,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return completions;
   }
 }

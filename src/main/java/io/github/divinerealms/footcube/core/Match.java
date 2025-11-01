@@ -15,50 +15,65 @@ import org.bukkit.scoreboard.*;
 import org.bukkit.util.Vector;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class Match {
   private final FCManager fcManager;
   private final Logger logger;
+  private final PhysicsUtil physicsUtil;
+  private final Organization organization;
+
   public int matchID;
   public int type;
   public int phase;
   public int countdown;
   public int tickToSec;
+
   private int teams;
   private long startTime;
-  public final HashMap<Player, Long> sugarCooldown = new HashMap<>();
+
   public final Location blue;
   public final Location red;
+
   private final Location mid;
-  private final Organization organization;
   private final boolean x;
   private final boolean redAboveBlue;
 
   public ArrayList<Player> redPlayers = new ArrayList<>();
   public ArrayList<Player> bluePlayers = new ArrayList<>();
-
   public ArrayList<Player> teamers = new ArrayList<>();
+
   public final ArrayList<Player> takePlace = new ArrayList<>();
-  public HashMap<Player, Boolean> isRed = new HashMap<>();
+
+  public Map<Player, Boolean> isRed = new ConcurrentHashMap<>();
+
+  public final Map<Player, Long> sugarCooldown = new ConcurrentHashMap<>();
+  public final Map<Player, Integer> goals = new ConcurrentHashMap<>();
+  public final Map<UUID, Integer> ownGoals = new ConcurrentHashMap<>();
+
   private Player lastKickRed = null;
   private Player lastKickBlue = null;
   private Player assistRed = null;
   private Player assistBlue = null;
+
   public int scoreRed;
   public int scoreBlue;
-  public final HashMap<Player, Integer> goals = new HashMap<>();
-  public final HashMap<UUID, Integer> ownGoals = new HashMap<>();
+
   private final ItemStack redChestPlate;
   private final ItemStack redLeggings;
   private final ItemStack blueChestPlate;
   private final ItemStack blueLeggings;
+
   public final ItemStack sugar;
+
   public Score time;
+
   private final Score redGoals;
   private final Score blueGoals;
   private final ScoreboardManager sbm;
   private final Scoreboard sb;
+
   public Slime cube;
 
   private final FileConfiguration config;
@@ -66,8 +81,10 @@ public class Match {
   public Match(FCManager fcManager, int t, Location b, Location r, Location m, int id) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-    this.matchID = id;
+    this.physicsUtil = fcManager.getPhysicsUtil();
     this.organization = fcManager.getOrg();
+
+    this.matchID = id;
     this.type = t;
     this.blue = b;
     this.red = r;
@@ -76,18 +93,22 @@ public class Match {
     this.scoreRed = 0;
     this.scoreBlue = 0;
     this.startTime = 0L;
+
     this.redChestPlate = this.createColoredArmour(Material.LEATHER_CHESTPLATE, Color.RED);
     this.redLeggings = this.createColoredArmour(Material.LEATHER_LEGGINGS, Color.RED);
     this.blueChestPlate = this.createColoredArmour(Material.LEATHER_CHESTPLATE, Color.BLUE);
     this.blueLeggings = this.createColoredArmour(Material.LEATHER_LEGGINGS, Color.BLUE);
+
     String itemName = Lang.SPEED_ITEM_NAME.replace(null);
     String itemLore = Lang.SPEED_ITEM_LORE.replace(null);
+
     this.sugar = this.organization.createComplexItem(Material.SUGAR, itemName, new String[]{itemLore});
+
     this.sbm = Bukkit.getScoreboardManager();
     this.sb = this.sbm.getNewScoreboard();
     boolean objectiveExists = false;
 
-    for(Objective ob : this.sb.getObjectives()) {
+    for (Objective ob : this.sb.getObjectives()) {
       if (ob.getName().equalsIgnoreCase("Match")) {
         objectiveExists = true;
         break;
@@ -380,13 +401,11 @@ public class Match {
         }
 
         this.phase = 3;
-        this.cube = PhysicsUtil.spawnCube(this.mid);
-        Random random = new Random();
+        this.cube = physicsUtil.spawnCube(this.mid);
+        Random random = PhysicsUtil.RANDOM;
         double vertical = 0.3 * random.nextDouble() + 0.2;
         double horizontal = 0.3 * random.nextDouble() + 0.3;
-        if (random.nextBoolean()) {
-          horizontal *= -1;
-        }
+        if (random.nextBoolean()) horizontal *= -1;
 
         if (this.x) {
           this.cube.setVelocity(new Vector(0, vertical, horizontal));
@@ -412,13 +431,11 @@ public class Match {
     }
 
     if (this.phase == 3 && this.cube.isDead()) {
-      this.cube = PhysicsUtil.spawnCube(this.mid);
-      Random random = new Random();
+      this.cube = physicsUtil.spawnCube(this.mid);
+      Random random = PhysicsUtil.RANDOM;
       double vertical = 0.3 * random.nextDouble() + 0.2;
       double horizontal = 0.3 * random.nextDouble() + 0.3;
-      if (random.nextBoolean()) {
-        horizontal *= -1;
-      }
+      if (random.nextBoolean()) horizontal *= -1;
 
       if (this.x) {
         this.cube.setVelocity(new Vector(0, vertical, horizontal));

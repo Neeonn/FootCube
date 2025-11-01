@@ -3,16 +3,12 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Match;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
+import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.core.MatchHelper;
 import net.luckperms.api.node.types.PermissionNode;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -35,6 +31,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Physics physics;
+  private final PhysicsUtil physicsUtil;
   private final Logger logger;
   private final Organization org;
   private final DisableCommands disableCommands;
@@ -61,6 +58,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.physics = fcManager.getPhysics();
+    this.physicsUtil = fcManager.getPhysicsUtil();
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
     this.disableCommands = disableCommands;
@@ -510,6 +508,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return true;
   }
 
@@ -563,6 +562,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return completions;
   }
 }

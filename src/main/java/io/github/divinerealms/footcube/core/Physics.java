@@ -24,12 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * The Physics class is responsible for managing and simulating physics-related behavior in the game.
- * It handles operations such as collision detection, vector manipulation, charge decay, and managing
- * interactions between entities like Slime entities and cubes.
- * This class maintains various data structures and fields required for physics processing, such as
- * managing entity velocities, tracking scheduled cube removals, handling sound effects, and logging
- * game states.
+ * Handles all physics interactions between players and cubes in the FootCube plugin.
+ * <p>
+ * This class is responsible for updating cube positions and velocities every tick (20 times per second),
+ * applying realistic physics effects such as collision, drag, and bounces. It also manages interaction
+ * logic between players and cubes, including proximity detection, touch power calculation, and sound triggers.
  */
 public class Physics {
   private final FCManager fcManager;
@@ -37,6 +36,7 @@ public class Physics {
   private final Organization org;
   private final Logger logger;
   private final BukkitScheduler scheduler;
+  @Setter private PhysicsUtil physicsUtil;
 
   @Getter private final Set<Slime> cubes = ConcurrentHashMap.newKeySet();
   private final Set<Slime> cubesToRemove = ConcurrentHashMap.newKeySet();
@@ -59,143 +59,187 @@ public class Physics {
   public Physics(FCManager fcManager) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
-    this.scheduler = plugin.getServer().getScheduler();
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
+    this.physicsUtil = fcManager.getPhysicsUtil();
+    this.scheduler = plugin.getServer().getScheduler();
   }
 
   /**
-   * The main physics loop, running every tick (20 times per second).
-   * This handles charge decay, collision detection, and vector manipulation.
+   * The main physics loop, running every game tick (20 times per second).
+   * <p>
+   * This method handles charge regeneration, player-cube interaction detection, cube velocity updates,
+   * collision responses (wall, air, and floor), and sound scheduling. Each cube is processed individually
+   * with vector math to ensure smooth and realistic behavior.
+   * </p>
+   *
+   * <p><b>Performance Note:</b> The entire routine measures its runtime in milliseconds and logs a warning
+   * if the update cycle exceeds 1 ms, which helps identify physics bottlenecks on large servers.</p>
    */
   public void update() {
     long start = System.nanoTime();
     try {
+      // Skip processing if there are no active players or cubes.
       if (fcManager.getCachedPlayers().isEmpty() || cubes.isEmpty()) return;
 
       processQueuedHits();
-
       tickCounter++;
-      kicked.entrySet().removeIf(uuidLongEntry -> System.currentTimeMillis() > uuidLongEntry.getValue() + PhysicsUtil.KICKED_TIMEOUT_MS);
+
+      // Remove players from the 'kicked' cache if their timeout expired.
+      kicked.entrySet().removeIf(entry -> System.currentTimeMillis() > entry.getValue() + PhysicsUtil.KICKED_TIMEOUT_MS);
+
+      // Regenerate player charge values gradually, visualized via the experience bar.
       Iterator<Map.Entry<UUID, Double>> chargesIterator = charges.entrySet().iterator();
       while (chargesIterator.hasNext()) {
         Map.Entry<UUID, Double> entry = chargesIterator.next();
         UUID uuid = entry.getKey();
         Player player = Bukkit.getPlayer(uuid);
-        if (player == null) {
-          chargesIterator.remove();
-          continue;
-        }
+        if (player == null) { chargesIterator.remove(); continue; }
 
-        double nextCharge = PhysicsUtil.CHARGE_BASE_VALUE - (PhysicsUtil.CHARGE_BASE_VALUE - entry.getValue()) * PhysicsUtil.CHARGE_RECOVERY_RATE;
-        entry.setValue(nextCharge);
-        if (tickCounter % PhysicsUtil.EXP_UPDATE_INTERVAL_TICKS == 0) player.setExp((float) nextCharge);
+        double currentCharge = entry.getValue();
+        double recoveredCharge = PhysicsUtil.CHARGE_BASE_VALUE - (PhysicsUtil.CHARGE_BASE_VALUE - currentCharge) * PhysicsUtil.CHARGE_RECOVERY_RATE;
+        entry.setValue(recoveredCharge);
+
+        // Only update player XP every few ticks to reduce overhead.
+        if (tickCounter % PhysicsUtil.EXP_UPDATE_INTERVAL_TICKS == 0) player.setExp((float) recoveredCharge);
       }
 
+      // Main cube processing loop.
       for (Slime cube : cubes) {
+        if (cube.isDead()) { cubesToRemove.add(cube); continue; }
+
         UUID cubeId = cube.getUniqueId();
-        if (cube.isDead()) {
-          cubesToRemove.add(cube);
-          continue;
-        }
+        Location cubeLocation = cube.getLocation();
 
-        Vector oldV = velocities.getOrDefault(cubeId, cube.getVelocity().clone());
-        Vector newV = cube.getVelocity().clone();
-        Location cubeLoc = cube.getLocation();
+        Vector previousVelocity = velocities.getOrDefault(cubeId, cube.getVelocity().clone());
+        Vector newVelocity = cube.getVelocity().clone();
 
-        boolean kicked = false, sound = false;
+        boolean wasKicked = false, playSound = false;
 
-        double closeEnough = PhysicsUtil.HIT_RADIUS + 0.1;
-        for (Entity entity : cube.getNearbyEntities(closeEnough, closeEnough, closeEnough)) {
+        // Process all nearby entities within hit range.
+        double searchRadius = PhysicsUtil.HIT_RADIUS_SQUARED;
+        for (Entity entity : cube.getNearbyEntities(searchRadius, searchRadius, searchRadius)) {
           if (!(entity instanceof Player)) continue;
           Player player = (Player) entity;
+          if (physicsUtil.notAllowedToInteract(player) || physicsUtil.isAFK(player)) continue;
           UUID playerId = player.getUniqueId();
-          if (PhysicsUtil.notAllowedToInteract(player) || PhysicsUtil.isAFK(player)) continue;
 
-          Location playerLoc = player.getLocation();
-          double distanceSquared = PhysicsUtil.getDistanceSquared(cubeLoc, playerLoc);
-          if (distanceSquared > PhysicsUtil.HIT_RADIUS_SQUARED) continue;
+          // --- Player proximity and touch detection ---
+          // Determines if the player is close enough to directly affect the cube.
+          double distanceSq = physicsUtil.getDistanceSquared(cube.getLocation(), player.getLocation());
+          if (distanceSq <= PhysicsUtil.HIT_RADIUS_SQUARED) {
+            double cubeSpeed = newVelocity.length();
 
-          double distance = -1;
-          if (distanceSquared <= PhysicsUtil.HIT_RADIUS_SQUARED) {
-            distance = Math.sqrt(distanceSquared);
-            double speed = newV.length();
-            if (distance <= PhysicsUtil.MIN_RADIUS && speed >= PhysicsUtil.MIN_SPEED_FOR_DAMPENING)
-              newV.multiply(PhysicsUtil.VELOCITY_DAMPENING_FACTOR / speed);
-            double power = this.speed.getOrDefault(playerId, 0D) / PhysicsUtil.PLAYER_SPEED_TOUCH_DIVISOR + oldV.length() / PhysicsUtil.CUBE_SPEED_TOUCH_DIVISOR;
-            newV.add(playerLoc.getDirection().setY(0).normalize().multiply(power));
+            // Dampen ball speed if inside proximity and moving too fast to prevent overshoot.
+            if (distanceSq <= PhysicsUtil.MIN_RADIUS_SQUARED && cubeSpeed >= PhysicsUtil.MIN_SPEED_FOR_DAMPENING)
+              newVelocity.multiply(PhysicsUtil.VELOCITY_DAMPENING_FACTOR / cubeSpeed);
+
+            // Compute the resulting power from player movement and cube velocity.
+            double impactPower = this.speed.getOrDefault(playerId, 1D) / PhysicsUtil.PLAYER_SPEED_TOUCH_DIVISOR
+                + previousVelocity.length() / PhysicsUtil.CUBE_SPEED_TOUCH_DIVISOR;
+
+            // Apply a horizontal directional force in the direction the player is facing.
+            newVelocity.add(player.getLocation().getDirection().setY(0).normalize().multiply(impactPower));
+
+            // Register the touch interaction with the organization system.
             org.ballTouch(player, TouchType.MOVE);
-            kicked = true;
-            if (power > PhysicsUtil.MIN_SOUND_POWER) sound = true;
+            wasKicked = true;
+
+            // Trigger sound effect if impact force exceeds threshold.
+            if (impactPower > PhysicsUtil.MIN_SOUND_POWER) playSound = true;
           }
 
-          double newVSquared = newV.lengthSquared();
-          double proximityThresholdSquared = newVSquared * PhysicsUtil.PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
+          // --- Advanced directional and proximity adjustments ---
+          // Used for adjusting near-collision behavior to maintain realistic interactions.
+          double newVelocitySq = newVelocity.lengthSquared();
+          double proximityThresholdSq = newVelocitySq * PhysicsUtil.PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
 
-          if (distanceSquared < proximityThresholdSquared) {
-            double delta = (distance > -1) ? distance : Math.sqrt(distanceSquared);
-            double newVLength = Math.sqrt(newVSquared);
+          if (distanceSq < proximityThresholdSq) {
+            double distance = Math.sqrt(distanceSq);
 
-            Vector loc = cubeLoc.toVector();
-            Vector nextLoc = loc.clone().add(newV);
+            Vector cubePos = cube.getLocation().toVector();
+            Vector projectedNextPos = (new Vector(cubePos.getX(), cubePos.getY(), cubePos.getZ())).add(newVelocity);
 
-            boolean rightDirection = true;
-            Vector pDir = new Vector(playerLoc.getX() - loc.getX(), 0, playerLoc.getZ() - loc.getZ());
-            Vector cDir = (new Vector(newV.getX(), 0, newV.getZ())).normalize();
+            // Calculate directional alignment between cube velocity and player.
+            boolean movingTowardPlayer = true;
+            Vector directionToPlayer = new Vector(player.getLocation().getX() - cubePos.getX(), 0, player.getLocation().getZ() - cubePos.getZ());
+            Vector cubeDirection = (new Vector(newVelocity.getX(), 0, newVelocity.getZ())).normalize();
 
-            int px = pDir.getX() < 0 ? -1 : 1;
-            int pz = pDir.getZ() < 0 ? -1 : 1;
-            int cx = cDir.getX() < 0 ? -1 : 1;
-            int cz = cDir.getZ() < 0 ? -1 : 1;
+            // Determine relative direction quadrant using sign comparison.
+            int playerDirX = directionToPlayer.getX() < 0 ? -1 : 1;
+            int playerDirZ = directionToPlayer.getZ() < 0 ? -1 : 1;
+            int cubeDirX = cubeDirection.getX() < 0 ? -1 : 1;
+            int cubeDirZ = cubeDirection.getZ() < 0 ? -1 : 1;
 
-            if (px != cx && pz != cz
-                || (px != cx || pz != cz) && (!(cx * pDir.getX() > (cx * cz * px) * cDir.getZ())
-                || !(cz * pDir.getZ() > (cz * cx * pz) * cDir.getX()))) rightDirection = false;
+            // Complex logic to determine whether cube is traveling away or toward the player.
+            if (playerDirX != cubeDirX && playerDirZ != cubeDirZ
+                || (playerDirX != cubeDirX || playerDirZ != cubeDirZ)
+                && (!(cubeDirX * directionToPlayer.getX() > (cubeDirX * cubeDirZ * playerDirX) * cubeDirection.getZ())
+                || !(cubeDirZ * directionToPlayer.getZ() > (cubeDirZ * cubeDirX * playerDirZ) * cubeDirection.getX()))) {
+              movingTowardPlayer = false;
+            }
 
-            if (rightDirection && loc.getY() < playerLoc.getY() + PhysicsUtil.PLAYER_HEAD_LEVEL
-                && loc.getY() > playerLoc.getY() - PhysicsUtil.PLAYER_FOOT_LEVEL
-                && nextLoc.getY() < playerLoc.getY() + PhysicsUtil.PLAYER_HEAD_LEVEL
-                && nextLoc.getY() > playerLoc.getY() - PhysicsUtil.PLAYER_FOOT_LEVEL) {
-              double velocityX = newV.getX();
+            // --- Height (Y-axis) validation ---
+            // Ensure cube is within player's vertical interaction range.
+            double playerY = player.getLocation().getY();
+            boolean withinVerticalRange =
+                cubePos.getY() < playerY + PhysicsUtil.PLAYER_HEAD_LEVEL &&
+                    cubePos.getY() > playerY - PhysicsUtil.PLAYER_FOOT_LEVEL &&
+                    projectedNextPos.getY() < playerY + PhysicsUtil.PLAYER_HEAD_LEVEL &&
+                    projectedNextPos.getY() > playerY - PhysicsUtil.PLAYER_FOOT_LEVEL;
+
+            // --- Collision line proximity correction ---
+            // Prevents the cube from clipping through the player when moving directly toward them.
+            if (movingTowardPlayer && withinVerticalRange) {
+              double velocityX = newVelocity.getX();
               if (Math.abs(velocityX) < PhysicsUtil.TOLERANCE_VELOCITY_CHECK) continue;
 
-              double a = newV.getZ() / newV.getX();
-              double b = loc.getZ() - a * loc.getX();
-              double numerator = a * playerLoc.getX() - playerLoc.getZ() + b;
-              double numeratorSquared = numerator * numerator;
-              double denominatorSquared = a * a + PhysicsUtil.CHARGE_BASE_VALUE;
+              // Represent cube trajectory as z = a*x + b and compute perpendicular distance.
+              double perpendicularDistance = physicsUtil.getPerpendicularDistance(newVelocity, cubePos, player);
 
-              if (numeratorSquared < PhysicsUtil.MIN_RADIUS_SQUARED * denominatorSquared)
-                newV.multiply(delta / newVLength);
+              // Reduce velocity to avoid tunneling effect when too close.
+              if (perpendicularDistance < PhysicsUtil.MIN_RADIUS) newVelocity.multiply(distance / newVelocity.length());
             }
           }
         }
 
-        if (newV.getX() == 0) {
-          newV.setX(-oldV.getX() * PhysicsUtil.WALL_BOUNCE_FACTOR);
-          if (Math.abs(oldV.getX()) > PhysicsUtil.BOUNCE_THRESHOLD) sound = true;
-        } else if (!kicked && Math.abs(oldV.getX() - newV.getX()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
-          newV.setX(oldV.getX() * PhysicsUtil.AIR_DRAG_FACTOR);
+        // --- Handle wall collisions and air drag effects ---
 
-        if (newV.getZ() == 0) {
-          newV.setZ(-oldV.getZ() * PhysicsUtil.WALL_BOUNCE_FACTOR);
-          if (Math.abs(oldV.getZ()) > PhysicsUtil.BOUNCE_THRESHOLD) sound = true;
-        } else if (!kicked && Math.abs(oldV.getZ() - newV.getZ()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
-          newV.setZ(oldV.getZ() * PhysicsUtil.AIR_DRAG_FACTOR);
+        // X-axis collision and drag adjustment.
+        // If the cube stops moving horizontally (X=0), bounce it back with reduced energy.
+        if (newVelocity.getX() == 0) {
+          newVelocity.setX(-previousVelocity.getX() * PhysicsUtil.WALL_BOUNCE_FACTOR);
+          if (Math.abs(previousVelocity.getX()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
 
-        if (newV.getY() < 0 && oldV.getY() < 0 && oldV.getY() < newV.getY() - PhysicsUtil.VERTICAL_BOUNCE_THRESHOLD) {
-          newV.setY(-oldV.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR);
-          if (Math.abs(oldV.getY()) > PhysicsUtil.BOUNCE_THRESHOLD) sound = true;
+        // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
+        } else if (!wasKicked && Math.abs(previousVelocity.getX() - newVelocity.getX()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
+          newVelocity.setX(previousVelocity.getX() * PhysicsUtil.AIR_DRAG_FACTOR);
+
+        // Z-axis collision and drag adjustment (mirrors X-axis logic).
+        if (newVelocity.getZ() == 0) {
+          newVelocity.setZ(-previousVelocity.getZ() * PhysicsUtil.WALL_BOUNCE_FACTOR);
+          if (Math.abs(previousVelocity.getZ()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
+        } else if (!wasKicked && Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
+          newVelocity.setZ(previousVelocity.getZ() * PhysicsUtil.AIR_DRAG_FACTOR);
+
+        // Y-axis bounce (vertical collision against floor or ceiling).
+        // This ensures realistic vertical rebound, preventing velocity loss bugs on impact.
+        if (newVelocity.getY() < 0 && previousVelocity.getY() < 0 && previousVelocity.getY() < newVelocity.getY() - PhysicsUtil.VERTICAL_BOUNCE_THRESHOLD) {
+          newVelocity.setY(-previousVelocity.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR);
+          if (Math.abs(previousVelocity.getY()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
         }
 
-        if (sound) PhysicsUtil.queueSound(cubeLoc);
+        // Queue impact sound effect if any significant collision occurred.
+        if (playSound) physicsUtil.queueSound(cubeLocation);
 
-        cube.setVelocity(newV);
-        velocities.put(cubeId, newV);
+        // Apply final computed velocity to the cube and update its tracked state.
+        cube.setVelocity(newVelocity);
+        velocities.put(cubeId, newVelocity);
       }
 
-      scheduleSound();
-      scheduleCubeRemoval();
+      // Finalize scheduled physics actions.
+      scheduleSound();// Dispatch queued sound events to players.
+      scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#update() took " + ms + "ms");
@@ -203,9 +247,8 @@ public class Physics {
   }
 
   /**
-   * Schedules the removal of dead cubes 20 ticks later (1 second).
-   * This delay is added to help mitigate the issues where the cube is dead but a final interaction is processed,
-   * and to provide a graceful death animation instead of instant removal.
+   * Schedules the removal of dead or invalid cubes from the world.
+   * Ensures the cubes list remains synchronized and prevents entity leaks.
    */
   private void scheduleCubeRemoval() {
     if (cubesToRemove.isEmpty()) return;
@@ -220,10 +263,8 @@ public class Physics {
   }
 
   /**
-   * Schedules sounds to be played at specific locations stored in the sound queue.
-   * If the sound queue is empty, no actions are performed. Otherwise, the method processes
-   * the current list of queued locations, clears the queue, and schedules a task to play
-   * the sound at each of the specified locations.
+   * Schedules the playback of queued sound events after physics updates.
+   * Ensures that multiple cubes can trigger sounds in a single tick efficiently.
    */
   private void scheduleSound() {
     if (soundQueue.isEmpty()) return;
@@ -253,8 +294,10 @@ public class Physics {
   }
 
   /**
-   * Processes actions stored in the hit queue by updating the velocity of associated Slime entities
-   * and storing their new velocities in the velocity map. The hit queue is then cleared.
+   * Processes queued hit actions to synchronize cube-player interactions.
+   * <p>
+   * This is called at the beginning of each tick cycle to ensure pending interactions are handled
+   * before performing new physics calculations.
    */
   private void processQueuedHits() {
     if (hitQueue.isEmpty()) return;
@@ -271,8 +314,19 @@ public class Physics {
   }
 
   /**
-   * Renders particle trail that follows the cube for players that are far away.
-   * This is implemented to tackle the issue of render distance for entities in 1.8.8
+   * Renders particle trails that visually follow cubes (Slime entities) for players who are far enough away
+   * that they might not see the actual cube entity due to Minecraft 1.8.8 render distance limitations.
+   * <p>
+   * This method improves visibility and game immersion by simulating cube motion with particles,
+   * ensuring remote players can still perceive the ball's movement even outside their render distance.
+   * </p>
+   *
+   * <p><b>Performance considerations:</b> Particle effects are sent only to players who are sufficiently far from the cube,
+   * reducing unnecessary network and client load. The method is optimized through caching of player locations
+   * and settings to minimize per-interval lookups.</p>
+   *
+   * @implNote This task is executed periodically every {@link PhysicsUtil#GLOW_TASK_INTERVAL_TICKS} ticks (default 10).
+   * The interval balances visual responsiveness and server performance.
    */
   public void showCubeParticles() {
     long start = System.nanoTime();
@@ -280,6 +334,7 @@ public class Physics {
       Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
       if (onlinePlayers.isEmpty() || cubes.isEmpty()) return;
 
+      // Cache player data to avoid redundant lookups.
       Map<UUID, Location> playerLocations = new HashMap<>(onlinePlayers.size());
       Map<UUID, PlayerSettings> playerSettings = new HashMap<>(onlinePlayers.size());
 
@@ -288,15 +343,17 @@ public class Physics {
         playerSettings.put(p.getUniqueId(), fcManager.getPlayerSettings(p));
       }
 
+      // Iterate over each cube and determine whether particles should be shown.
       for (Slime cube : cubes) {
         if (cube == null || cube.isDead()) continue;
         Location cubeLoc = cube.getLocation();
         if (cubeLoc == null) continue;
 
         double x = cubeLoc.getX();
-        double y = cubeLoc.getY() + PhysicsUtil.PARTICLE_Y_OFFSET;
+        double y = cubeLoc.getY() + PhysicsUtil.PARTICLE_Y_OFFSET; // Raise particle height slightly above cube.
         double z = cubeLoc.getZ();
 
+        // Determine if any players are far enough away to require particle visibility.
         boolean anyFarPlayers = false;
         for (Map.Entry<UUID, PlayerSettings> entry : playerSettings.entrySet()) {
           PlayerSettings s = entry.getValue();
@@ -307,6 +364,8 @@ public class Physics {
           double dx = playerLoc.getX() - x;
           double dy = playerLoc.getY() - y;
           double dz = playerLoc.getZ() - z;
+
+          // Check if player is beyond the visual threshold distance.
           if ((dx * dx + dy * dy + dz * dz) >= PhysicsUtil.DISTANCE_PARTICLE_THRESHOLD_SQUARED) {
             anyFarPlayers = true;
             break;
@@ -314,6 +373,7 @@ public class Physics {
         }
         if (!anyFarPlayers) continue;
 
+        // Emit particle trails for players far from the cube.
         for (Player player : onlinePlayers) {
           UUID playerId = player.getUniqueId();
           Location playerLoc = playerLocations.get(playerId);
@@ -322,12 +382,16 @@ public class Physics {
           double dx = playerLoc.getX() - x;
           double dy = playerLoc.getY() - y;
           double dz = playerLoc.getZ() - z;
+
+          // Skip players already close enough to see the cube directly.
           if ((dx * dx + dy * dy + dz * dz) < PhysicsUtil.DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
 
           PlayerSettings settings = playerSettings.get(playerId);
           if (settings == null || !settings.isParticlesEnabled()) continue;
 
           EnumParticle particle = settings.getParticle();
+
+          // Render colorized Redstone particles.
           if (particle == EnumParticle.REDSTONE) {
             Color color = settings.getRedstoneColor();
             Utilities.sendParticle(player, EnumParticle.REDSTONE,
@@ -335,6 +399,7 @@ public class Physics {
                 color.getRed() / 255F, color.getGreen() / 255F, color.getBlue() / 255F,
                 1.0F, 0);
           } else {
+            // Render standard particle effect.
             Utilities.sendParticle(player, particle,
                 x, y, z,
                 PhysicsUtil.GENERIC_PARTICLE_OFFSET,
@@ -352,13 +417,19 @@ public class Physics {
   }
 
   /**
-   * Cleans up various physics-related data structures by clearing them and resetting their states.
-   * This method ensures that all leftover data and states from previous operations are removed
-   * to prepare for a fresh state. It also logs a warning if the cleanup process takes more than 1 millisecond.
+   * Clears and resets all data structures used by the physics engine.
+   * <p>
+   * This method should be called when unloading the plugin, restarting the system, or resetting the physics simulation.
+   * It ensures no residual entity or state data persists between sessions, which could otherwise cause memory leaks
+   * or inconsistent game behavior.
+   * </p>
+   *
+   * <p>Execution is timed for performance monitoring and logs a warning if cleanup exceeds 1ms.</p>
    */
   public void cleanup() {
     long start = System.nanoTime();
     try {
+      // Reset entity and state tracking structures.
       cubes.clear();
       cubesToRemove.clear();
       velocities.clear();
@@ -372,6 +443,8 @@ public class Physics {
       soundQueue.clear();
       hitQueue.clear();
       buttonCooldowns.clear();
+
+      // Reset control flags and counters.
       matchesEnabled = true;
       hitDebugEnabled = false;
       tickCounter = 0;
@@ -382,10 +455,12 @@ public class Physics {
   }
 
   /**
-   * Represents an action that occurs when a "Slime" entity (referred to as a cube) is hit within the physics system.
-   * This class stores information about the entity being hit, the velocity applied during the hit,
-   * and whether the velocity from this action is additive or should replace the current velocity.
-   * This class is designed to be immutable, ensuring thread-safety when used in concurrent environments.
+   * Represents a discrete hit event applied to a cube (Slime entity) in the physics system.
+   * <p>
+   * Each {@code HitAction} encapsulates the cube being hit and the vector (velocity) applied as a result.
+   * These are immutable objects, designed for safe usage in asynchronous or concurrent contexts such as
+   * physics update queues.
+   * </p>
    */
   @Getter
   @AllArgsConstructor
@@ -395,12 +470,17 @@ public class Physics {
   }
 
   /**
-   * Represents an action to play a sound at a given location. This class encapsulates
-   * all the necessary information such as the location, player-specific targeting,
-   * sound type, volume, and pitch.
-   * Instances of this class can optionally target a specific player. When targeting a player, the sound
-   * will be directed towards that player; otherwise, it will act as a general sound event for all nearby players.
-   * The sound properties (volume and pitch) define how the sound is experienced during playback.
+   * Encapsulates a sound effect action within the physics system.
+   * <p>
+   * A {@code SoundAction} defines a sound event at a specific location, with optional player targeting.
+   * It includes the sound type, playback volume, and pitch. If {@code player} is non-null, the sound is only
+   * sent to that player; otherwise, it is broadcast to all nearby listeners.
+   * </p>
+   *
+   * <p>This design allows flexible and fine-grained control over sound feedback, ensuring that auditory cues
+   * are consistent with the player's experience and interaction with physics objects.</p>
+   *
+   * @see Sound
    */
   @Getter
   @AllArgsConstructor
@@ -411,6 +491,11 @@ public class Physics {
     private final float volume;
     private final float pitch;
 
+    /**
+     * Checks whether this sound action is targeted at a specific player.
+     *
+     * @return {@code true} if the sound targets a player; {@code false} otherwise.
+     */
     public boolean isPlayerTargeted() {
       return player != null;
     }

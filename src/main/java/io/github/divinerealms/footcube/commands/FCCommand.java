@@ -31,6 +31,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Physics physics;
+  private final PhysicsUtil physicsUtil;
   private final Logger logger;
   private final Organization org;
   private final FileConfiguration arenas;
@@ -47,6 +48,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.physics = fcManager.getPhysics();
+    this.physicsUtil = fcManager.getPhysicsUtil();
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
     this.arenas = fcManager.getConfigManager().getConfig("arenas.yml");
@@ -258,7 +260,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
         if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
         if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
-        if (PhysicsUtil.cantSpawnYet(player)) return true;
+        if (physicsUtil.cantSpawnYet(player)) return true;
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
@@ -268,8 +270,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           spawnLoc.setY(loc.getY() + 2.5);
         } else spawnLoc = loc;
 
-        PhysicsUtil.spawnCube(spawnLoc);
-        PhysicsUtil.setSpawnCooldownMs(player);
+        physicsUtil.spawnCube(spawnLoc);
+        physicsUtil.setButtonCooldown(player);
         logger.send(player, Lang.CUBE_SPAWN.replace(null));
         break;
 
@@ -474,6 +476,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return true;
   }
 
@@ -555,6 +558,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
+    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
     return completions;
   }
 }

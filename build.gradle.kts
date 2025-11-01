@@ -20,7 +20,8 @@ val props = Properties().apply {
 
 val major = props.getProperty("major").toInt()
 val minor = props.getProperty("minor").toInt()
-var patch = props.getProperty("patch").toInt()
+val patch = props.getProperty("patch").toInt()
+val versionBase = "$major.$minor.$patch"
 
 fun gitCommitHash(): String? = try {
     val stdout = ByteArrayOutputStream()
@@ -33,15 +34,32 @@ fun gitCommitHash(): String? = try {
     null
 }
 
-val commit = gitCommitHash()
-version = if (commit != null)
-    "$major.$minor.$patch-$commit"
+fun hasUncommittedChanges(): Boolean = try {
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine("git", "status", "--porcelain")
+        standardOutput = stdout
+    }
+    stdout.toString().isNotBlank()
+} catch (_: Exception) {
+    false
+}
+
+val commit = gitCommitHash() ?: "unknown"
+val dirty = hasUncommittedChanges()
+
+version = "$versionBase-$commit"
+
+val jarLabel = if (dirty)
+    "FootCube-$versionBase-$commit-DEV.jar"
 else
-    "$major.$minor.$patch"
+    "FootCube-$versionBase-$commit.jar"
 
 tasks.named("build") {
     doFirst {
-        println("Building FootCube version $version")
+        println("Building FootCube version: $version")
+        println("Repository state: ${if (dirty) "UNCOMMITTED CHANGES" else "CLEAN"}")
+        println("Output JAR: $jarLabel")
     }
 }
 
@@ -52,7 +70,7 @@ tasks.processResources {
 }
 
 tasks.jar {
-    archiveFileName.set("FootCube.jar")
+    archiveFileName.set(jarLabel)
 }
 
 repositories {

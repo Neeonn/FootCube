@@ -4,7 +4,6 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
-import lombok.experimental.UtilityClass;
 import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
 import org.bukkit.GameMode;
@@ -27,24 +26,23 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
-@UtilityClass
 public class PhysicsUtil {
-  private FCManager fcManager;
-  private Physics physics;
-  private Logger logger;
-  private Plugin plugin;
+  private final FCManager fcManager;
+  private final Physics physics;
+  private final Logger logger;
+  private final Plugin plugin;
 
-  public static void initialize(FCManager manager) {
-    fcManager = manager;
-    physics = manager.getPhysics();
-    logger = manager.getLogger();
-    plugin = manager.getPlugin();
+  public PhysicsUtil(FCManager fcManager) {
+    this.fcManager = fcManager;
+    this.physics = fcManager.getPhysics();
+    this.logger = fcManager.getLogger();
+    this.plugin = fcManager.getPlugin();
   }
 
   // --- Task Intervals (Ticks) ---
-  public static final long PHYSICS_TASK_INTERVAL_TICKS = 1L;
-  public static final long GLOW_TASK_INTERVAL_TICKS = 10L;
-  public static final long CUBE_REMOVAL_DELAY_TICKS = 20L;
+  public static final long PHYSICS_TASK_INTERVAL_TICKS = 1;
+  public static final long GLOW_TASK_INTERVAL_TICKS = 10;
+  public static final long CUBE_REMOVAL_DELAY_TICKS = 20;
 
   // --- Slime/Entity Configuration ---
   public static final int SLIME_SIZE = 1;
@@ -52,17 +50,17 @@ public class PhysicsUtil {
   public static final int JUMP_POTION_AMPLIFIER = -3;
 
   // --- Timeouts & Cooldowns (Milliseconds) ---
-  public static final long KICKED_TIMEOUT_MS = 1000L;
-  public static final long REGULAR_HIT_COOLDOWN = 150L;
-  public static final long CHARGED_HIT_COOLDOWN = 500L;
-  public static final long AFK_THRESHOLD = 60_000L;
+  public static final long KICKED_TIMEOUT_MS = 1000;
+  public static final long REGULAR_HIT_COOLDOWN = 150;
+  public static final long CHARGED_HIT_COOLDOWN = 500;
+  public static final long AFK_THRESHOLD = 60_000;
 
   // --- Kick Power & Charge Settings ---
-  public static final double MAX_KP = 5.0;
-  public static final double SOFT_CAP_MIN_FACTOR = 0.85;
-  public static final double CHARGE_MULTIPLIER = 7.0;
-  public static final double BASE_POWER = 0.375;
-  public static final double CHARGE_BASE_VALUE = 1.0;
+  public static final double MAX_KP = 5;
+  public static final double SOFT_CAP_MIN_FACTOR = 0.9;
+  public static final double CHARGE_MULTIPLIER = 7;
+  public static final double BASE_POWER = 0.4; // 0.375
+  public static final double CHARGE_BASE_VALUE = 1;
   public static final double CHARGE_RECOVERY_RATE = 0.945;
   public static final double MIN_SPEED_FOR_DAMPENING = 0.5;
   public static final double MIN_SOUND_POWER = 0.15;
@@ -77,12 +75,13 @@ public class PhysicsUtil {
   public static final double BOUNCE_THRESHOLD = 0.3;
 
   // --- Physics Multipliers ---
-  public static final double BALL_TOUCH_Y_OFFSET = 1.0;
+  public static final double BALL_TOUCH_Y_OFFSET = 1;
   public static final double CUBE_HITBOX_ADJUSTMENT = 1.5;
-  public static final double KICK_POWER_SPEED_MULTIPLIER = 2.0;
+  public static final double KICK_POWER_SPEED_MULTIPLIER = 2;
   public static final double VELOCITY_DAMPENING_FACTOR = 0.5;
-  public static final double PLAYER_SPEED_TOUCH_DIVISOR = 3.0;
-  public static final double CUBE_SPEED_TOUCH_DIVISOR = 6.0;
+  public static final double PLAYER_SPEED_TOUCH_DIVISOR = 3;
+  public static final double CUBE_SPEED_TOUCH_DIVISOR = 6;
+  public static final double PROXIMITY_THRESHOLD_MULTIPLIER = 1.3;
   public static final double PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED = 1.69;
   public static final double WALL_BOUNCE_FACTOR = 0.8;
   public static final double AIR_DRAG_FACTOR = 0.98;
@@ -99,10 +98,10 @@ public class PhysicsUtil {
 
   // --- Sound Defaults ---
   public static final float SOUND_VOLUME = 0.5F;
-  public static final float SOUND_PITCH = 1.0F;
+  public static final float SOUND_PITCH = 1;
 
   // --- Particle Defaults ---
-  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 64 * 64;
+  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = 32 * 32;
   public static final double PARTICLE_Y_OFFSET = 0.25;
   public static final float GENERIC_PARTICLE_OFFSET = 0.01F;
   public static final float GENERIC_PARTICLE_SPEED = 0.1F;
@@ -118,7 +117,7 @@ public class PhysicsUtil {
    *
    * @param location The location to be added to the sound queue. Must not be null.
    */
-  public static void queueSound(Location location, Sound sound, float volume, float pitch) {
+  public void queueSound(Location location, Sound sound, float volume, float pitch) {
     if (location == null || sound == null) return;
     physics.getSoundQueue().offer(new Physics.SoundAction(location, null, sound, volume, pitch));
   }
@@ -133,7 +132,7 @@ public class PhysicsUtil {
    * @param volume The volume level of the sound. A float value where higher values indicate louder sounds.
    * @param pitch The pitch of the sound. A float value where higher values indicate a higher pitch.
    */
-  public static void queueSound(Player player, Sound sound, float volume, float pitch) {
+  public void queueSound(Player player, Sound sound, float volume, float pitch) {
     if (player == null || sound == null) return;
     physics.getSoundQueue().offer(new Physics.SoundAction(null, player, sound, volume, pitch));
   }
@@ -144,7 +143,7 @@ public class PhysicsUtil {
    *
    * @param location The location where the sound will be queued. Must not be null.
    */
-  public static void queueSound(Location location) {
+  public void queueSound(Location location) {
     queueSound(location, Sound.SLIME_WALK, SOUND_VOLUME, SOUND_PITCH);
   }
 
@@ -154,20 +153,47 @@ public class PhysicsUtil {
    * @param cube The Slime entity that is being hit. Must not be null and must be alive.
    * @param velocity The Vector defining the direction and magnitude of the hit's velocity. Must not be null.
    */
-  public static void queueHit(Slime cube, Vector velocity) {
+  public void queueHit(Slime cube, Vector velocity) {
     if (cube == null || cube.isDead() || velocity == null) return;
     physics.getHitQueue().offer(new Physics.HitAction(cube, velocity));
   }
 
   /**
-   * Calculates a custom distance squared between a player (locA) and the ball (locB).
-   * The calculation includes an offset to account for player height and cube size.
+   * Computes the distance between two locations in the world, accounting for vertical offset adjustments.
+   * Includes performance logging if the computation takes longer than 1ms.
+   *
+   * @param locA The first location (usually the player location).
+   * @param locB The second location (usually the cube/ball location).
+   * @return The computed distance between the two points.
    */
-  public static double getDistanceSquared(Location locA, Location locB) {
+  public double getDistance(Location locA, Location locB) {
+    long start = System.nanoTime();
+    try {
+      locA.add(0.0, -1.0, 0.0);
+      double dx = Math.abs(locA.getX() - locB.getX());
+      double dy = Math.abs(locA.getY() - locB.getY() - 0.25) - 1.25;
+      if (dy < 0.0) dy = 0.0;
+      double dz = Math.abs(locA.getZ() - locB.getZ());
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#getDistance() took " + ms + "ms");
+    }
+  }
+
+  /**
+   * Calculates the squared distance between two locations, optimized for physics calculations.
+   * This variant avoids using {@link Math#sqrt(double)} for performance reasons and adjusts for cube height.
+   *
+   * @param locA The first location (usually player).
+   * @param locB The second location (usually cube/ball).
+   * @return The squared distance between the two points.
+   */
+  public double getDistanceSquared(Location locA, Location locB) {
     long start = System.nanoTime();
     try {
       double dx = locA.getX() - locB.getX();
-      double dy = (locA.getY() - PhysicsUtil.BALL_TOUCH_Y_OFFSET) - locB.getY() - PhysicsUtil.CUBE_HITBOX_ADJUSTMENT;
+      double dy = (locA.getY() - BALL_TOUCH_Y_OFFSET) - locB.getY() - CUBE_HITBOX_ADJUSTMENT;
       if (dy < 0) dy = 0;
       double dz = locA.getZ() - locB.getZ();
 
@@ -183,11 +209,11 @@ public class PhysicsUtil {
    * @param player Player who is being checked (who kicked the ball).
    * @return Remaining cooldown in milliseconds.
    */
-  public static boolean canHitBall(Player player) {
+  public boolean canHitBall(Player player) {
     long start = System.nanoTime();
     try {
       long now = System.currentTimeMillis();
-      long cooldown = player.isSneaking() ? PhysicsUtil.CHARGED_HIT_COOLDOWN : PhysicsUtil.REGULAR_HIT_COOLDOWN;
+      long cooldown = player.isSneaking() ? CHARGED_HIT_COOLDOWN : REGULAR_HIT_COOLDOWN;
       long lastHit = physics.getBallHitCooldowns().getOrDefault(player.getUniqueId(), 0L);
 
       return now - lastHit >= cooldown;
@@ -202,12 +228,12 @@ public class PhysicsUtil {
    * @param baseKickPower Initial kick power.
    * @return Randomized capped kick power.
    */
-  private static double capKickPower(double baseKickPower) {
+  private double capKickPower(double baseKickPower) {
     long start = System.nanoTime();
     try {
-      if (baseKickPower <= PhysicsUtil.MAX_KP) return baseKickPower;
-      double minRandomKP = PhysicsUtil.MAX_KP * PhysicsUtil.SOFT_CAP_MIN_FACTOR;
-      return PhysicsUtil.RANDOM.nextDouble(minRandomKP, PhysicsUtil.MAX_KP);
+      if (baseKickPower <= MAX_KP) return baseKickPower;
+      double minRandomKP = MAX_KP * SOFT_CAP_MIN_FACTOR;
+      return RANDOM.nextDouble(minRandomKP, MAX_KP);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#capKickPower() took " + ms + "ms");
@@ -219,13 +245,13 @@ public class PhysicsUtil {
    * @param player Player who initiated the calculation (who kicked the ball).
    * @return Player's kick power
    */
-  public static KickResult calculateKickPower(Player player) {
+  public KickResult calculateKickPower(Player player) {
     long start = System.nanoTime();
     try {
       boolean isCharged = player.isSneaking();
-      double charge = PhysicsUtil.CHARGE_BASE_VALUE + physics.getCharges().getOrDefault(player.getUniqueId(), 0D) * PhysicsUtil.CHARGE_MULTIPLIER;
-      double speed = physics.getSpeed().getOrDefault(player.getUniqueId(), PhysicsUtil.MIN_SPEED_FOR_DAMPENING);
-      double power = speed * PhysicsUtil.KICK_POWER_SPEED_MULTIPLIER + PhysicsUtil.BASE_POWER;
+      double charge = CHARGE_BASE_VALUE + physics.getCharges().getOrDefault(player.getUniqueId(), 0D) * CHARGE_MULTIPLIER;
+      double speed = physics.getSpeed().getOrDefault(player.getUniqueId(), MIN_SPEED_FOR_DAMPENING);
+      double power = speed * KICK_POWER_SPEED_MULTIPLIER + BASE_POWER;
       double baseKickPower = isCharged ? charge * power : power;
       double finalKickPower = capKickPower(baseKickPower);
 
@@ -240,7 +266,7 @@ public class PhysicsUtil {
    * Removes all Slime entities in the main world.
    * Used only on plugin reload.
    */
-  public static void removeCubes() {
+  public void removeCubes() {
     long start = System.nanoTime();
     try {
       List<Entity> entities = plugin.getServer().getWorlds().get(0).getEntities();
@@ -261,14 +287,14 @@ public class PhysicsUtil {
    * @param location The location to spawn the cube.
    * @return The spawned entity.
    */
-  public static Slime spawnCube(Location location) {
+  public Slime spawnCube(Location location) {
     long start = System.nanoTime();
     try {
       Slime cube = (Slime) location.getWorld().spawnEntity(location, EntityType.SLIME);
       cube.setRemoveWhenFarAway(false);
-      cube.setSize(PhysicsUtil.SLIME_SIZE);
+      cube.setSize(SLIME_SIZE);
       // Permanent jump effect that stops the cube from hopping.
-      cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, PhysicsUtil.JUMP_POTION_DURATION, PhysicsUtil.JUMP_POTION_AMPLIFIER, true), true);
+      cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, JUMP_POTION_DURATION, JUMP_POTION_AMPLIFIER, true), true);
 
       // NMS Hack to prevent the ball from trying to reach the player.
       EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
@@ -295,7 +321,7 @@ public class PhysicsUtil {
    * @param player The player to check. Must not be null.
    * @return True if the player is not in survival game mode, otherwise false.
    */
-  public static boolean notAllowedToInteract(Player player) {
+  public boolean notAllowedToInteract(Player player) {
     return player.getGameMode() != GameMode.SURVIVAL;
   }
 
@@ -306,9 +332,9 @@ public class PhysicsUtil {
    * @param player The player to check for AFK status. Must not be null.
    * @return True if the player is considered AFK (time since last action exceeds the set threshold), false otherwise.
    */
-  public static boolean isAFK(Player player) {
+  public boolean isAFK(Player player) {
     long last = physics.getLastAction().getOrDefault(player.getUniqueId(), 0L);
-    return System.currentTimeMillis() - last > PhysicsUtil.AFK_THRESHOLD;
+    return System.currentTimeMillis() - last > AFK_THRESHOLD;
   }
 
   /**
@@ -316,7 +342,7 @@ public class PhysicsUtil {
    *
    * @param player The player whose action is being recorded. Must not be null.
    */
-  public static void recordPlayerAction(Player player) {
+  public void recordPlayerAction(Player player) {
     physics.getLastAction().put(player.getUniqueId(), System.currentTimeMillis());
   }
 
@@ -327,7 +353,7 @@ public class PhysicsUtil {
    *
    * @param player The player to be removed. Must not be null.
    */
-  public static void removePlayer(Player player) {
+  public void removePlayer(Player player) {
     long start = System.nanoTime();
     try {
       UUID uuid = player.getUniqueId();
@@ -354,14 +380,14 @@ public class PhysicsUtil {
    * @param kickResult The result of the kick action, containing details such as kick power,
    *                   charge level, and whether the hit was charged. This parameter must not be null.
    */
-  public static void showHits(Player player, KickResult kickResult) {
+  public void showHits(Player player, KickResult kickResult) {
     long start = System.nanoTime();
     try {
       UUID playerId = player.getUniqueId();
       boolean isChargedHit = kickResult.isChargedHit();
       double finalKickPower = kickResult.getFinalKickPower();
 
-      long cooldownDuration = isChargedHit ? PhysicsUtil.CHARGED_HIT_COOLDOWN : PhysicsUtil.REGULAR_HIT_COOLDOWN;
+      long cooldownDuration = isChargedHit ? CHARGED_HIT_COOLDOWN : REGULAR_HIT_COOLDOWN;
       long lastHitTime = physics.getBallHitCooldowns().getOrDefault(playerId, 0L);
 
       long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
@@ -392,7 +418,7 @@ public class PhysicsUtil {
    *               charge level, and whether the hit was charged. This parameter must not be null.
    * @return A string containing the formatted debug information about the hit action.
    */
-  public static String onHitDebug(Player player, KickResult result) {
+  public String onHitDebug(Player player, KickResult result) {
     long start = System.nanoTime();
     try {
       String coloredKickPower = result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a";
@@ -408,10 +434,37 @@ public class PhysicsUtil {
     }
   }
 
-  public static boolean cantSpawnYet(Player player) {
+  /**
+   * Calculates the shortest perpendicular distance from a player's position to the
+   * path of the cube's movement vector. Used for proximity and collision prediction.
+   *
+   * @param newVelocity The velocity vector of the cube.
+   * @param cubePos The cube's current position.
+   * @param player The player whose position is used for distance checking.
+   * @return The perpendicular distance between the player and the cube's velocity vector.
+   */
+  public double getPerpendicularDistance(Vector newVelocity, Vector cubePos, Player player) {
+    double slopeA = newVelocity.getZ() / newVelocity.getX();
+    double interceptB = cubePos.getZ() - slopeA * cubePos.getX();
+
+    double playerX = player.getLocation().getX();
+    double playerZ = player.getLocation().getZ();
+
+    // Compute perpendicular distance from player to cube’s path
+    return Math.abs(slopeA * playerX - playerZ + interceptB) / Math.sqrt(slopeA * slopeA + BALL_TOUCH_Y_OFFSET);
+  }
+
+  /**
+   * Checks if a player is currently under a cooldown preventing cube (ball) spawning.
+   * If the cooldown is active, a message is sent to the player and {@code true} is returned.
+   *
+   * @param player The player attempting to spawn a cube.
+   * @return True if the player must wait before spawning again, false otherwise.
+   */
+  public boolean cantSpawnYet(Player player) {
     UUID playerId = player.getUniqueId();
     long now = System.currentTimeMillis(), last = physics.getButtonCooldowns().getOrDefault(playerId, 0L), diff = now - last;
-    if (diff < PhysicsUtil.SPAWN_COOLDOWN_MS) {
+    if (diff < SPAWN_COOLDOWN_MS) {
       long remainingMs = SPAWN_COOLDOWN_MS - diff, seconds = remainingMs / 1000;
       logger.send(player, Lang.BLOCK_INTERACT_COOLDOWN.replace(new String[]{Utilities.formatTime(seconds)}));
       return true;
@@ -419,7 +472,13 @@ public class PhysicsUtil {
     return false;
   }
 
-  public static void setSpawnCooldownMs(Player player) {
+  /**
+   * Sets a cooldown timer preventing the player from spawning another cube immediately.
+   * Used to rate-limit spawn button presses.
+   *
+   * @param player The player who triggered the spawn action.
+   */
+  public void setButtonCooldown(Player player) {
     physics.getButtonCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
   }
 }

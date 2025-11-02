@@ -63,6 +63,7 @@ public class PhysicsUtil {
   public static final double CHARGE_BASE_VALUE = 1;
   public static final double CHARGE_RECOVERY_RATE = 0.945;
   public static final double MIN_SPEED_FOR_DAMPENING = 0.5;
+  public static final double MIN_SPEED_FOR_DAMPENING_SQUARED = MIN_SPEED_FOR_DAMPENING * MIN_SPEED_FOR_DAMPENING;
   public static final double MIN_SOUND_POWER = 0.15;
   public static final double KICK_VERTICAL_BOOST = 0.2; // def 0.3
   public static final int EXP_UPDATE_INTERVAL_TICKS = 3;
@@ -455,6 +456,30 @@ public class PhysicsUtil {
 
     // Compute perpendicular distance from player to cube’s path
     return Math.abs(slopeA * playerX - playerZ + interceptB) / Math.sqrt(slopeA * slopeA + BALL_TOUCH_Y_OFFSET);
+  }
+
+  /**
+   * Calculates the squared perpendicular distance from a player's position to the
+   * path of the cube's movement vector. Used for proximity and collision prediction.
+   *
+   * <p>Squared form avoids costly {@link Math#sqrt(double)} calls when only relative
+   * distance comparisons are required.</p>
+   *
+   * @param newVelocity The velocity vector of the cube.
+   * @param cubePos The cube's current position.
+   * @param player The player whose position is used for distance checking.
+   * @return The squared perpendicular distance between the player and the cube's velocity vector.
+   */
+  public double getPerpendicularDistanceSquared(Vector newVelocity, Vector cubePos, Player player) {
+    double slopeA = newVelocity.getZ() / newVelocity.getX();
+    double interceptB = cubePos.getZ() - slopeA * cubePos.getX();
+
+    double playerX = player.getLocation().getX();
+    double playerZ = player.getLocation().getZ();
+
+    // (|a*x - z + b| / sqrt(a² + 1))² = (a*x - z + b)² / (a² + 1)
+    double numerator = slopeA * playerX - playerZ + interceptB;
+    return (numerator * numerator) / (slopeA * slopeA + 1);
   }
 
   /**

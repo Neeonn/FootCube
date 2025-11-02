@@ -106,7 +106,7 @@ public class Physics {
 
       // Main cube processing loop.
       for (Slime cube : cubes) {
-        if (cube.isDead()) { cubesToRemove.add(cube); continue; }
+        if (cube.isDead()) { cubesToRemove.add(cube); return; }
 
         UUID cubeId = cube.getUniqueId();
         Location cubeLocation = cube.getLocation();
@@ -128,15 +128,16 @@ public class Physics {
           // Determines if the player is close enough to directly affect the cube.
           double distanceSq = physicsUtil.getDistanceSquared(cube.getLocation(), player.getLocation());
           if (distanceSq <= PhysicsUtil.HIT_RADIUS_SQUARED) {
-            double cubeSpeed = newVelocity.length();
+            double cubeSpeedSq = newVelocity.lengthSquared();
+            double prevVelocityMagSq = previousVelocity.lengthSquared();
 
             // Dampen ball speed if inside proximity and moving too fast to prevent overshoot.
-            if (distanceSq <= PhysicsUtil.MIN_RADIUS_SQUARED && cubeSpeed >= PhysicsUtil.MIN_SPEED_FOR_DAMPENING)
-              newVelocity.multiply(PhysicsUtil.VELOCITY_DAMPENING_FACTOR / cubeSpeed);
+            if (distanceSq <= PhysicsUtil.MIN_RADIUS_SQUARED && cubeSpeedSq >= PhysicsUtil.MIN_SPEED_FOR_DAMPENING_SQUARED)
+              newVelocity.multiply(PhysicsUtil.VELOCITY_DAMPENING_FACTOR / Math.sqrt(cubeSpeedSq));
 
             // Compute the resulting power from player movement and cube velocity.
             double impactPower = this.speed.getOrDefault(playerId, 1D) / PhysicsUtil.PLAYER_SPEED_TOUCH_DIVISOR
-                + previousVelocity.length() / PhysicsUtil.CUBE_SPEED_TOUCH_DIVISOR;
+                + Math.sqrt(prevVelocityMagSq) / PhysicsUtil.CUBE_SPEED_TOUCH_DIVISOR;
 
             // Apply a horizontal directional force in the direction the player is facing.
             newVelocity.add(player.getLocation().getDirection().setY(0).normalize().multiply(impactPower));
@@ -155,8 +156,6 @@ public class Physics {
           double proximityThresholdSq = newVelocitySq * PhysicsUtil.PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED;
 
           if (distanceSq < proximityThresholdSq) {
-            double distance = Math.sqrt(distanceSq);
-
             Vector cubePos = cube.getLocation().toVector();
             Vector projectedNextPos = (new Vector(cubePos.getX(), cubePos.getY(), cubePos.getZ())).add(newVelocity);
 
@@ -195,10 +194,10 @@ public class Physics {
               if (Math.abs(velocityX) < PhysicsUtil.TOLERANCE_VELOCITY_CHECK) continue;
 
               // Represent cube trajectory as z = a*x + b and compute perpendicular distance.
-              double perpendicularDistance = physicsUtil.getPerpendicularDistance(newVelocity, cubePos, player);
+              double perpendicularDistanceSq = physicsUtil.getPerpendicularDistanceSquared(newVelocity, cubePos, player);
 
               // Reduce velocity to avoid tunneling effect when too close.
-              if (perpendicularDistance < PhysicsUtil.MIN_RADIUS) newVelocity.multiply(distance / newVelocity.length());
+              if (perpendicularDistanceSq < PhysicsUtil.MIN_RADIUS_SQUARED) newVelocity.multiply(Math.sqrt(distanceSq / newVelocitySq));
             }
           }
         }
@@ -242,7 +241,7 @@ public class Physics {
       scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#update() took " + ms + "ms");
+      if (ms > 1 && tickCounter % 20 == 0) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#update() took " + ms + "ms");
     }
   }
 

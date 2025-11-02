@@ -163,6 +163,22 @@ public class PhysicsUtil {
   }
 
   /**
+   * Checks whether the specified {@link Slime} currently has a queued hit action awaiting processing.
+   * <p>
+   * This method inspects the active hit queue to determine if the given cube will receive
+   * an externally applied velocity update (such as from a right-click or kick interaction)
+   * during the next physics tick. Used to prevent redundant or conflicting impulses.
+   * </p>
+   *
+   * @param cube The Slime entity to check for a pending hit. Must not be null and must be alive.
+   * @return {@code true} if the cube has a queued hit action pending, {@code false} otherwise.
+   */
+  public boolean hasQueuedHit(Slime cube) {
+    if (cube == null || cube.isDead()) return false;
+    return physics.getHitQueue().stream().anyMatch(action -> action.getCube().equals(cube));
+  }
+
+  /**
    * Computes the distance between two locations in the world, accounting for vertical offset adjustments.
    * Includes performance logging if the computation takes longer than 1ms.
    *

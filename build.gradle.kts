@@ -48,12 +48,11 @@ fun hasUncommittedChanges(): Boolean = try {
 val commit = gitCommitHash() ?: "unknown"
 val dirty = hasUncommittedChanges()
 
-version = "$versionBase-$commit"
+version = if (dirty) "$versionBase-$commit-DEV"
+else "$versionBase-$commit"
 
-val jarLabel = if (dirty)
-    "FootCube-$versionBase-$commit-DEV.jar"
-else
-    "FootCube-$versionBase-$commit.jar"
+val jarLabel = if (dirty) "FootCube-$versionBase-$commit-DEV.jar"
+else "FootCube-$versionBase-$commit.jar"
 
 tasks.named("build") {
     doFirst {

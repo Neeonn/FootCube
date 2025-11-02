@@ -227,6 +227,11 @@ public class Physics {
         if (newVelocity.getY() < 0 && previousVelocity.getY() < 0 && previousVelocity.getY() < newVelocity.getY() - PhysicsUtil.VERTICAL_BOUNCE_THRESHOLD) {
           newVelocity.setY(-previousVelocity.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR);
           if (Math.abs(previousVelocity.getY()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
+
+        // This patches a weird bug that makes the cube glue to the player and the floor.
+        } else if (cube.isOnGround() && !physicsUtil.hasQueuedHit(cube)) {
+          double bounceY = -previousVelocity.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR;
+          newVelocity.setY(Math.max(0.05, Math.abs(bounceY)));
         }
 
         // Queue impact sound effect if any significant collision occurred.

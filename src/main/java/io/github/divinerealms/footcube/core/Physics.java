@@ -106,7 +106,7 @@ public class Physics {
 
       // Main cube processing loop.
       for (Slime cube : cubes) {
-        if (cube.isDead()) { cubesToRemove.add(cube); return; }
+        if (cube.isDead()) { cubesToRemove.add(cube); continue; }
 
         UUID cubeId = cube.getUniqueId();
         Location cubeLocation = cube.getLocation();

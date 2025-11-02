@@ -479,7 +479,7 @@ public class PhysicsUtil {
 
     // (|a*x - z + b| / sqrt(a² + 1))² = (a*x - z + b)² / (a² + 1)
     double numerator = slopeA * playerX - playerZ + interceptB;
-    return (numerator * numerator) / (slopeA * slopeA + 1);
+    return (numerator * numerator) / (slopeA * slopeA + BALL_TOUCH_Y_OFFSET);
   }
 
   /**

@@ -603,17 +603,8 @@ public class Match {
         ownGoals.put(playerResponsible.getUniqueId(), ogCount);
         ownGoalData.add("owngoals");
 
-        fcManager.getEconomy().withdrawPlayer(playerResponsible, 200);
+        fcManager.getEconomy().withdrawPlayer(playerResponsible, 50);
         logger.send(playerResponsible, Lang.MATCH_SCORE_OWN_GOAL.replace(null));
-
-        if (ogCount >= 3) {
-          MatchHelper.leaveMatch(organization, playerResponsible, this, logger, true);
-
-          long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
-          organization.getLeaveCooldowns().put(playerResponsible.getUniqueId(), banUntil);
-
-          for (Player player : this.isRed.keySet()) logger.send(player, Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{playerResponsible.getDisplayName()}));
-        }
       }
 
       PlayerData data = fcManager.getDataManager().get(playerResponsible);

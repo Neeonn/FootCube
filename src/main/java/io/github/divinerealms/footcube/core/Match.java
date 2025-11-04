@@ -123,7 +123,7 @@ public class Match {
   public void updateScoreboard() {
     if (!this.scoreDirty || this.scoreboardManager == null) return;
 
-    if (this.redPlayers.isEmpty() && this.bluePlayers.isEmpty()) {
+    if (this.isRed.isEmpty() && this.redPlayers.isEmpty() && this.bluePlayers.isEmpty()) {
       removeExistingScoreboard();
       return;
     }
@@ -181,14 +181,13 @@ public class Match {
             new String[]{String.valueOf(this.bluePlayers.indexOf(player) + 1), player.getName()}))
         .collect(Collectors.joining(System.lineSeparator()));
 
-    String playersList;
-    if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) {
-      playersList = redPlayersList + System.lineSeparator() + ChatColor.RESET + System.lineSeparator() + redPlayersList;
-    } else if (!redPlayers.isEmpty()) {
-      playersList = redPlayersList;
-    } else if (!bluePlayers.isEmpty()) {
-      playersList = bluePlayersList;
-    } else playersList = Lang.NOBODY.replace(null);
+    String playersList = Lang.NOBODY.replace(null);
+    if (!this.isRed.isEmpty()) {
+      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) {
+        playersList = redPlayersList + System.lineSeparator() + ChatColor.RESET + System.lineSeparator() + bluePlayersList;
+      } else if (!redPlayers.isEmpty()) playersList = redPlayersList;
+      else if (!bluePlayers.isEmpty()) playersList = bluePlayersList;
+    }
 
     return Lang.SCOREBOARD_LINES_LOBBY.replace(new String[]{playersList, status});
   }

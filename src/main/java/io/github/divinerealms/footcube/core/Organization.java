@@ -553,8 +553,8 @@ public class Organization {
           output.add(Lang.MATCHES_LIST_STATUS.replace(new String[]{timeDisplay}));
         } else {
           output.add(Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(match.matchID)}));
-          output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.scoreRed), String.valueOf(match.scoreBlue)})
-              + Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay}));
+          output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.scoreRed), String.valueOf(match.scoreBlue),
+              Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay})}));
           output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));
           output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)}));
         }

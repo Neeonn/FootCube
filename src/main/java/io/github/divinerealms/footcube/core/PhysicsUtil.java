@@ -39,6 +39,12 @@ public class PhysicsUtil {
     this.plugin = fcManager.getPlugin();
   }
 
+  // TEST
+  public static final double INTERACT_REACH = 4.0;
+  public static final double INTERACT_REACH_SQ = INTERACT_REACH * INTERACT_REACH;
+  public static final double CUBE_CENTER_Y = 0.5;
+  public static final int DEBUG_ON_MS = 5;
+
   // --- Task Intervals (Ticks) ---
   public static final long PHYSICS_TASK_INTERVAL_TICKS = 1;
   public static final long GLOW_TASK_INTERVAL_TICKS = 10;
@@ -163,7 +169,7 @@ public class PhysicsUtil {
   }
 
   /**
-   * Checks whether the specified {@link Slime} currently has a queued hit action awaiting processing.
+   * Checks whether the specified {@link Slime} currently doesn't have a queued hit action awaiting processing.
    * <p>
    * This method inspects the active hit queue to determine if the given cube will receive
    * an externally applied velocity update (such as from a right-click or kick interaction)
@@ -171,11 +177,11 @@ public class PhysicsUtil {
    * </p>
    *
    * @param cube The Slime entity to check for a pending hit. Must not be null and must be alive.
-   * @return {@code true} if the cube has a queued hit action pending, {@code false} otherwise.
+   * @return {@code false} if the cube has a queued hit action pending, {@code true} otherwise.
    */
-  public boolean hasQueuedHit(Slime cube) {
-    if (cube == null || cube.isDead()) return false;
-    return physics.getHitQueue().stream().anyMatch(action -> action.getCube().equals(cube));
+  public boolean noHitQueued(Slime cube) {
+    if (cube == null || cube.isDead()) return true;
+    return physics.getHitQueue().stream().noneMatch(action -> action.getCube().equals(cube));
   }
 
   /**
@@ -197,7 +203,7 @@ public class PhysicsUtil {
       return Math.sqrt(dx * dx + dy * dy + dz * dz);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#getDistance() took " + ms + "ms");
+      if (ms > 5) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#getDistance() took " + ms + "ms");
     }
   }
 
@@ -220,7 +226,7 @@ public class PhysicsUtil {
       return dx * dx + dy * dy + dz * dz;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#getDistanceSquared() took " + ms + "ms");
+      if (ms > 5) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#getDistanceSquared() took " + ms + "ms");
     }
   }
 
@@ -239,7 +245,7 @@ public class PhysicsUtil {
       return now - lastHit >= cooldown;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#canHitBall() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#canHitBall() took " + ms + "ms");
     }
   }
 
@@ -256,7 +262,7 @@ public class PhysicsUtil {
       return RANDOM.nextDouble(minRandomKP, MAX_KP);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#capKickPower() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#capKickPower() took " + ms + "ms");
     }
   }
 
@@ -278,7 +284,7 @@ public class PhysicsUtil {
       return new KickResult(power, charge, baseKickPower, finalKickPower, isCharged);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#calculateKickPower() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#calculateKickPower() took " + ms + "ms");
     }
   }
 
@@ -298,7 +304,7 @@ public class PhysicsUtil {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#removeCubes() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#removeCubes() took " + ms + "ms");
     }
   }
 
@@ -331,7 +337,7 @@ public class PhysicsUtil {
       return cube;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#spawnCube() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#spawnCube() took " + ms + "ms");
     }
   }
 
@@ -387,7 +393,7 @@ public class PhysicsUtil {
       physics.getCubeHits().remove(uuid);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#removePlayer() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#removePlayer() took " + ms + "ms");
     }
   }
 
@@ -423,7 +429,7 @@ public class PhysicsUtil {
       ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)}));
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#showHits() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#showHits() took " + ms + "ms");
     }
   }
 
@@ -450,7 +456,7 @@ public class PhysicsUtil {
           : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#onHitDebug() took " + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "PhysicsUtil#onHitDebug() took " + ms + "ms");
     }
   }
 
@@ -524,5 +530,15 @@ public class PhysicsUtil {
    */
   public void setButtonCooldown(Player player) {
     physics.getButtonCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
+  }
+
+  public boolean withinInteractReach(Player player, Slime cube) {
+    if (player == null || cube == null) return false;
+    Location eye = player.getEyeLocation();
+    Location cubeLoc = cube.getLocation();
+    if (cubeLoc == null || eye == null) return false;
+    // Use cube center (approximate) so vertical difference is accounted for.
+    cubeLoc = cubeLoc.clone().add(0.0, PhysicsUtil.CUBE_CENTER_Y, 0.0);
+    return eye.distanceSquared(cubeLoc) <= PhysicsUtil.INTERACT_REACH_SQ;
   }
 }

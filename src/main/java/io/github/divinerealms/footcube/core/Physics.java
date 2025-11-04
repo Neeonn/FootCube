@@ -114,7 +114,7 @@ public class Physics {
         Vector previousVelocity = velocities.getOrDefault(cubeId, cube.getVelocity().clone());
         Vector newVelocity = cube.getVelocity().clone();
 
-        boolean wasKicked = false, playSound = false;
+        boolean wasMoved = false, playSound = false;
 
         // Process all nearby entities within hit range.
         double searchRadius = PhysicsUtil.HIT_RADIUS_SQUARED;
@@ -143,7 +143,7 @@ public class Physics {
 
             // Register the touch interaction with the organization system.
             org.ballTouch(player, TouchType.MOVE);
-            wasKicked = true;
+            wasMoved = true;
 
             // Trigger sound effect if impact force exceeds threshold.
             if (impactPower > PhysicsUtil.MIN_SOUND_POWER) playSound = true;
@@ -190,7 +190,7 @@ public class Physics {
 
             // --- Collision line proximity correction ---
             // Prevents the cube from clipping through the player when moving directly toward them.
-            if (movingTowardPlayer && withinVerticalRange) {
+            if (movingTowardPlayer && withinVerticalRange && physicsUtil.noHitQueued(cube)) {
               double velocityX = newVelocity.getX();
               if (Math.abs(velocityX) < PhysicsUtil.TOLERANCE_VELOCITY_CHECK) continue;
 
@@ -212,14 +212,14 @@ public class Physics {
           if (Math.abs(previousVelocity.getX()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
 
         // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
-        } else if (!wasKicked && Math.abs(previousVelocity.getX() - newVelocity.getX()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
+        } else if (!wasMoved && Math.abs(previousVelocity.getX() - newVelocity.getX()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
           newVelocity.setX(previousVelocity.getX() * PhysicsUtil.AIR_DRAG_FACTOR);
 
         // Z-axis collision and drag adjustment (mirrors X-axis logic).
         if (newVelocity.getZ() == 0) {
           newVelocity.setZ(-previousVelocity.getZ() * PhysicsUtil.WALL_BOUNCE_FACTOR);
           if (Math.abs(previousVelocity.getZ()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
-        } else if (!wasKicked && Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
+        } else if (!wasMoved && Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < PhysicsUtil.VECTOR_CHANGE_THRESHOLD)
           newVelocity.setZ(previousVelocity.getZ() * PhysicsUtil.AIR_DRAG_FACTOR);
 
         // Y-axis bounce (vertical collision against floor or ceiling).
@@ -229,7 +229,7 @@ public class Physics {
           if (Math.abs(previousVelocity.getY()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
 
         // This patches a weird bug that makes the cube glue to the player and the floor.
-        } else if (cube.isOnGround()) {
+        } else if (cube.isOnGround() && physicsUtil.noHitQueued(cube)) {
           double bounceY = -previousVelocity.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR;
           newVelocity.setY(Math.max(0.05, Math.abs(bounceY)));
         }
@@ -247,7 +247,7 @@ public class Physics {
       scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1 && tickCounter % 20 == 0) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#update() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#update() took " + ms + "ms");
     }
   }
 
@@ -420,7 +420,7 @@ public class Physics {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#showCubeParticles() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#showCubeParticles() took " + ms + "ms");
     }
   }
 
@@ -458,7 +458,7 @@ public class Physics {
       tickCounter = 0;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#cleanup() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "Physics#cleanup() took " + ms + "ms");
     }
   }
 

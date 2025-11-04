@@ -74,7 +74,7 @@ public class BallEvents implements Listener {
         event.setCancelled(true);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#disableDamage() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#disableDamage() took " + ms + "ms");
     }
   }
 
@@ -106,6 +106,7 @@ public class BallEvents implements Listener {
 
       // Prevent AFK or unauthorized players from interacting.
       if (physicsUtil.notAllowedToInteract(player)) return;
+      if (!physicsUtil.withinInteractReach(player, cube)) return;
 
       // Calculate kick power and enforce cooldown.
       KickResult kickResult = physicsUtil.calculateKickPower(player);
@@ -135,7 +136,7 @@ public class BallEvents implements Listener {
       });
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#hitDetection() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#hitDetection() took " + ms + "ms");
     }
   }
 
@@ -157,21 +158,25 @@ public class BallEvents implements Listener {
       Slime cube = (Slime) event.getRightClicked();
 
       if (physicsUtil.notAllowedToInteract(player)) return;
+      if (!physicsUtil.withinInteractReach(player, cube)) return;
       if (!physics.getCubes().contains(cube)) return;
       if (physics.getKicked().containsKey(playerId)) return;
+
+      event.setCancelled(true);
 
       // Mark player action to prevent spamming.
       physics.getKicked().put(playerId, System.currentTimeMillis());
       physicsUtil.recordPlayerAction(player);
       org.ballTouch(player, TouchType.HIT);
 
-      // Apply small upward force and sound feedback.
       double verticalBoost = PhysicsUtil.CUBE_JUMP_RIGHT_CLICK;
-      physicsUtil.queueHit(cube, new Vector(0, verticalBoost, 0));
+      Vector rise = new Vector(0, verticalBoost, 0);
+
+      physicsUtil.queueHit(cube, rise);
       physicsUtil.queueSound(cube.getLocation());
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#rightClick() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#rightClick() took " + ms + "ms");
     }
   }
 
@@ -205,7 +210,7 @@ public class BallEvents implements Listener {
       physics.getSpeed().put(player.getUniqueId(), speed);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > 1) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#playerMove() took " + ms + "ms");
+      if (ms > PhysicsUtil.DEBUG_ON_MS) logger.send("group.fcfa", Lang.PREFIX_ADMIN.replace(null) + "BallEvents#playerMove() took " + ms + "ms");
     }
   }
 }

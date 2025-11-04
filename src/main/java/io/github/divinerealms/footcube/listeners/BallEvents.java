@@ -11,6 +11,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -84,7 +85,7 @@ public class BallEvents implements Listener {
    *
    * @param event the {@link EntityDamageByEntityEvent} triggered when one entity damages another
    */
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGHEST)
   public void hitDetection(EntityDamageByEntityEvent event) {
     long start = System.nanoTime();
     try {
@@ -145,7 +146,7 @@ public class BallEvents implements Listener {
    *
    * @param event the {@link PlayerInteractEntityEvent} fired when a player interacts with an entity
    */
-  @EventHandler
+  @EventHandler(priority = EventPriority.HIGH)
   public void rightClick(PlayerInteractEntityEvent event) {
     long start = System.nanoTime();
     try {
@@ -181,7 +182,7 @@ public class BallEvents implements Listener {
    *
    * @param event the {@link PlayerMoveEvent} triggered on any player movement
    */
-  @EventHandler
+  @EventHandler(priority = EventPriority.LOWEST)
   public void playerMove(PlayerMoveEvent event) {
     long start = System.nanoTime();
     try {

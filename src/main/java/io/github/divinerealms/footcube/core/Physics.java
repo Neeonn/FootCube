@@ -229,7 +229,7 @@ public class Physics {
           if (Math.abs(previousVelocity.getY()) > PhysicsUtil.BOUNCE_THRESHOLD) playSound = true;
 
         // This patches a weird bug that makes the cube glue to the player and the floor.
-        } else if (cube.isOnGround() && !physicsUtil.hasQueuedHit(cube)) {
+        } else if (cube.isOnGround()) {
           double bounceY = -previousVelocity.getY() * PhysicsUtil.WALL_BOUNCE_FACTOR;
           newVelocity.setY(Math.max(0.05, Math.abs(bounceY)));
         }
@@ -307,15 +307,15 @@ public class Physics {
   private void processQueuedHits() {
     if (hitQueue.isEmpty()) return;
 
-    for (HitAction action : hitQueue) {
-      Slime cube = action.getCube();
-      if (cube.isDead()) continue;
-
-      Vector appliedVelocity = cube.getVelocity().add(action.getVelocity());
-      cube.setVelocity(appliedVelocity);
-    }
-
+    Queue<HitAction> toProcess = new ArrayDeque<>(hitQueue);
     hitQueue.clear();
+
+    toProcess.forEach(action -> {
+      Slime cube = action.getCube();
+      if (cube.isDead()) return;
+
+      cube.setVelocity(cube.getVelocity().add(action.getVelocity()));
+    });
   }
 
   /**

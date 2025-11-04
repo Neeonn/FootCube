@@ -3,20 +3,25 @@ package io.github.divinerealms.footcube.core;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import me.neznamy.tab.api.TabPlayer;
+import me.neznamy.tab.api.scoreboard.Line;
+import me.neznamy.tab.api.scoreboard.Scoreboard;
+import me.neznamy.tab.api.scoreboard.ScoreboardManager;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.scoreboard.*;
 import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class Match {
   private final FCManager fcManager;
@@ -57,8 +62,12 @@ public class Match {
   private Player assistRed = null;
   private Player assistBlue = null;
 
-  public int scoreRed;
-  public int scoreBlue;
+  private final ScoreboardManager scoreboardManager;
+  private final String scoreName;
+  private String scoreTitle, scoreFooter;
+  private Scoreboard scoreboard;
+  public int scoreRed, scoreBlue, scoreTime, scoreTick;
+  private boolean scoreDirty = true;
 
   private final ItemStack redChestPlate;
   private final ItemStack redLeggings;
@@ -66,13 +75,6 @@ public class Match {
   private final ItemStack blueLeggings;
 
   public final ItemStack sugar;
-
-  public Score time;
-
-  private final Score redGoals;
-  private final Score blueGoals;
-  private final ScoreboardManager sbm;
-  private final Scoreboard sb;
 
   public Slime cube;
 
@@ -93,6 +95,7 @@ public class Match {
     this.scoreRed = 0;
     this.scoreBlue = 0;
     this.startTime = 0L;
+    this.scoreTick = 0;
 
     this.redChestPlate = this.createColoredArmour(Material.LEATHER_CHESTPLATE, Color.RED);
     this.redLeggings = this.createColoredArmour(Material.LEATHER_LEGGINGS, Color.RED);
@@ -104,46 +107,143 @@ public class Match {
 
     this.sugar = this.organization.createComplexItem(Material.SUGAR, itemName, new String[]{itemLore});
 
-    this.sbm = Bukkit.getScoreboardManager();
-    this.sb = this.sbm.getNewScoreboard();
-    boolean objectiveExists = false;
-
-    for (Objective ob : this.sb.getObjectives()) {
-      if (ob.getName().equalsIgnoreCase("Match")) {
-        objectiveExists = true;
-        break;
-      }
-    }
-
-    Objective o;
-    if (objectiveExists) {
-      o = this.sb.getObjective("Match");
-      o.setDisplayName("Match");
-    } else {
-      o = this.sb.registerNewObjective("Match", "dummy");
-      o.setDisplaySlot(DisplaySlot.SIDEBAR);
-      o.setDisplayName(Lang.SCOREBOARD_TITLE.replace(null));
-    }
-
-    String scoreboardTimeLeft = Lang.SCOREBOARD_TIMELEFT.replace(null);
-    String scoreboardRedTeam = Lang.SCOREBOARD_RED_TEAM.replace(null);
-    String scoreboardBlueTeam = Lang.SCOREBOARD_BLUE_TEAM.replace(null);
-    this.time = o.getScore(scoreboardTimeLeft);
-    this.time.setScore(300);
-    this.redGoals = o.getScore(scoreboardRedTeam);
-    this.redGoals.setScore(0);
-    this.blueGoals = o.getScore(scoreboardBlueTeam);
-    this.blueGoals.setScore(0);
+    this.scoreboardManager = fcManager.getTabAPI().getScoreboardManager();
+    this.scoreName = "match_" + this.type + "v" + this.type + "_" + this.matchID;
+    this.scoreTitle = Lang.MATCHES_LIST_LOBBY.replace(new String[]{ this.type + "v" + this.type, String.valueOf(this.matchID) });
+    this.scoreFooter = Lang.SCOREBOARD_FOOTER.replace(null);
 
     this.x = Math.abs(b.getX() - r.getX()) > Math.abs(b.getZ() - r.getZ());
-    if (this.x) {
-      this.redAboveBlue = r.getX() > b.getX();
-    } else {
-      this.redAboveBlue = r.getZ() > b.getZ();
-    }
+    if (this.x) this.redAboveBlue = r.getX() > b.getX();
+    else this.redAboveBlue = r.getZ() > b.getZ();
 
     ConfigManager configManager = fcManager.getConfigManager();
     this.config = configManager.getConfig("config.yml");
+  }
+
+  public void updateScoreboard() {
+    if (!this.scoreDirty || this.scoreboardManager == null) return;
+
+    if (this.redPlayers.isEmpty() && this.bluePlayers.isEmpty()) {
+      removeExistingScoreboard();
+      return;
+    }
+
+    String timeDisplay = getTimeDisplay();
+    String formatted = (this.phase == 1 || this.phase == 2) ? buildLobbyScoreboard(timeDisplay) : buildMatchScoreboard(timeDisplay);
+
+    List<String> lines = new ArrayList<>(Arrays.asList(formatted.split(System.lineSeparator())));
+    lines.add(this.scoreFooter);
+
+    if (this.scoreboard == null) this.scoreboard = this.scoreboardManager.createScoreboard(this.scoreName, this.scoreTitle, lines);
+
+    if (this.phase == 2) {
+      this.scoreTitle = Lang.MATCHES_LIST_MATCH.replace(new String[]{this.type + "v" + this.type, String.valueOf(this.matchID)});
+      this.scoreboard.setTitle(this.scoreTitle);
+    }
+
+    boolean needsFullRefresh = lines.size() != this.scoreboard.getLines().size();
+    if (needsFullRefresh) resetAllPlayerScoreboards();
+
+    updateScoreboardLines(lines);
+    showToAllPlayers();
+
+    this.scoreDirty = false;
+  }
+
+  private void removeExistingScoreboard() {
+    if (this.scoreboard == null) return;
+
+    this.scoreboardManager.removeScoreboard(this.scoreboard.getName());
+    this.scoreboard = null;
+  }
+
+  private String getTimeDisplay() {
+    String countdown = String.valueOf(this.countdown);
+    switch (this.phase) {
+      case 1: return Lang.MATCHES_LIST_WAITING.replace(null);
+      case 2: return Lang.MATCHES_LIST_STARTING.replace(new String[]{countdown});
+      case 4: return Lang.MATCHES_LIST_CONTINUING.replace(new String[]{countdown});
+      default:
+        int remaining = this.scoreTime != 0 ? this.scoreTime : -1;
+        String remainingTime = Utilities.formatTime(remaining);
+        return remaining >= 0 ? remainingTime : Lang.NOBODY.replace(null);
+    }
+  }
+
+  private String buildLobbyScoreboard(String status) {
+    String redPlayersList = this.redPlayers.stream()
+        .map(player -> Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
+            new String[]{String.valueOf(this.redPlayers.indexOf(player) + 1), player.getName()}))
+        .collect(Collectors.joining(System.lineSeparator()));
+
+    String bluePlayersList = this.bluePlayers.stream()
+        .map(player -> Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
+            new String[]{String.valueOf(this.bluePlayers.indexOf(player) + 1), player.getName()}))
+        .collect(Collectors.joining(System.lineSeparator()));
+
+    String playersList;
+    if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) {
+      playersList = redPlayersList + System.lineSeparator() + ChatColor.RESET + System.lineSeparator() + redPlayersList;
+    } else if (!redPlayers.isEmpty()) {
+      playersList = redPlayersList;
+    } else if (!bluePlayers.isEmpty()) {
+      playersList = bluePlayersList;
+    } else playersList = Lang.NOBODY.replace(null);
+
+    return Lang.SCOREBOARD_LINES_LOBBY.replace(new String[]{playersList, status});
+  }
+
+  private String buildMatchScoreboard(String timeDisplay) {
+    return Lang.SCOREBOARD_LINES_MATCH.replace(new String[]{
+        Lang.RED.replace(null), String.valueOf(this.scoreRed), String.valueOf(this.scoreBlue), Lang.BLUE.replace(null),
+        timeDisplay
+    });
+  }
+
+  private void resetAllPlayerScoreboards() {
+    for (Player player : getAllPlayers()) {
+      if (player == null || !player.isOnline()) continue;
+
+      TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
+      if (tabPlayer == null) continue;
+
+      scoreboardManager.resetScoreboard(tabPlayer);
+    }
+  }
+
+  private void updateScoreboardLines(List<String> lines) {
+    List<Line> existingLines = this.scoreboard.getLines();
+    int min = Math.min(existingLines.size(), lines.size());
+
+    for (int i = 0; i < min; i++) {
+      Line line = existingLines.get(i);
+      String newText = lines.get(i);
+      if (!Objects.equals(line.getText(), newText)) line.setText(newText);
+    }
+
+    if (lines.size() > existingLines.size()) {
+      for (int i = existingLines.size(); i < lines.size(); i++) this.scoreboard.addLine(lines.get(i));
+    } else if (existingLines.size() > lines.size()) {
+      for (int i = existingLines.size() - 1; i >= lines.size(); i--) this.scoreboard.removeLine(i);
+    }
+  }
+
+  private void showToAllPlayers() {
+    for (Player player : getAllPlayers()) {
+      if (player == null || !player.isOnline()) continue;
+
+      TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
+      if (tabPlayer == null) continue;
+
+      scoreboardManager.showScoreboard(tabPlayer, this.scoreboard);
+    }
+  }
+
+  private List<Player> getAllPlayers() {
+    List<Player> list = new ArrayList<>();
+    list.addAll(this.redPlayers);
+    list.addAll(this.bluePlayers);
+    return list;
   }
 
   public boolean equals(Match m) {
@@ -205,6 +305,8 @@ public class Match {
     } else {
       logger.send(p, Lang.TO_LEAVE.replace(null));
     }
+
+    this.scoreDirty = true;
   }
 
   public void leave(Player player) {
@@ -222,7 +324,11 @@ public class Match {
     try {
       player.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : player.getWorld().getSpawnLocation());
     } catch (Exception ignored) {}
-    player.setScoreboard(this.sbm.getNewScoreboard());
+
+    TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
+    if (tabPlayer != null && scoreboardManager != null) scoreboardManager.resetScoreboard(tabPlayer);
+
+    this.scoreDirty = true;
   }
 
   public void takePlace(Player p) {
@@ -259,7 +365,7 @@ public class Match {
       p.getInventory().setLeggings(this.blueLeggings);
     }
 
-    if (this.phase > 2) p.setScoreboard(this.sb);
+    this.scoreDirty = true;
   }
 
   public void kick(Player p, TouchType type) {
@@ -286,6 +392,10 @@ public class Match {
 
   public boolean canUseTeamChat() {
     return !this.redPlayers.isEmpty() && !this.bluePlayers.isEmpty();
+  }
+
+  public boolean hasPlayers() {
+    return !(this.redPlayers.isEmpty() && this.bluePlayers.isEmpty());
   }
 
   public void teamChat(Player p, String message) {
@@ -339,7 +449,7 @@ public class Match {
             if (!this.teamers.contains(p)) {
               redPlayersIterator.remove();
               this.bluePlayers.add(p);
-              this.isRed.put(p, true);
+              this.isRed.put(p, false);
               p.teleport(this.blue);
               logger.send(p, Lang.TEAM_SWITCH.replace(new String[]{p0.getName(), p1.getName()}));
               this.join(p0, false);
@@ -358,6 +468,9 @@ public class Match {
 
   public void update() {
     --this.tickToSec;
+    this.scoreTick++;
+
+    if (this.scoreDirty && this.scoreTick % 10 == 0) this.updateScoreboard();
 
     if (this.phase == 3) {
       if (this.cube == null) return;
@@ -374,100 +487,79 @@ public class Match {
       } else if ((this.redAboveBlue && l.getBlockZ() <= this.blue.getBlockZ() || !this.redAboveBlue && this.blue.getBlockZ() <= l.getBlockZ()) && l.getY() < this.blue.getY() + (double)3 && l.getX() < this.blue.getX() + (double)4 && l.getX() > this.blue.getX() - (double)4) {
         this.score(true);
       }
+
+      this.scoreDirty = true;
     }
 
     if ((this.phase == 2 || this.phase == 4) && this.tickToSec == 0) {
       --this.countdown;
       this.tickToSec = 20;
-
-      for(Player p : this.isRed.keySet()) {
-        p.setLevel(this.countdown);
-      }
-
+      for (Player p : this.isRed.keySet()) p.setLevel(this.countdown);
       if (this.countdown <= 0) {
         String message;
         if (this.phase == 2) {
           message = Lang.MATCH_STARTED.replace(null);
           this.startTime = System.currentTimeMillis();
-          this.redGoals.setScore(0);
-          this.blueGoals.setScore(0);
+          this.scoreBlue = 0;
+          this.scoreRed = 0;
+          this.scoreTime = 0;
 
-          for(Player p : this.isRed.keySet()) {
-            this.organization.playerStarts(p);
-            p.setScoreboard(this.sb);
-          }
-        } else {
-          message = Lang.MATCH_PROCEED.replace(null);
-        }
+          for (Player p : this.isRed.keySet()) this.organization.playerStarts(p);
+        } else message = Lang.MATCH_PROCEED.replace(null);
 
         this.phase = 3;
         this.cube = physicsUtil.spawnCube(this.mid);
+
         Random random = PhysicsUtil.RANDOM;
         double vertical = 0.3 * random.nextDouble() + 0.2;
         double horizontal = 0.3 * random.nextDouble() + 0.3;
         if (random.nextBoolean()) horizontal *= -1;
 
-        if (this.x) {
-          this.cube.setVelocity(new Vector(0, vertical, horizontal));
-        } else {
-          this.cube.setVelocity(new Vector(horizontal, vertical, 0));
-        }
+        if (this.x) this.cube.setVelocity(new Vector(0, vertical, horizontal));
+        else this.cube.setVelocity(new Vector(horizontal, vertical, 0));
 
         for (Player p : this.isRed.keySet()) {
           logger.send(p, message);
-          if (this.isRed.containsKey(p) && this.isRed.get(p)) {
-            p.teleport(this.red);
-          } else {
-            p.teleport(this.blue);
-          }
-
+          if (this.isRed.containsKey(p) && this.isRed.get(p)) p.teleport(this.red);
+          else p.teleport(this.blue);
           p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
         }
       } else if (this.countdown <= 10) {
-        for (Player p : this.isRed.keySet()) {
-          p.playSound(p.getLocation(), Sound.NOTE_STICKS, 1, 1);
-        }
+        for (Player p : this.isRed.keySet()) p.playSound(p.getLocation(), Sound.NOTE_STICKS, 1, 1);
       }
+
+      this.scoreDirty = true;
     }
 
     if (this.phase == 3 && this.cube.isDead()) {
       this.cube = physicsUtil.spawnCube(this.mid);
+
       Random random = PhysicsUtil.RANDOM;
       double vertical = 0.3 * random.nextDouble() + 0.2;
       double horizontal = 0.3 * random.nextDouble() + 0.3;
       if (random.nextBoolean()) horizontal *= -1;
 
-      if (this.x) {
-        this.cube.setVelocity(new Vector(0, vertical, horizontal));
-      } else {
-        this.cube.setVelocity(new Vector(horizontal, vertical, 0));
-      }
+      if (this.x) this.cube.setVelocity(new Vector(0, vertical, horizontal));
+      else this.cube.setVelocity(new Vector(horizontal, vertical, 0));
 
-      for(Player p : this.isRed.keySet()) {
+      for (Player p : this.isRed.keySet()) {
         logger.send(p, Lang.CLEARED_CUBE_INGAME.replace(null));
-        if (this.isRed.containsKey(p) && this.isRed.get(p)) {
-          p.teleport(this.red);
-        } else {
-          p.teleport(this.blue);
-        }
+
+        if (this.isRed.containsKey(p) && this.isRed.get(p)) p.teleport(this.red);
+        else p.teleport(this.blue);
 
         p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
       }
     }
 
-    if (this.type == 2) {
-      this.time.setScore(120 - (int)(System.currentTimeMillis() - this.startTime) / 1000);
-    } else {
-      this.time.setScore(300 - (int) (System.currentTimeMillis() - this.startTime) / 1000);
-    }
+    if (this.type == 2) this.scoreTime = 120 - (int)(System.currentTimeMillis() - this.startTime) / 1000;
+    else this.scoreTime = 300 - (int) (System.currentTimeMillis() - this.startTime) / 1000;
 
-    if (this.time.getScore() <= 0 && this.phase > 2) {
+    if (this.scoreTime <= 0 && this.phase > 2) {
       for (Player p : this.isRed.keySet()) {
         PlayerData data = fcManager.getDataManager().get(p);
         this.organization.endMatch(p);
-        p.setScoreboard(this.sbm.getNewScoreboard());
-        p.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation());
-        this.organization.clearInventory(p);
+
         if (this.scoreRed > this.scoreBlue) {
           logger.send(p, Lang.MATCH_TIMES_UP.replace(new String[]{Lang.RED.replace(null)}));
           if (this.isRed.get(p) && !this.takePlace.contains(p)) {
@@ -485,11 +577,9 @@ public class Match {
               fcManager.getEconomy().depositPlayer(p.getPlayer(), 100);
               logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
             }
-            p.setExp(0);
+
           } else {
-            if (this.type != 2) {
-              data.set("winstreak", 0);
-            }
+            if (this.type != 2) data.set("winstreak", 0);
           }
         } else if (this.scoreRed < this.scoreBlue) {
           logger.send(p, Lang.MATCH_TIMES_UP.replace(new String[]{Lang.BLUE.replace(null)}));
@@ -509,9 +599,7 @@ public class Match {
               logger.send(p, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
             }
           } else {
-            if (this.type != 2) {
-              data.set("winstreak", 0);
-            }
+            if (this.type != 2) data.set("winstreak", 0);
           }
         } else {
           logger.send(p, Lang.MATCH_TIED.replace(null));
@@ -526,19 +614,7 @@ public class Match {
         }
       }
 
-      this.phase = 1;
-      this.cube.setHealth(0F);
-      this.organization.undoTakePlace(this);
-      this.scoreRed = 0;
-      this.scoreBlue = 0;
-      this.teams = 0;
-      this.redPlayers.clear();
-      this.bluePlayers.clear();
-      this.teamers = new ArrayList<>();
-      this.isRed = new HashMap<>();
-      this.takePlace.clear();
-      this.goals.clear();
-      this.sugarCooldown.clear();
+      this.endMatch();
     }
 
     long cutoff = System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(40);
@@ -559,13 +635,8 @@ public class Match {
     Player assister = red ? this.assistRed : this.assistBlue;
     String scoringTeamName = red ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
 
-    if (red) {
-      ++this.scoreRed;
-      this.redGoals.setScore(this.redGoals.getScore() + 1);
-    } else {
-      ++this.scoreBlue;
-      this.blueGoals.setScore(this.blueGoals.getScore() + 1);
-    }
+    if (red) ++this.scoreRed;
+    else ++this.scoreBlue;
 
     boolean ownGoal = false;
     Player playerResponsible = null;
@@ -656,12 +727,14 @@ public class Match {
               part + displayPrefixName + part
           }), 10, 30, 10);
 
-      if (this.time.getScore() > 0) {
+      if (this.scoreTime > 0) {
         p.setLevel(10);
         logger.send(p, Lang.MATCH_SCORE_STATS.replace(new String[]{String.valueOf(this.scoreRed), String.valueOf(this.scoreBlue)}));
       } else {
         this.organization.endMatch(p);
-        p.setScoreboard(this.sbm.getNewScoreboard());
+
+        TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(p.getUniqueId());
+        if (tabPlayer != null && scoreboardManager != null) scoreboardManager.resetScoreboard(tabPlayer);
 
         PlayerData playerData = fcManager.getDataManager().get(p);
         boolean playerIsRed = this.isRed.getOrDefault(p, false);
@@ -691,20 +764,12 @@ public class Match {
       }
     }
 
-    if (this.time.getScore() <= 0) {
-      this.phase = 1;
-      this.organization.undoTakePlace(this);
-      this.scoreRed = 0;
-      this.scoreBlue = 0;
-      this.teams = 0;
-      this.redPlayers.clear();
-      this.bluePlayers.clear();
-      this.teamers.clear();
-      this.isRed.clear();
-      this.takePlace.clear();
-      this.goals.clear();
-      this.sugarCooldown.clear();
-    }
+    if (this.scoreTime <= 0) endMatch();
+  }
+
+  public void endMatch() {
+    this.cleanup();
+    this.phase = 1;
   }
 
   public void cleanup() {
@@ -718,30 +783,36 @@ public class Match {
     try {
       for (Player p : new ArrayList<>(this.isRed.keySet())) {
         try {
-          p.setScoreboard(this.sbm.getNewScoreboard());
+          TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(p.getUniqueId());
+          if (tabPlayer != null && this.scoreboardManager != null) this.scoreboardManager.resetScoreboard(tabPlayer);
+
           Location lobby = config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation();
           p.teleport(lobby);
           organization.clearInventory(p);
           p.setLevel(0);
-          logger.send(p, Lang.RELOAD.replace(null));
         } catch (Exception ignored) {}
       }
     } catch (Exception ignored) {}
 
     try {
-      if (this.sb != null) {
-        for (Objective obj : this.sb.getObjectives()) {
-          try {
-            obj.unregister();
-          } catch (Exception ignored) {}
-        }
+      if (this.scoreboardManager != null) {
+        if (this.scoreboard != null) {
+          this.scoreboardManager.removeScoreboard(this.scoreboard.getName());
+        } else this.scoreboardManager.removeScoreboard(this.scoreName);
       }
     } catch (Exception ignored) {}
 
     try {
+      this.scoreboard = null;
+      this.scoreTitle = Lang.MATCHES_LIST_LOBBY.replace(new String[]{ this.type + "v" + this.type, String.valueOf(this.matchID) });
+      this.scoreFooter = Lang.SCOREBOARD_FOOTER.replace(null);
       this.scoreRed = 0;
       this.scoreBlue = 0;
+      this.scoreTick = 0;
+      this.scoreTime = 0;
+      this.scoreDirty = true;
       this.teams = 0;
+
       this.redPlayers.clear();
       this.bluePlayers.clear();
       this.teamers.clear();
@@ -750,10 +821,13 @@ public class Match {
       this.goals.clear();
       this.ownGoals.clear();
       this.sugarCooldown.clear();
+
       this.lastKickRed = null;
       this.lastKickBlue = null;
       this.assistRed = null;
       this.assistBlue = null;
+
+      this.organization.undoTakePlace(this);
     } catch (Exception ignored) {}
   }
 }

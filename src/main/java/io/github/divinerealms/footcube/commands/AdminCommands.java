@@ -403,39 +403,13 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         switch (args[1].toLowerCase()) {
           case "start":
             for (int i = 1; i <= (match.type * 2) - 1; i++) { match.join(player, false); org.getWaitingPlayers().put(player.getName(), match.type); }
-            match.countdown = 2;
+            match.countdown = 5;
             logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{matchType}));
             break;
 
           case "end":
-            match.phase = 1;
-
-            for (Player p : fcManager.getCachedPlayers()) {
-              if (match.isInMatch(p)) {
-                MatchHelper.leaveMatch(org, p, match, logger, false);
-                p.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation());
-                p.setScoreboard(plugin.getServer().getScoreboardManager().getNewScoreboard());
-              }
-            }
-
-            match.time.setScore(-1);
-
-            if (match.cube != null) { match.cube.setHealth(0); match.cube.remove(); match.cube = null; }
-
-            match.scoreRed = 0;
-            match.scoreBlue = 0;
-
-            match.redPlayers.clear();
-            match.bluePlayers.clear();
-            match.teamers.clear();
-            match.isRed.clear();
-            match.takePlace.clear();
-            match.goals.clear();
-            match.sugarCooldown.clear();
-
-            org.undoTakePlace(match);
+            match.endMatch();
             org.endMatch(player);
-
             logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{matchType}));
             break;
 

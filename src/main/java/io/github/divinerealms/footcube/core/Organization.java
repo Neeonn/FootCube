@@ -169,10 +169,10 @@ public class Organization {
 
       for (Player p : fcManager.getCachedPlayers()) {
         if (!isInGame(p)) {
-          if (m.time.getScore() < 0) {
+          if (m.scoreTime < 0) {
             logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT.replace(new String[]{String.valueOf(m.type)}));
           } else {
-            logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_2.replace(new String[]{String.valueOf(m.type), v, String.valueOf(m.time.getScore())}));
+            logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_2.replace(new String[]{String.valueOf(m.type), v, String.valueOf(m.scoreTime)}));
           }
 
           logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_3.replace(null));
@@ -322,12 +322,17 @@ public class Organization {
 
   public void addArena(int type, Location b, Location r) {
     Location m = new Location(b.getWorld(), (b.getX() + r.getX()) / (double)2.0F, (b.getY() + r.getY()) / (double)2.0F + (double)2.0F, (b.getZ() + r.getZ()) / (double)2.0F);
+    int id;
+
     if (type == 2) {
-      this.matches2v2 = this.extendArray(this.matches2v2, new Match(fcManager, 2, b, r, m, this.matches2v2.length + this.matches3v3.length + this.matches4v4.length));
+      id = this.matches2v2.length + 1;
+      this.matches2v2 = this.extendArray(this.matches2v2, new Match(fcManager, 2, b, r, m, id));
     } else if (type == 3) {
-      this.matches3v3 = this.extendArray(this.matches3v3, new Match(fcManager, 3, b, r, m, this.matches2v2.length + this.matches3v3.length + this.matches4v4.length));
+      id = this.matches3v3.length + 1;
+      this.matches3v3 = this.extendArray(this.matches3v3, new Match(fcManager, 3, b, r, m, id));
     } else {
-      this.matches4v4 = this.extendArray(this.matches4v4, new Match(fcManager, 4, b, r, m, this.matches2v2.length + this.matches3v3.length + this.matches4v4.length));
+      id = this.matches4v4.length + 1;
+      this.matches4v4 = this.extendArray(this.matches4v4, new Match(fcManager, 4, b, r, m, id));
     }
   }
 
@@ -457,15 +462,15 @@ public class Organization {
 
   private void update() {
     for (Match match : this.matches2v2) {
-      match.update();
+      if (match.hasPlayers()) match.update();
     }
 
     for (Match match : this.matches3v3) {
-      match.update();
+      if (match.hasPlayers()) match.update();
     }
 
     for (Match match : this.matches4v4) {
-      match.update();
+      if (match.hasPlayers()) match.update();
     }
 
     if (this.leftMatches.length > 0 && System.currentTimeMillis() - this.announcementTime > 30000L) {
@@ -490,10 +495,10 @@ public class Organization {
 
       for (Player p : fcManager.getCachedPlayers()) {
         if (!this.playingPlayers.contains(p.getName()) && !this.waitingPlayers.containsKey(p.getName())) {
-          if (m.time.getScore() < 0) {
+          if (m.scoreTime < 0) {
             logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT.replace(new String[]{String.valueOf(m.type)}));
           } else {
-            logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_2.replace(new String[]{String.valueOf(m.type), v, String.valueOf(m.time.getScore())}));
+            logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_2.replace(new String[]{String.valueOf(m.type), v, String.valueOf(m.scoreTime)}));
           }
 
           logger.send(p, Lang.TAKEPLACE_ANNOUNCEMENT_3.replace(null));
@@ -537,17 +542,17 @@ public class Organization {
         } else if (match.phase == 4) {
           timeDisplay = Lang.MATCHES_LIST_CONTINUING.replace(new String[]{String.valueOf(match.countdown)});
         } else {
-          int remaining = match.time != null ? match.time.getScore() : -1;
+          int remaining = match.scoreTime != 0 ? match.scoreTime : -1;
           timeDisplay = remaining >= 0 ? remaining + "s" : "N/A";
         }
 
         if (match.phase == 1) {
-          output.add(Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(i + 1)}));
+          output.add(Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(match.matchID)}));
           output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));
           output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)}));
           output.add(Lang.MATCHES_LIST_STATUS.replace(new String[]{timeDisplay}));
         } else {
-          output.add(Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(i + 1)}));
+          output.add(Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(match.matchID)}));
           output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.scoreRed), String.valueOf(match.scoreBlue)})
               + " | " + Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay}));
           output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));

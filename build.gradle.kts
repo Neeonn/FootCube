@@ -88,7 +88,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.38")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("net.luckperms:api:5.4")
-    compileOnly("net.dmulloy2:ProtocolLib:5.3.0")
+    compileOnly("com.github.NEZNAMY:TAB-API:5.3.2")
 
     annotationProcessor("org.projectlombok:lombok:1.18.38")
 

@@ -13,6 +13,7 @@ import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.*;
 import lombok.Getter;
+import me.neznamy.tab.api.TabAPI;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
@@ -53,6 +54,7 @@ public class FCManager {
   private Economy economy;
   private Chat chat;
   private LuckPerms luckPerms;
+  private TabAPI tabAPI;
 
   private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false;
   private int cubeCleanerTaskID, physicsTaskID, glowTaskID;
@@ -210,10 +212,12 @@ public class FCManager {
     this.chat = chatRsp == null ? null : chatRsp.getProvider();
     if (chat == null) throw new IllegalStateException("Vault not found!");
 
-    if (plugin.getServer().getPluginManager().getPlugin("ProtocolLib") == null) {
-      logger.info("&cProtocolLib not found! Disabling FootCube.");
-      plugin.getServer().getPluginManager().disablePlugin(this.plugin);
-      return;
+    if (plugin.getServer().getPluginManager().isPluginEnabled("TAB")) {
+      this.tabAPI = TabAPI.getInstance();
+      logger.info("&a✔ &2Hooked into &dTAB &2successfully!");
+    } else {
+      this.tabAPI = null;
+      logger.info("&eTAB plugin not found. Scoreboard features will be disabled.");
     }
 
     logger.info("&a✔ &2Hooked into &dLuckPerms &2and &dVault &2successfully!");

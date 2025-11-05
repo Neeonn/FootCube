@@ -68,6 +68,7 @@ public class Match {
   public int scoreRed, scoreBlue, scoreTime, scoreTick;
   private boolean scoreDirty = true;
   private long lastScoreUpdate = 0L;
+  private long pausedTime = 0L;
 
   private final ItemStack redChestPlate;
   private final ItemStack redLeggings;
@@ -270,7 +271,7 @@ public class Match {
       this.countdown = 15;
       this.tickToSec = 20;
       this.organization.matchStart(this.type);
-
+      this.scoreDirty = true;
       for (Player player : this.isRed.keySet()) {
         PlayerData playerData = fcManager.getDataManager().get(player);
         player.setLevel(this.countdown);
@@ -289,9 +290,9 @@ public class Match {
         }
 
         logger.send(player, Lang.STARTING.replace(null));
-        this.scoreDirty = true;
       }
     } else {
+      refreshLobbyScoreboardForAll();
       logger.send(p, Lang.TO_LEAVE.replace(null));
     }
   }
@@ -452,7 +453,7 @@ public class Match {
     --this.tickToSec;
     this.scoreTick++;
     if (this.phase < 1 || this.phase > 4) return;
-    if (this.scoreDirty && this.scoreTick % 10 == 0) this.updateScoreboard();
+    if (this.scoreDirty && this.scoreTick % 20 == 0) this.updateScoreboard();
 
     if (this.phase == 3) {
       if (this.cube == null) return;
@@ -469,6 +470,10 @@ public class Match {
       } else if ((this.redAboveBlue && l.getBlockZ() <= this.blue.getBlockZ() || !this.redAboveBlue && this.blue.getBlockZ() <= l.getBlockZ()) && l.getY() < this.blue.getY() + (double)3 && l.getX() < this.blue.getX() + (double)4 && l.getX() > this.blue.getX() - (double)4) {
         this.score(true);
       }
+
+      long elapsed = this.pausedTime + (System.currentTimeMillis() - this.startTime);
+      int total = (this.type == 2 ? 120 : 300);
+      this.scoreTime = total - (int) (elapsed / 1000);
 
       this.scoreDirty = true;
     }
@@ -492,7 +497,6 @@ public class Match {
 
         this.phase = 3;
         this.cube = physicsUtil.spawnCube(this.mid);
-        this.scoreDirty = true;
 
         if (scoreboardManager != null && lobbyScore != null) {
           scoreboardManager.removeScoreboard(lobbyScore.getName());
@@ -540,9 +544,6 @@ public class Match {
         p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
       }
     }
-
-    if (this.type == 2) this.scoreTime = 120 - (int)(System.currentTimeMillis() - this.startTime) / 1000;
-    else this.scoreTime = 300 - (int) (System.currentTimeMillis() - this.startTime) / 1000;
 
     if (this.scoreTime <= 0 && this.phase > 2) {
       for (Player p : this.isRed.keySet()) {
@@ -616,6 +617,7 @@ public class Match {
   }
 
   private void score(boolean red) {
+    this.pausedTime += System.currentTimeMillis() - this.startTime;
     this.phase = 4;
     this.tickToSec = 20;
     this.countdown = 5;

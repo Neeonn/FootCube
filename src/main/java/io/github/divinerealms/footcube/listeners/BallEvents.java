@@ -106,7 +106,7 @@ public class BallEvents implements Listener {
 
       // Prevent AFK or unauthorized players from interacting.
       if (physicsUtil.notAllowedToInteract(player)) return;
-      if (!physicsUtil.withinInteractReach(player, cube)) return;
+      if (physicsUtil.tooFarToInteract(player, cube)) return;
 
       // Calculate kick power and enforce cooldown.
       KickResult kickResult = physicsUtil.calculateKickPower(player);
@@ -158,7 +158,7 @@ public class BallEvents implements Listener {
       Slime cube = (Slime) event.getRightClicked();
 
       if (physicsUtil.notAllowedToInteract(player)) return;
-      if (!physicsUtil.withinInteractReach(player, cube)) return;
+      if (physicsUtil.tooFarToInteract(player, cube)) return;
       if (!physics.getCubes().contains(cube)) return;
       if (physics.getKicked().containsKey(playerId)) return;
 

@@ -1,6 +1,7 @@
 package io.github.divinerealms.footcube.core;
 
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.listeners.BallEvents;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.KickResult;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -39,7 +40,6 @@ public class PhysicsUtil {
     this.plugin = fcManager.getPlugin();
   }
 
-  // TEST
   public static final double INTERACT_REACH = 4.0;
   public static final double INTERACT_REACH_SQ = INTERACT_REACH * INTERACT_REACH;
   public static final double CUBE_CENTER_Y = 0.5;
@@ -69,7 +69,6 @@ public class PhysicsUtil {
   public static final double CHARGE_BASE_VALUE = 1;
   public static final double CHARGE_RECOVERY_RATE = 0.945;
   public static final double MIN_SPEED_FOR_DAMPENING = 0.5;
-  public static final double MIN_SPEED_FOR_DAMPENING_SQUARED = MIN_SPEED_FOR_DAMPENING * MIN_SPEED_FOR_DAMPENING;
   public static final double MIN_SOUND_POWER = 0.15;
   public static final double KICK_VERTICAL_BOOST = 0.2; // def 0.3
   public static final int EXP_UPDATE_INTERVAL_TICKS = 3;
@@ -89,7 +88,7 @@ public class PhysicsUtil {
   public static final double PLAYER_SPEED_TOUCH_DIVISOR = 3;
   public static final double CUBE_SPEED_TOUCH_DIVISOR = 6;
   public static final double PROXIMITY_THRESHOLD_MULTIPLIER = 1.3;
-  public static final double PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED = 1.69;
+  public static final double PROXIMITY_THRESHOLD_MULTIPLIER_SQUARED = PROXIMITY_THRESHOLD_MULTIPLIER * PROXIMITY_THRESHOLD_MULTIPLIER;
   public static final double WALL_BOUNCE_FACTOR = 0.8;
   public static final double AIR_DRAG_FACTOR = 0.98;
   public static final double CUBE_JUMP_RIGHT_CLICK = 0.7;
@@ -192,6 +191,7 @@ public class PhysicsUtil {
    * @param locB The second location (usually the cube/ball location).
    * @return The computed distance between the two points.
    */
+  @SuppressWarnings("unused")
   public double getDistance(Location locA, Location locB) {
     long start = System.nanoTime();
     try {
@@ -492,6 +492,7 @@ public class PhysicsUtil {
    * @param player The player whose position is used for distance checking.
    * @return The squared perpendicular distance between the player and the cube's velocity vector.
    */
+  @SuppressWarnings("unused")
   public double getPerpendicularDistanceSquared(Vector newVelocity, Vector cubePos, Player player) {
     double slopeA = newVelocity.getZ() / newVelocity.getX();
     double interceptB = cubePos.getZ() - slopeA * cubePos.getX();
@@ -532,13 +533,21 @@ public class PhysicsUtil {
     physics.getButtonCooldowns().put(player.getUniqueId(), System.currentTimeMillis());
   }
 
-  public boolean withinInteractReach(Player player, Slime cube) {
-    if (player == null || cube == null) return false;
+  /**
+   * Checks if the player is outside interact reach.
+   * Used to combine reach for interactions {@link BallEvents} with the cube.
+   *
+   * @param player Player who interacted with the cube.
+   * @param cube Cube (Slime Entity) being interacted with.
+   * @return {@code false} if player is too far away; {@code true} if within reach.
+   */
+  public boolean tooFarToInteract(Player player, Slime cube) {
+    if (player == null || cube == null) return true;
     Location eye = player.getEyeLocation();
     Location cubeLoc = cube.getLocation();
-    if (cubeLoc == null || eye == null) return false;
+    if (cubeLoc == null || eye == null) return true;
     // Use cube center (approximate) so vertical difference is accounted for.
     cubeLoc = cubeLoc.clone().add(0.0, PhysicsUtil.CUBE_CENTER_Y, 0.0);
-    return eye.distanceSquared(cubeLoc) <= PhysicsUtil.INTERACT_REACH_SQ;
+    return !(eye.distanceSquared(cubeLoc) <= PhysicsUtil.INTERACT_REACH_SQ);
   }
 }

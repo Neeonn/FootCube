@@ -127,7 +127,27 @@ public class PlayerEvents implements Listener {
 
     // If the player was in a match, handle safe removal.
     Match match = MatchHelper.getMatch(org, player);
-    if (match != null) MatchHelper.leaveMatch(org, player, match, logger, true);
+    if (match != null) {
+      int playerScore, opponentScore;
+
+      if (match.redPlayers.contains(player)) {
+        playerScore = match.scoreRed;
+        opponentScore = match.scoreBlue;
+      } else {
+        playerScore = match.scoreBlue;
+        opponentScore = match.scoreRed;
+      }
+
+      boolean freeLeave = match.phase == 2 || playerScore == opponentScore || playerScore > opponentScore;
+      if (!freeLeave) {
+        fcManager.getEconomy().withdrawPlayer(player, 200);
+        long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
+        org.getLeaveCooldowns().put(player.getUniqueId(), banUntil);
+        logger.send(player, Lang.LEAVE_LOSING.replace(null));
+      }
+
+      MatchHelper.leaveMatch(org, player, match, logger, false);
+    }
   }
 
   /**

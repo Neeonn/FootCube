@@ -223,7 +223,7 @@ public class Organization {
 
   public void endMatch(Player player) {
     this.playingPlayers.remove(player.getName());
-    player.setExp(0);
+    player.setLevel(0);
   }
 
   public void playerStarts(Player player) {
@@ -336,7 +336,7 @@ public class Organization {
     }
   }
 
-  void loadArenas() {
+  public void loadArenas() {
     for (int i = 1; i <= arenas.getInt("arenas.2v2.amount"); ++i) {
       World world = this.plugin.getServer().getWorld(arenas.getString("arenas.world"));
       String blue = "arenas.2v2." + i + ".blue.";

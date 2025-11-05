@@ -97,6 +97,7 @@ public class PlayerEvents implements Listener {
 
     // Reset basic state and cache player reference.
     player.setExp(0);
+    player.setLevel(0);
     org.clearInventory(player);
     fcManager.getCachedPlayers().add(player);
 
@@ -173,7 +174,7 @@ public class PlayerEvents implements Listener {
       physicsUtil.recordPlayerAction(event.getPlayer());
     } else {
       // Reset when released.
-      player.setExp(0F);
+      player.setExp(0);
       physics.getCharges().remove(player.getUniqueId());
     }
   }

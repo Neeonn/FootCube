@@ -474,7 +474,6 @@ public class Match {
       long elapsed = this.pausedTime + (System.currentTimeMillis() - this.startTime);
       int total = (this.type == 2 ? 120 : 300);
       this.scoreTime = total - (int) (elapsed / 1000);
-
       this.scoreDirty = true;
     }
 
@@ -496,6 +495,7 @@ public class Match {
         } else message = Lang.MATCH_PROCEED.replace(null);
 
         this.phase = 3;
+        this.startTime = System.currentTimeMillis();
         this.cube = physicsUtil.spawnCube(this.mid);
 
         if (scoreboardManager != null && lobbyScore != null) {
@@ -543,6 +543,12 @@ public class Match {
 
         p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
       }
+    }
+
+    if (this.phase == 3) {
+      long elapsed = this.pausedTime + (System.currentTimeMillis() - this.startTime);
+      int total = (this.type == 2 ? 120 : 300);
+      this.scoreTime = total - (int) (elapsed / 1000);
     }
 
     if (this.scoreTime <= 0 && this.phase > 2) {

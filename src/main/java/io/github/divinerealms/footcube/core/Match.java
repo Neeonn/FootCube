@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Match {
   private final FCManager fcManager;
@@ -63,11 +64,10 @@ public class Match {
   private Player assistBlue = null;
 
   private final ScoreboardManager scoreboardManager;
-  private final String scoreName;
-  private String scoreTitle, scoreFooter;
-  private Scoreboard scoreboard;
+  private Scoreboard lobbyScore, matchScore;
   public int scoreRed, scoreBlue, scoreTime, scoreTick;
   private boolean scoreDirty = true;
+  private long lastScoreUpdate = 0L;
 
   private final ItemStack redChestPlate;
   private final ItemStack redLeggings;
@@ -108,9 +108,6 @@ public class Match {
     this.sugar = this.organization.createComplexItem(Material.SUGAR, itemName, new String[]{itemLore});
 
     this.scoreboardManager = fcManager.getTabAPI().getScoreboardManager();
-    this.scoreName = "match_" + this.type + "v" + this.type + "_" + this.matchID;
-    this.scoreTitle = Lang.MATCHES_LIST_LOBBY.replace(new String[]{ this.type + "v" + this.type, String.valueOf(this.matchID) });
-    this.scoreFooter = Lang.SCOREBOARD_FOOTER.replace(null);
 
     this.x = Math.abs(b.getX() - r.getX()) > Math.abs(b.getZ() - r.getZ());
     if (this.x) this.redAboveBlue = r.getX() > b.getX();
@@ -120,41 +117,62 @@ public class Match {
     this.config = configManager.getConfig("config.yml");
   }
 
-  public void updateScoreboard() {
-    if (!this.scoreDirty || this.scoreboardManager == null) return;
+  private void showLobbyScoreboard(Player player) {
+    if (scoreboardManager == null) return;
 
-    if (this.isRed.isEmpty() && this.redPlayers.isEmpty() && this.bluePlayers.isEmpty()) {
-      removeExistingScoreboard();
-      return;
+    if (lobbyScore == null) {
+      String type = this.type + "v" + this.type;
+      String title = Lang.MATCHES_LIST_LOBBY.replace(new String[]{ type, String.valueOf(matchID) });
+      List<String> lines = Arrays.asList(buildLobbyScoreboard(getTimeDisplay()).split(System.lineSeparator()));
+      lobbyScore = scoreboardManager.createScoreboard("lobby_" + type + "_" + matchID, title, lines);
     }
 
-    String timeDisplay = getTimeDisplay();
-    String formatted = (this.phase == 1 || this.phase == 2) ? buildLobbyScoreboard(timeDisplay) : buildMatchScoreboard(timeDisplay);
-
-    List<String> lines = new ArrayList<>(Arrays.asList(formatted.split(System.lineSeparator())));
-    lines.add(this.scoreFooter);
-
-    if (this.scoreboard == null) this.scoreboard = this.scoreboardManager.createScoreboard(this.scoreName, this.scoreTitle, lines);
-
-    if (this.phase == 2) {
-      this.scoreTitle = Lang.MATCHES_LIST_MATCH.replace(new String[]{this.type + "v" + this.type, String.valueOf(this.matchID)});
-      this.scoreboard.setTitle(this.scoreTitle);
-    }
-
-    boolean needsFullRefresh = lines.size() != this.scoreboard.getLines().size();
-    if (needsFullRefresh) resetAllPlayerScoreboards();
-
-    updateScoreboardLines(lines);
-    showToAllPlayers();
-
-    this.scoreDirty = false;
+    TabPlayer tabPlayer = this.fcManager.getTabAPI().getPlayer(player.getUniqueId());
+    if (tabPlayer != null) this.scoreboardManager.showScoreboard(tabPlayer, lobbyScore);
   }
 
-  private void removeExistingScoreboard() {
-    if (this.scoreboard == null) return;
+  private void showMatchScoreboard(Player player) {
+    if (scoreboardManager == null) return;
 
-    this.scoreboardManager.removeScoreboard(this.scoreboard.getName());
-    this.scoreboard = null;
+    if (matchScore == null) {
+      String type = this.type + "v" + this.type;
+      String title = Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(matchID)});
+      List<String> lines = Arrays.asList(buildMatchScoreboard(getTimeDisplay()).split(System.lineSeparator()));
+      matchScore = scoreboardManager.createScoreboard("match_" + type + "_" + matchID, title, lines);
+    }
+
+    TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
+    if (tabPlayer != null) scoreboardManager.showScoreboard(tabPlayer, matchScore);
+  }
+
+  private void resetToDefaultScoreboard(Player player) {
+    if (scoreboardManager == null) return;
+    TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
+    if (tabPlayer != null) scoreboardManager.resetScoreboard(tabPlayer);
+  }
+
+  public void updateScoreboard() {
+    if (!scoreDirty || scoreboardManager == null) return;
+    if ((phase == 1 && lobbyScore == null) || (phase >= 3 && matchScore == null)) return;
+
+    long now = System.currentTimeMillis();
+    if (now - lastScoreUpdate < 500) return;
+    lastScoreUpdate = now;
+
+    Scoreboard board = (phase == 1 || phase == 2) ? lobbyScore : matchScore;
+    if (board == null) return;
+
+    List<String> newLines;
+    if (phase == 1 || phase == 2) newLines = Arrays.asList(buildLobbyScoreboard(getTimeDisplay()).split(System.lineSeparator()));
+    else newLines = Arrays.asList(buildMatchScoreboard(getTimeDisplay()).split(System.lineSeparator()));
+
+    List<Line> existingLines = board.getLines();
+    for (int i = 0; i < Math.min(existingLines.size(), newLines.size()); i++) {
+      String oldText = existingLines.get(i).getText(), newText = newLines.get(i);
+      if (!Objects.equals(oldText, newText)) existingLines.get(i).setText(newText);
+    }
+
+    scoreDirty = false;
   }
 
   private String getTimeDisplay() {
@@ -171,15 +189,13 @@ public class Match {
   }
 
   private String buildLobbyScoreboard(String status) {
-    String redPlayersList = this.redPlayers.stream()
-        .map(player -> Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
-            new String[]{String.valueOf(this.redPlayers.indexOf(player) + 1), player.getName()}))
-        .collect(Collectors.joining(System.lineSeparator()));
+    String redPlayersList = IntStream.range(0, redPlayers.size()).mapToObj(i -> Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
+        new String[]{String.valueOf(i + 1), redPlayers.get(i).getName()}
+    )).collect(Collectors.joining(System.lineSeparator()));
 
-    String bluePlayersList = this.bluePlayers.stream()
-        .map(player -> Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
-            new String[]{String.valueOf(this.bluePlayers.indexOf(player) + 1), player.getName()}))
-        .collect(Collectors.joining(System.lineSeparator()));
+    String bluePlayersList = IntStream.range(0, bluePlayers.size()).mapToObj(i -> Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
+        new String[]{String.valueOf(i + 1), bluePlayers.get(i).getName()}
+    )).collect(Collectors.joining(System.lineSeparator()));
 
     String playersList = Lang.NOBODY.replace(null);
     if (!this.isRed.isEmpty()) {
@@ -189,60 +205,32 @@ public class Match {
       else if (!bluePlayers.isEmpty()) playersList = bluePlayersList;
     }
 
-    return Lang.SCOREBOARD_LINES_LOBBY.replace(new String[]{playersList, status});
+    return Lang.SCOREBOARD_LINES_LOBBY.replace(new String[]{playersList, status}) + System.lineSeparator() + Lang.SCOREBOARD_FOOTER.replace(null);
   }
 
   private String buildMatchScoreboard(String timeDisplay) {
     return Lang.SCOREBOARD_LINES_MATCH.replace(new String[]{
         Lang.RED.replace(null), String.valueOf(this.scoreRed), String.valueOf(this.scoreBlue), Lang.BLUE.replace(null),
         timeDisplay
-    });
+    }) + System.lineSeparator() + Lang.SCOREBOARD_FOOTER.replace(null);
   }
 
-  private void resetAllPlayerScoreboards() {
-    for (Player player : getAllPlayers()) {
+  private void refreshLobbyScoreboardForAll() {
+    if (scoreboardManager == null) return;
+    if (this.phase >= 3) return;
+
+    String type = this.type + "v" + this.type;
+    String title = Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(matchID)});
+    List<String> lines = Arrays.asList(buildLobbyScoreboard(getTimeDisplay()).split(System.lineSeparator()));
+
+    if (lobbyScore != null) scoreboardManager.removeScoreboard(lobbyScore.getName());
+    lobbyScore = scoreboardManager.createScoreboard("lobby_" + type + "_" + matchID, title, lines);
+
+    for (Player player : isRed.keySet()) {
       if (player == null || !player.isOnline()) continue;
-
       TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
-      if (tabPlayer == null) continue;
-
-      scoreboardManager.resetScoreboard(tabPlayer);
+      if (tabPlayer != null) scoreboardManager.showScoreboard(tabPlayer, lobbyScore);
     }
-  }
-
-  private void updateScoreboardLines(List<String> lines) {
-    List<Line> existingLines = this.scoreboard.getLines();
-    int min = Math.min(existingLines.size(), lines.size());
-
-    for (int i = 0; i < min; i++) {
-      Line line = existingLines.get(i);
-      String newText = lines.get(i);
-      if (!Objects.equals(line.getText(), newText)) line.setText(newText);
-    }
-
-    if (lines.size() > existingLines.size()) {
-      for (int i = existingLines.size(); i < lines.size(); i++) this.scoreboard.addLine(lines.get(i));
-    } else if (existingLines.size() > lines.size()) {
-      for (int i = existingLines.size() - 1; i >= lines.size(); i--) this.scoreboard.removeLine(i);
-    }
-  }
-
-  private void showToAllPlayers() {
-    for (Player player : getAllPlayers()) {
-      if (player == null || !player.isOnline()) continue;
-
-      TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
-      if (tabPlayer == null) continue;
-
-      scoreboardManager.showScoreboard(tabPlayer, this.scoreboard);
-    }
-  }
-
-  private List<Player> getAllPlayers() {
-    List<Player> list = new ArrayList<>();
-    list.addAll(this.redPlayers);
-    list.addAll(this.bluePlayers);
-    return list;
   }
 
   public boolean equals(Match m) {
@@ -263,7 +251,7 @@ public class Match {
   public void join(Player p, boolean b) {
     PlayerData data = fcManager.getDataManager().get(p);
     fcManager.getDataManager().addDefaults(data);
-
+    showLobbyScoreboard(p);
     if (this.redPlayers.size() < this.type && !b) {
       this.redPlayers.add(p);
       this.isRed.put(p, true);
@@ -276,6 +264,7 @@ public class Match {
       logger.send(p, Lang.WELCOME.replace(new String[]{Lang.BLUE.replace(null)}));
     }
 
+    if (this.phase == 1) refreshLobbyScoreboardForAll();
     if (this.phase < 2 && this.bluePlayers.size() == this.type && this.redPlayers.size() == this.type) {
       this.phase = 2;
       this.countdown = 15;
@@ -300,18 +289,17 @@ public class Match {
         }
 
         logger.send(player, Lang.STARTING.replace(null));
+        this.scoreDirty = true;
       }
     } else {
       logger.send(p, Lang.TO_LEAVE.replace(null));
     }
-
-    this.scoreDirty = true;
   }
 
   public void leave(Player player) {
     if (player == null) return;
     UUID uuid = player.getUniqueId();
-
+    resetToDefaultScoreboard(player);
     this.redPlayers.removeIf(player1 -> player1 == null || player1.getUniqueId().equals(uuid));
     this.bluePlayers.removeIf(player1 -> player1 == null || player1.getUniqueId().equals(uuid));
     this.isRed.entrySet().removeIf(entry -> entry.getKey() == null || entry.getKey().getUniqueId().equals(uuid));
@@ -324,10 +312,7 @@ public class Match {
       player.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : player.getWorld().getSpawnLocation());
     } catch (Exception ignored) {}
 
-    TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(player.getUniqueId());
-    if (tabPlayer != null && scoreboardManager != null) scoreboardManager.resetScoreboard(tabPlayer);
-
-    this.scoreDirty = true;
+    if (this.phase == 1 || this.phase == 2) refreshLobbyScoreboardForAll();
   }
 
   public void takePlace(Player p) {
@@ -342,7 +327,7 @@ public class Match {
     }
 
     this.takePlace.add(p);
-
+    showMatchScoreboard(p);
     if (this.redPlayers.size() <= this.bluePlayers.size() && this.redPlayers.size() < this.type) {
       this.redPlayers.add(p);
       this.isRed.put(p, true);
@@ -363,8 +348,6 @@ public class Match {
       p.getInventory().setChestplate(this.blueChestPlate);
       p.getInventory().setLeggings(this.blueLeggings);
     }
-
-    this.scoreDirty = true;
   }
 
   public void kick(Player p, TouchType type) {
@@ -468,7 +451,7 @@ public class Match {
   public void update() {
     --this.tickToSec;
     this.scoreTick++;
-
+    if (this.phase < 1 || this.phase > 4) return;
     if (this.scoreDirty && this.scoreTick % 10 == 0) this.updateScoreboard();
 
     if (this.phase == 3) {
@@ -493,6 +476,7 @@ public class Match {
     if ((this.phase == 2 || this.phase == 4) && this.tickToSec == 0) {
       --this.countdown;
       this.tickToSec = 20;
+      this.scoreDirty = true;
       for (Player p : this.isRed.keySet()) p.setLevel(this.countdown);
       if (this.countdown <= 0) {
         String message;
@@ -508,6 +492,12 @@ public class Match {
 
         this.phase = 3;
         this.cube = physicsUtil.spawnCube(this.mid);
+        this.scoreDirty = true;
+
+        if (scoreboardManager != null && lobbyScore != null) {
+          scoreboardManager.removeScoreboard(lobbyScore.getName());
+          lobbyScore = null;
+        }
 
         Random random = PhysicsUtil.RANDOM;
         double vertical = 0.3 * random.nextDouble() + 0.2;
@@ -522,12 +512,12 @@ public class Match {
           if (this.isRed.containsKey(p) && this.isRed.get(p)) p.teleport(this.red);
           else p.teleport(this.blue);
           p.playSound(p.getLocation(), Sound.EXPLODE, 1, 1);
+          showMatchScoreboard(p);
         }
       } else if (this.countdown <= 10) {
         for (Player p : this.isRed.keySet()) p.playSound(p.getLocation(), Sound.NOTE_STICKS, 1, 1);
+        this.scoreDirty = true;
       }
-
-      this.scoreDirty = true;
     }
 
     if (this.phase == 3 && this.cube.isDead()) {
@@ -782,29 +772,29 @@ public class Match {
     try {
       for (Player p : new ArrayList<>(this.isRed.keySet())) {
         try {
-          TabPlayer tabPlayer = fcManager.getTabAPI().getPlayer(p.getUniqueId());
-          if (tabPlayer != null && this.scoreboardManager != null) this.scoreboardManager.resetScoreboard(tabPlayer);
-
           Location lobby = config.get("lobby") != null ? (Location) config.get("lobby") : p.getWorld().getSpawnLocation();
           p.teleport(lobby);
           organization.clearInventory(p);
           p.setLevel(0);
+          resetToDefaultScoreboard(p);
         } catch (Exception ignored) {}
       }
     } catch (Exception ignored) {}
 
     try {
-      if (this.scoreboardManager != null) {
-        if (this.scoreboard != null) {
-          this.scoreboardManager.removeScoreboard(this.scoreboard.getName());
-        } else this.scoreboardManager.removeScoreboard(this.scoreName);
+      if (scoreboardManager != null) {
+        if (lobbyScore != null) {
+          scoreboardManager.removeScoreboard(lobbyScore.getName());
+          lobbyScore = null;
+        }
+        if (matchScore != null) {
+          scoreboardManager.removeScoreboard(matchScore.getName());
+          matchScore = null;
+        }
       }
     } catch (Exception ignored) {}
 
     try {
-      this.scoreboard = null;
-      this.scoreTitle = Lang.MATCHES_LIST_LOBBY.replace(new String[]{ this.type + "v" + this.type, String.valueOf(this.matchID) });
-      this.scoreFooter = Lang.SCOREBOARD_FOOTER.replace(null);
       this.scoreRed = 0;
       this.scoreBlue = 0;
       this.scoreTick = 0;

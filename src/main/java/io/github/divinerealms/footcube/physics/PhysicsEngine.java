@@ -82,7 +82,7 @@ public class PhysicsEngine {
       Iterator<Slime> cubeIterator = data.getCubes().iterator();
       while (cubeIterator.hasNext()) {
         Slime cube = cubeIterator.next();
-        if (cube == null || cube.isDead()) { cubeIterator.remove(); data.getCubesToRemove().add(cube); continue; }
+        if (cube.isDead()) { data.getCubesToRemove().add(cube); cubeIterator.remove(); continue; }
 
         UUID cubeId = cube.getUniqueId();
         Location cubeLocation = cube.getLocation();

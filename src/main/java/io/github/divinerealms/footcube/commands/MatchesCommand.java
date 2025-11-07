@@ -3,7 +3,7 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.PhysicsUtil;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,12 +15,14 @@ import java.util.List;
 public class MatchesCommand implements CommandExecutor {
   private final FCManager fcManager;
   private final Logger logger;
-  private final PhysicsUtil physicsUtil;
+
+  private final PhysicsSystem system;
 
   public MatchesCommand(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-    this.physicsUtil = fcManager.getPhysicsUtil();
+
+    this.system = fcManager.getPhysicsSystem();
   }
 
   @Override
@@ -36,7 +38,7 @@ public class MatchesCommand implements CommandExecutor {
       logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;
   }
 }

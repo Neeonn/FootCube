@@ -7,6 +7,8 @@ import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.physics.PhysicsData;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import net.luckperms.api.node.types.PermissionNode;
@@ -27,43 +29,34 @@ import org.bukkit.material.Wool;
 
 import java.util.*;
 
+import static io.github.divinerealms.footcube.utils.Permissions.*;
+
 public class AdminCommands implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
-  private final Physics physics;
-  private final PhysicsUtil physicsUtil;
   private final Logger logger;
   private final Organization org;
   private final DisableCommands disableCommands;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
-  private final FileConfiguration arenas, config, practice;
 
-  private static final String PERM_MAIN = "footcube.admin";
-  private static final String PERM_TOGGLE = PERM_MAIN + ".toggle";
-  private static final String PERM_BAN = PERM_MAIN + ".ban";
-  private static final String PERM_UNBAN = PERM_MAIN + ".unban";
-  private static final String PERM_STAT_SET = PERM_MAIN + ".statset";
-  private static final String PERM_SETUP_ARENA = PERM_MAIN + ".setuparena";
-  private static final String PERM_CLEAR_ARENAS = PERM_MAIN + ".cleararenas";
-  private static final String PERM_SET_LOBBY = PERM_MAIN + ".setlobby";
-  private static final String PERM_SET_PRACTICE_AREA = PERM_MAIN + ".setpracticearea";
-  private static final String PERM_HIT_DEBUG = PERM_MAIN + ".hitdebug";
-  private static final String PERM_COMMAND_DISABLER = PERM_MAIN + ".commanddisabler";
-  private static final String PERM_MATCHMAN = PERM_MAIN + ".matchman";
-  private static final String PERM_FORCE_LEAVE = PERM_MAIN + ".forceleave";
-  private static final String PERM_SETBUTON = PERM_MAIN + ".setbutton";
+  private final PhysicsData data;
+  private final PhysicsSystem system;
+
+  private final FileConfiguration arenas, config, practice;
 
   public AdminCommands(FCManager fcManager, DisableCommands disableCommands) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
-    this.physics = fcManager.getPhysics();
-    this.physicsUtil = fcManager.getPhysicsUtil();
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
     this.disableCommands = disableCommands;
     this.configManager = fcManager.getConfigManager();
     this.dataManager = fcManager.getDataManager();
+
+    this.data = fcManager.getPhysicsData();
+    this.system = fcManager.getPhysicsSystem();
+
     this.arenas = configManager.getConfig("arenas.yml");
     this.config = configManager.getConfig("config.yml");
     this.practice = configManager.getConfig("practice.yml");
@@ -82,7 +75,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     switch (sub) {
       case "reload":
         if (args.length == 1) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <configs|all>"})); return true; }
-        if (!sender.hasPermission(PERM_MAIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MAIN, label + " " + sub})); return true; }
+        if (!sender.hasPermission(PERM_ADMIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_ADMIN, label + " " + sub})); return true; }
 
         switch (args[1].toLowerCase()) {
           case "configs":
@@ -102,8 +95,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       case "toggle":
         if (!sender.hasPermission(PERM_TOGGLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_TOGGLE, label + " " + sub})); return true; }
-        boolean state = physics.isMatchesEnabled();
-        physics.setMatchesEnabled(!state);
+        boolean state = data.isMatchesEnabled();
+        data.matchesEnabled = !state;
         fcManager.getLuckPerms().getGroupManager().modifyGroup("vip", group -> {
           if (state) {
             group.data().add(PermissionNode.builder("essentials.gamemode.spectator").build());
@@ -353,8 +346,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       case "hitsdebug":
       case "hits":
         if (!sender.hasPermission(PERM_HIT_DEBUG)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_HIT_DEBUG, label + " " + sub})); return true; }
-        boolean status = physics.isHitDebugEnabled();
-        physics.hitDebugEnabled = !status;
+        boolean status = data.isHitDebugEnabled();
+        data.hitDebugEnabled = !status;
         logger.send(sender, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{status ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
         break;
 
@@ -482,12 +475,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;
   }
 
   private void sendHelp(CommandSender sender) {
-    if (sender.hasPermission(PERM_MAIN)) logger.send(sender, Lang.HELP_ADMIN.replace(null));
+    if (sender.hasPermission(PERM_ADMIN)) logger.send(sender, Lang.HELP_ADMIN.replace(null));
   }
 
   private boolean inGameOnly(CommandSender sender) {
@@ -497,7 +490,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-    if (!sender.hasPermission(PERM_MAIN)) return Collections.emptyList();
+    if (!sender.hasPermission(PERM_ADMIN)) return Collections.emptyList();
 
     List<String> completions = new ArrayList<>();
 
@@ -536,7 +529,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return completions;
   }
 }

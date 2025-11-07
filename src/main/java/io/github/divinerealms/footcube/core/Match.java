@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import me.neznamy.tab.api.TabPlayer;
@@ -24,11 +25,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.RANDOM;
+
 public class Match {
   private final FCManager fcManager;
   private final Logger logger;
-  private final PhysicsUtil physicsUtil;
   private final Organization organization;
+
+  private final PhysicsSystem system;
 
   public int matchID;
   public int type;
@@ -67,8 +71,8 @@ public class Match {
   private Scoreboard lobbyScore, matchScore;
   public int scoreRed, scoreBlue, scoreTime, scoreTick;
   private boolean scoreDirty = true;
-  private long lastScoreUpdate = 0L;
-  private long pausedTime = 0L;
+  private long lastScoreUpdate = 0;
+  private long pausedTime;
 
   private final ItemStack redChestPlate;
   private final ItemStack redLeggings;
@@ -84,8 +88,9 @@ public class Match {
   public Match(FCManager fcManager, int t, Location b, Location r, Location m, int id) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-    this.physicsUtil = fcManager.getPhysicsUtil();
     this.organization = fcManager.getOrg();
+
+    this.system = fcManager.getPhysicsSystem();
 
     this.matchID = id;
     this.type = t;
@@ -95,7 +100,7 @@ public class Match {
     this.phase = 1;
     this.scoreRed = 0;
     this.scoreBlue = 0;
-    this.startTime = 0L;
+    this.startTime = 0;
     this.scoreTick = 0;
 
     this.redChestPlate = this.createColoredArmour(Material.LEATHER_CHESTPLATE, Color.RED);
@@ -471,9 +476,6 @@ public class Match {
         this.score(true);
       }
 
-      long elapsed = this.pausedTime + (System.currentTimeMillis() - this.startTime);
-      int total = (this.type == 2 ? 120 : 300);
-      this.scoreTime = total - (int) (elapsed / 1000);
       this.scoreDirty = true;
     }
 
@@ -487,6 +489,7 @@ public class Match {
         if (this.phase == 2) {
           message = Lang.MATCH_STARTED.replace(null);
           this.startTime = System.currentTimeMillis();
+          this.pausedTime = 0;
           this.scoreBlue = 0;
           this.scoreRed = 0;
           this.scoreTime = 0;
@@ -496,14 +499,14 @@ public class Match {
 
         this.phase = 3;
         this.startTime = System.currentTimeMillis();
-        this.cube = physicsUtil.spawnCube(this.mid);
+        this.cube = system.spawnCube(this.mid);
 
         if (scoreboardManager != null && lobbyScore != null) {
           scoreboardManager.removeScoreboard(lobbyScore.getName());
           lobbyScore = null;
         }
 
-        Random random = PhysicsUtil.RANDOM;
+        Random random = RANDOM;
         double vertical = 0.3 * random.nextDouble() + 0.2;
         double horizontal = 0.3 * random.nextDouble() + 0.3;
         if (random.nextBoolean()) horizontal *= -1;
@@ -525,9 +528,9 @@ public class Match {
     }
 
     if (this.phase == 3 && this.cube.isDead()) {
-      this.cube = physicsUtil.spawnCube(this.mid);
+      this.cube = system.spawnCube(this.mid);
 
-      Random random = PhysicsUtil.RANDOM;
+      Random random = RANDOM;
       double vertical = 0.3 * random.nextDouble() + 0.2;
       double horizontal = 0.3 * random.nextDouble() + 0.3;
       if (random.nextBoolean()) horizontal *= -1;
@@ -549,6 +552,7 @@ public class Match {
       long elapsed = this.pausedTime + (System.currentTimeMillis() - this.startTime);
       int total = (this.type == 2 ? 120 : 300);
       this.scoreTime = total - (int) (elapsed / 1000);
+      this.scoreDirty = true;
     }
 
     if (this.scoreTime <= 0 && this.phase > 2) {
@@ -624,6 +628,7 @@ public class Match {
 
   private void score(boolean red) {
     this.pausedTime += System.currentTimeMillis() - this.startTime;
+
     this.phase = 4;
     this.tickToSec = 20;
     this.countdown = 5;
@@ -760,8 +765,6 @@ public class Match {
         this.organization.clearInventory(p);
       }
     }
-
-    if (this.scoreTime <= 0) endMatch();
   }
 
   public void endMatch() {
@@ -807,6 +810,7 @@ public class Match {
       this.scoreBlue = 0;
       this.scoreTick = 0;
       this.scoreTime = 0;
+      this.pausedTime = 0;
       this.scoreDirty = true;
       this.teams = 0;
 

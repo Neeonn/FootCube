@@ -86,6 +86,7 @@ public class MatchHelper {
     return false;
   }
 
+  @SuppressWarnings("unused")
   public static int getMatchArenaType(Organization org, String playerName) {
     Match match = getMatchArena(org, playerName);
     if (match == null) return -1;

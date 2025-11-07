@@ -11,6 +11,10 @@ import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.ListenerManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.physics.PhysicsData;
+import io.github.divinerealms.footcube.physics.PhysicsEngine;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.*;
 import lombok.Getter;
 import me.neznamy.tab.api.TabAPI;
@@ -30,6 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.GLOW_TASK_INTERVAL_TICKS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.PHYSICS_TASK_INTERVAL_TICKS;
+
 @Getter
 public class FCManager {
   @Getter private static FCManager instance;
@@ -41,13 +48,17 @@ public class FCManager {
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
   private final Organization org;
-  private final ListenerManager listenerManager;
 
-  private final Physics physics;
-  private final PhysicsUtil physicsUtil;
   private final CubeCleaner cubeCleaner;
   private final DisableCommands disableCommands;
   private final BukkitScheduler scheduler;
+
+  private final PhysicsData physicsData;
+  private final PhysicsSystem physicsSystem;
+  private final PhysicsEngine physicsEngine;
+  private final PhysicsFormulae physicsFormulae;
+
+  private final ListenerManager listenerManager;
 
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
 
@@ -82,12 +93,16 @@ public class FCManager {
     this.utilities = new Utilities(this);
     this.org = new Organization(this);
 
-    this.physics = new Physics(this);
-    this.physicsUtil = new PhysicsUtil(this);
-    this.listenerManager = new ListenerManager(this);
     this.cubeCleaner = new CubeCleaner(this);
     this.disableCommands = new DisableCommands(this);
     this.scheduler = plugin.getServer().getScheduler();
+
+    this.physicsData = new PhysicsData();
+    this.physicsSystem = new PhysicsSystem(physicsData, logger, getScheduler(), plugin);
+    this.physicsFormulae = new PhysicsFormulae(logger);
+    this.physicsEngine = new PhysicsEngine(this);
+
+    this.listenerManager = new ListenerManager(this);
 
     new FCPlaceholders(this).register();
     this.reload();
@@ -130,12 +145,11 @@ public class FCManager {
       }, 20L, cubeCleaner.getRemoveInterval()).getTaskId();
     }
 
-    this.physics.setPhysicsUtil(this.physicsUtil);
     this.physicsRunning = true;
-    this.physicsTaskID = scheduler.runTaskTimer(plugin, physics::update, PhysicsUtil.PHYSICS_TASK_INTERVAL_TICKS, PhysicsUtil.PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
+    this.physicsTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeProcess, PHYSICS_TASK_INTERVAL_TICKS, PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
 
     this.glowRunning = true;
-    this.glowTaskID = scheduler.runTaskTimer(plugin, physics::showCubeParticles, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS, PhysicsUtil.GLOW_TASK_INTERVAL_TICKS).getTaskId();
+    this.glowTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
@@ -156,7 +170,7 @@ public class FCManager {
       this.glowRunning = false;
     }
 
-    physicsUtil.removeCubes();
+    physicsSystem.removeCubes();
 
     if (cubeCleanerRunning) {
       scheduler.cancelTask(cubeCleanerTaskID);

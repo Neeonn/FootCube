@@ -3,7 +3,7 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.PhysicsUtil;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.Bukkit;
@@ -17,20 +17,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD_OTHER;
+
 public class BuildCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final Organization org;
   private final Logger logger;
-  private final PhysicsUtil physicsUtil;
 
-  private static final String PERM_BUILD = "footcube.build";
-  private static final String PERM_BUILD_OTHER = PERM_BUILD + ".other";
+  private final PhysicsSystem system;
 
   public BuildCommand(FCManager fcManager) {
     this.fcManager = fcManager;
     this.org = fcManager.getOrg();
     this.logger = fcManager.getLogger();
-    this.physicsUtil = fcManager.getPhysicsUtil();
+    this.system = fcManager.getPhysicsSystem();
   }
 
   @Override
@@ -63,7 +64,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     logger.send(target, Lang.SET_BUILD_MODE.replace(new String[]{status}));
     logger.send(sender, Lang.SET_BUILD_MODE_OTHER.replace(new String[]{target.getDisplayName(), status}));
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;
   }
 
@@ -83,7 +84,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return completions;
   }
 }

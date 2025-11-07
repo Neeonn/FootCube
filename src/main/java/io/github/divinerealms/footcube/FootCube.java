@@ -23,7 +23,7 @@ public class FootCube extends JavaPlugin {
     if (fcManager != null) {
       fcManager.saveAll();
       if (fcManager.getOrg() != null) fcManager.getOrg().cleanup();
-      fcManager.getPhysics().cleanup();
+      fcManager.getPhysicsEngine().cleanup();
       fcManager.shutdownTasks();
       getServer().getScheduler().cancelTasks(this);
       fcManager.getListenerManager().unregisterAll();

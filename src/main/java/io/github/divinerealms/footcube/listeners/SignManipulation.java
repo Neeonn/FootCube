@@ -3,9 +3,9 @@ package io.github.divinerealms.footcube.listeners;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.Physics;
-import io.github.divinerealms.footcube.core.PhysicsUtil;
 import io.github.divinerealms.footcube.managers.ConfigManager;
+import io.github.divinerealms.footcube.physics.PhysicsData;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
@@ -31,24 +31,27 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
+
 public class SignManipulation implements Listener {
   private final FCManager fcManager;
   private final Logger logger;
   private final Organization org;
-  private final Physics physics;
-  private final PhysicsUtil physicsUtil;
   private final FileConfiguration arenas;
 
-  private static final String PERM_PLAY = "footcube.play";
+  private final PhysicsData data;
+  private final PhysicsSystem system;
 
   public SignManipulation(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
-    this.physics = fcManager.getPhysics();
-    this.physicsUtil = fcManager.getPhysicsUtil();
+
     ConfigManager configManager = fcManager.getConfigManager();
     this.arenas = configManager.getConfig("arenas.yml");
+
+    this.data = fcManager.getPhysicsData();
+    this.system = fcManager.getPhysicsSystem();
   }
 
   @EventHandler
@@ -127,18 +130,18 @@ public class SignManipulation implements Listener {
       Block below = block.getRelative(BlockFace.DOWN);
       if (below == null || below.getType() != Material.WOOL) return;
 
-      MaterialData data = below.getState().getData();
-      if (!(data instanceof Wool)) return;
+      MaterialData materialData = below.getState().getData();
+      if (!(materialData instanceof Wool)) return;
 
-      DyeColor color = ((Wool) data).getColor();
+      DyeColor color = ((Wool) materialData).getColor();
       Location playerLocation = player.getLocation();
       switch (color) {
         case LIME:
-          if (physicsUtil.cantSpawnYet(player)) return;
+          if (system.cantSpawnYet(player)) return;
           Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100, 100);
           if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-            physicsUtil.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
-            physicsUtil.setButtonCooldown(player);
+            system.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
+            system.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));
           } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
           break;
@@ -146,7 +149,7 @@ public class SignManipulation implements Listener {
         case RED:
           double closestDistance = 30;
           int removed = 0;
-          for (Slime cube : new HashSet<>(physics.getCubes())) {
+          for (Slime cube : new HashSet<>(data.getCubes())) {
             if (cube == null || cube.isDead()) continue;
 
             if (cube.getLocation().distance(playerLocation) <= closestDistance) {
@@ -179,7 +182,7 @@ public class SignManipulation implements Listener {
             logger.send(player, Lang.JOIN_INTEAM.replace(null));
             return;
           }
-          if (!physics.isMatchesEnabled()) {
+          if (!data.isMatchesEnabled()) {
             logger.send(player, Lang.FC_DISABLED.replace(null));
             return;
           }
@@ -216,12 +219,12 @@ public class SignManipulation implements Listener {
           break;
 
         case "cube":
-          if (physicsUtil.cantSpawnYet(player)) return;
+          if (system.cantSpawnYet(player)) return;
           Location location = player.getLocation();
           Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
           if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
-            physicsUtil.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
-            physicsUtil.setButtonCooldown(player);
+            system.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
+            system.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));
           } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
           break;

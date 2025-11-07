@@ -2,8 +2,12 @@ package io.github.divinerealms.footcube.listeners;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.*;
+import io.github.divinerealms.footcube.core.FCManager;
+import io.github.divinerealms.footcube.core.Match;
+import io.github.divinerealms.footcube.core.MatchHelper;
+import io.github.divinerealms.footcube.core.Organization;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
@@ -25,6 +29,8 @@ import org.bukkit.potion.PotionEffectType;
 
 import java.util.UUID;
 
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_DISABLED_COMMANDS;
+
 /**
  * The {@code PlayerEvents} class listens for and manages all player-related events
  * within the Footcube plugin. It ensures controlled player behavior within matches,
@@ -39,24 +45,22 @@ import java.util.UUID;
 public class PlayerEvents implements Listener {
   private final FCManager fcManager;
   private final Logger logger;
-  private final Physics physics;
   private final Plugin plugin;
   private final Organization org;
   private final PlayerDataManager dataManager;
   private final DisableCommands disableCommands;
-  private final PhysicsUtil physicsUtil;
 
-  private static final String PERM_BYPASS_DISABLED_COMMANDS = "footcube.bypass.disablecommands";
+  private final PhysicsSystem system;
   
   public PlayerEvents(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-    this.physics = fcManager.getPhysics();
     this.plugin = fcManager.getPlugin();
     this.org = fcManager.getOrg();
     this.dataManager = fcManager.getDataManager();
     this.disableCommands = fcManager.getDisableCommands();
-    this.physicsUtil = fcManager.getPhysicsUtil();
+
+    this.system = fcManager.getPhysicsSystem();
   }
 
   /**
@@ -100,6 +104,7 @@ public class PlayerEvents implements Listener {
     player.setLevel(0);
     org.clearInventory(player);
     fcManager.getCachedPlayers().add(player);
+    fcManager.getPhysicsSystem().recordPlayerAction(player);
 
     // Load persistent data asynchronously to avoid main-thread blocking.
     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -123,7 +128,9 @@ public class PlayerEvents implements Listener {
     Player player = event.getPlayer();
 
     dataManager.unload(player);
-    physicsUtil.removePlayer(player);
+    system.removePlayer(player);
+    fcManager.getCachedPlayers().remove(player);
+    fcManager.getPlayerSettings().remove(player.getUniqueId());
 
     // If the player was in a match, handle safe removal.
     Match match = MatchHelper.getMatch(org, player);
@@ -158,7 +165,7 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void playerSpeedConsumption(PlayerInteractEvent event) {
     Player player = event.getPlayer();
-    if (physicsUtil.notAllowedToInteract(player)) return;
+    if (system.notAllowedToInteract(player)) return;
 
     Action action = event.getAction();
     if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
@@ -174,29 +181,6 @@ public class PlayerEvents implements Listener {
     match.sugarCooldown.put(player, System.currentTimeMillis());
     player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 5 * 20, 1));
     event.setCancelled(true);
-  }
-
-  /**
-   * Calculates and manages charge buildup when players toggle sneaking.
-   * When sneaking starts, initializes a charge state; when sneaking stops,
-   * resets experience and removes the charge.
-   *
-   * @param event the {@link PlayerToggleSneakEvent} triggered when sneaking state changes
-   */
-  @EventHandler
-  public void playerChargeCalculator(PlayerToggleSneakEvent event) {
-    Player player = event.getPlayer();
-    if (physicsUtil.notAllowedToInteract(player)) return;
-
-    if (event.isSneaking()) {
-      // Begin charging.
-      physics.getCharges().put(player.getUniqueId(), 0D);
-      physicsUtil.recordPlayerAction(event.getPlayer());
-    } else {
-      // Reset when released.
-      player.setExp(0);
-      physics.getCharges().remove(player.getUniqueId());
-    }
   }
 
   /** Prevents item drops during a match to maintain fair play. */

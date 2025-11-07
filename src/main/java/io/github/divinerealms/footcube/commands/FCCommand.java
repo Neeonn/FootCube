@@ -5,6 +5,8 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.*;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.physics.PhysicsData;
+import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.core.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
@@ -27,32 +29,29 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.github.divinerealms.footcube.utils.Permissions.*;
+
 public class FCCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
-  private final Physics physics;
-  private final PhysicsUtil physicsUtil;
   private final Logger logger;
   private final Organization org;
   private final FileConfiguration arenas;
   private final PlayerDataManager dataManager;
 
-  private static final String PERM_MAIN = "footcube";
-  private static final String PERM_PLAY = PERM_MAIN + ".play";
-  private static final String PERM_CUBE = PERM_MAIN + ".cube";
-  private static final String PERM_CLEAR_CUBE = PERM_MAIN + ".clearcube";
-  private static final String PERM_SET_SOUND = PERM_MAIN + ".sound";
-  private static final String PERM_SET_PARTICLE = PERM_MAIN + ".particle";
+  private final PhysicsData physicsData;
+  private final PhysicsSystem system;
 
   public FCCommand(FCManager fcManager) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
-    this.physics = fcManager.getPhysics();
-    this.physicsUtil = fcManager.getPhysicsUtil();
     this.logger = fcManager.getLogger();
     this.org = fcManager.getOrg();
     this.arenas = fcManager.getConfigManager().getConfig("arenas.yml");
     this.dataManager = fcManager.getDataManager();
+
+    this.physicsData = fcManager.getPhysicsData();
+    this.system = fcManager.getPhysicsSystem();
   }
 
   @Override
@@ -70,7 +69,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
         if (org.isBanned(player)) return true;
 
         if (args.length < 2 || args[1] == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
@@ -134,7 +133,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
         if (org.isBanned(player)) return true;
         if (org.getLeftMatches().length == 0) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
         if (org.isInGame(player)) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
@@ -175,7 +174,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physics.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
         if (args.length < 2) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
 
         String action = args[1].toLowerCase();
@@ -260,7 +259,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
         if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
         if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
-        if (physicsUtil.cantSpawnYet(player)) return true;
+        if (system.cantSpawnYet(player)) return true;
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
@@ -270,8 +269,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           spawnLoc.setY(loc.getY() + 2.5);
         } else spawnLoc = loc;
 
-        physicsUtil.spawnCube(spawnLoc);
-        physicsUtil.setButtonCooldown(player);
+        system.spawnCube(spawnLoc);
+        system.setButtonCooldown(player);
         logger.send(player, Lang.CUBE_SPAWN.replace(null));
         break;
 
@@ -283,7 +282,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
         double closestDistance = 100.0;
         Slime closest = null;
-        for (Slime cube : physics.getCubes()) {
+        for (Slime cube : physicsData.getCubes()) {
           double distance = cube.getLocation().distance(player.getLocation());
           if (distance < closestDistance) {
             closestDistance = distance;
@@ -304,7 +303,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
         int count = 0;
-        for (Slime cube : physics.getCubes()) {
+        for (Slime cube : physicsData.getCubes()) {
           cube.setHealth(0);
           count++;
         }
@@ -341,10 +340,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             break;
 
           case "hits":
-            boolean wasEnabled = physics.getCubeHits().contains(player.getUniqueId());
+            boolean wasEnabled = physicsData.getCubeHits().contains(player.getUniqueId());
 
-            if (wasEnabled) physics.getCubeHits().remove(player.getUniqueId());
-            else physics.getCubeHits().add(player.getUniqueId());
+            if (wasEnabled) physicsData.getCubeHits().remove(player.getUniqueId());
+            else physicsData.getCubeHits().add(player.getUniqueId());
 
             logger.send(player, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{!wasEnabled ? Lang.ON.replace(null) : Lang.OFF.replace(null)}));
             break;
@@ -476,7 +475,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;
   }
 
@@ -558,7 +557,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
-    if (sender instanceof Player) physicsUtil.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return completions;
   }
 }

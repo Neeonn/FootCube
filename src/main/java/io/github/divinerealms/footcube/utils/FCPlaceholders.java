@@ -46,7 +46,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
   public String onPlaceholderRequest(Player player, @NotNull String identifier) {
     Organization org = fcManager.getOrg();
 
-    if (identifier.equals("enabled")) return fcManager.getPhysics().isMatchesEnabled() ? "YES" : "NO";
+    if (identifier.equals("enabled")) return fcManager.getPhysicsData().isMatchesEnabled() ? "YES" : "NO";
 
     if (identifier.equals("active_lobbies_all")) {
       int count = 0;

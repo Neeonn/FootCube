@@ -3,6 +3,7 @@ package io.github.divinerealms.footcube.managers;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.listeners.*;
+import io.github.divinerealms.footcube.physics.listeners.*;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 
@@ -23,7 +24,12 @@ public class ListenerManager {
     pluginManager.registerEvents(new ChunkCheckers(), plugin);
     pluginManager.registerEvents(new PlayerEvents(fcManager), plugin);
     pluginManager.registerEvents(new SignManipulation(fcManager), plugin);
-    pluginManager.registerEvents(new BallEvents(fcManager), plugin);
+
+    pluginManager.registerEvents(new CubeDamageListener(fcManager), plugin);
+    pluginManager.registerEvents(new CubeKickListener(fcManager), plugin);
+    pluginManager.registerEvents(new CubeTapListener(fcManager), plugin);
+    pluginManager.registerEvents(new PlayerChargeListener(fcManager), plugin);
+    pluginManager.registerEvents(new PlayerMovementListener(fcManager), plugin);
 
     fcManager.getLogger().info("&a✔ &2Registered &e5 &2listeners.");
   }

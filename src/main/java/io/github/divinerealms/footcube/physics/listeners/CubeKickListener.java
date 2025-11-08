@@ -89,8 +89,6 @@ public class CubeKickListener implements Listener {
       CubeTouchType kickType = kickResult.isChargedHit() ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
       if (touches.containsKey(kickType)) return;
 
-      if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
-
       // Compute final kick direction and apply impulse.
       Location playerLocation = player.getLocation();
       Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(KICK_VERTICAL_BOOST);
@@ -104,6 +102,7 @@ public class CubeKickListener implements Listener {
       org.ballTouch(player, TouchType.HIT);
 
       // Schedule post-processing for player sound feedback and debug info.
+      if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
       scheduler.runTask(plugin, () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings != null && settings.isKickSoundEnabled()) system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);

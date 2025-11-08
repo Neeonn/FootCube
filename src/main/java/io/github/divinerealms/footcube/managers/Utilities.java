@@ -55,6 +55,12 @@ public class Utilities {
     return totalSeconds;
   }
 
+  public static String formatTimePretty(int totalSeconds) {
+    int minutes = totalSeconds / 60;
+    int seconds = totalSeconds % 60;
+    return String.format("%02d:%02d", minutes, seconds);
+  }
+
   public static String formatTime(long totalSeconds) {
     if (totalSeconds <= 0) return "0s";
 

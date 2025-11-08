@@ -189,7 +189,7 @@ public class Match {
       case 4: return Lang.MATCHES_LIST_CONTINUING.replace(new String[]{countdown});
       default:
         int remaining = this.scoreTime != 0 ? this.scoreTime : -1;
-        String remainingTime = Utilities.formatTime(remaining);
+        String remainingTime = Utilities.formatTimePretty(remaining);
         return remaining >= 0 ? remainingTime : Lang.NOBODY.replace(null);
     }
   }

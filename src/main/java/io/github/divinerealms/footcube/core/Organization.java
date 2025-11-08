@@ -543,7 +543,7 @@ public class Organization {
           timeDisplay = Lang.MATCHES_LIST_CONTINUING.replace(new String[]{String.valueOf(match.countdown)});
         } else {
           int remaining = match.scoreTime != 0 ? match.scoreTime : -1;
-          timeDisplay = remaining >= 0 ? Utilities.formatTime(remaining) : "N/A";
+          timeDisplay = remaining >= 0 ? Utilities.formatTimePretty(remaining) : "N/A";
         }
 
         if (match.phase == 1) {

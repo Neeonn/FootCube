@@ -44,7 +44,6 @@ public class CubeTapListener implements Listener {
    *
    * @param event the {@link PlayerInteractEntityEvent} fired when a player interacts with an entity
    */
-  @SuppressWarnings("SuspiciousNameCombination")
   @EventHandler
   public void rightClick(PlayerInteractEntityEvent event) {
     long start = System.nanoTime();
@@ -60,11 +59,14 @@ public class CubeTapListener implements Listener {
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().computeIfAbsent(playerId, key -> new ConcurrentHashMap<>());
       if (touches.containsKey(CubeTouchType.RISE)) return;
 
-      cube.setVelocity(cube.getVelocity().add(new Vector(0, CUBE_JUMP_RIGHT_CLICK, 0)));
+      Vector previousVelocity = cube.getVelocity().clone();
+      double newY = Math.max(previousVelocity.getY(), CUBE_JUMP_RIGHT_CLICK);
+      cube.setVelocity(previousVelocity.setY(newY));
       system.queueSound(cube.getLocation());
 
       // Mark player action to prevent spamming.
       touches.put(CubeTouchType.RISE, new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
+      data.getRaised().put(cube.getUniqueId(), System.currentTimeMillis());
       system.recordPlayerAction(player);
       org.ballTouch(player, TouchType.HIT);
     } finally {

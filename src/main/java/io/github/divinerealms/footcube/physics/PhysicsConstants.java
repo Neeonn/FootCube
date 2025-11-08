@@ -18,7 +18,7 @@ public class PhysicsConstants {
   // --- Timeouts & Cooldowns (Milliseconds) ---
   public static final long REGULAR_KICK_COOLDOWN = 150;
   public static final long CHARGED_KICK_COOLDOWN = 500;
-  public static final long RISE_COOLDOWN = 200;
+  public static final long RISE_COOLDOWN = 300;
   public static final long AFK_THRESHOLD = 60_000;
   public static final long SPAWN_COOLDOWN_MS = 3_000L;
 
@@ -31,7 +31,8 @@ public class PhysicsConstants {
   public static final double MAX_KP = 5;
   public static final double SOFT_CAP_MIN_FACTOR = 0.9;
   public static final double CHARGE_MULTIPLIER = 7;
-  public static final double BASE_POWER = 0.4; // 0.375
+  public static final double CHARGED_BASE_POWER = 0.375;
+  public static final double REGULAR_BASE_POWER = 0.65;
   public static final double CHARGE_BASE_VALUE = 1;
   public static final double CHARGE_RECOVERY_RATE = 0.945;
 
@@ -44,7 +45,7 @@ public class PhysicsConstants {
   public static final double WALL_BOUNCE_FACTOR = 0.8;
   public static final double AIR_DRAG_FACTOR = 0.98;
   public static final double CUBE_JUMP_RIGHT_CLICK = 0.7;
-  public static final double KICK_VERTICAL_BOOST = 0.2; // def 0.3
+  public static final double KICK_VERTICAL_BOOST = 0.3;
 
   // --- Distance & Collision Thresholds ---
   public static final double PLAYER_CLOSE = 1.5;

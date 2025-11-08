@@ -102,7 +102,8 @@ public class CubeKickListener implements Listener {
       org.ballTouch(player, TouchType.HIT);
 
       // Schedule post-processing for player sound feedback and debug info.
-      if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
+      // #TODO: Change to lastTouches.
+      // if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
       scheduler.runTask(plugin, () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings != null && settings.isKickSoundEnabled()) system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);

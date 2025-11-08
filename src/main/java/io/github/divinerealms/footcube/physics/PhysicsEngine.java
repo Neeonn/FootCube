@@ -155,7 +155,7 @@ public class PhysicsEngine {
           if (Math.abs(previousVelocity.getY()) > BOUNCE_THRESHOLD) playSound = true;
 
           // If cube is on the ground, add a small bounce so it doesn't stay glued to the ground.
-        } else if (cube.isOnGround()) {
+        } else if (!system.wasRecentlyRaised(cubeId) && cube.isOnGround()) {
           double bounceY = -previousVelocity.getY() * WALL_BOUNCE_FACTOR;
           newVelocity.setY(Math.max(MIN_BOUNCE_VELOCITY_Y, Math.abs(bounceY)));
         }
@@ -356,11 +356,9 @@ public class PhysicsEngine {
       data.getRaised().clear();
       data.getSpeed().clear();
       data.getCharges().clear();
-      data.getKicked().clear();
       fcManager.getPlayerSettings().clear();
       data.getLastAction().clear();
       data.getCubeHits().clear();
-      data.getHitQueue().clear();
       data.getSoundQueue().clear();
       data.getButtonCooldowns().clear();
       data.getLastTouches().clear();

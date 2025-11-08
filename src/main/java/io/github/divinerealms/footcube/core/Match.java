@@ -458,7 +458,7 @@ public class Match {
     --this.tickToSec;
     this.scoreTick++;
     if (this.phase < 1 || this.phase > 4) return;
-    if (this.scoreDirty && this.scoreTick % 20 == 0) this.updateScoreboard();
+    if (this.scoreDirty && this.scoreTick % 10 == 0) this.updateScoreboard();
 
     if (this.phase == 3) {
       if (this.cube == null) return;

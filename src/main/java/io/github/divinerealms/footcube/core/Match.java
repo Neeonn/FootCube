@@ -21,7 +21,6 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -58,7 +57,7 @@ public class Match {
 
   public Map<Player, Boolean> isRed = new ConcurrentHashMap<>();
 
-  public final Map<Player, Long> sugarCooldown = new ConcurrentHashMap<>();
+//  public final Map<Player, Long> sugarCooldown = new ConcurrentHashMap<>();
   public final Map<Player, Integer> goals = new ConcurrentHashMap<>();
   public final Map<UUID, Integer> ownGoals = new ConcurrentHashMap<>();
 
@@ -79,7 +78,7 @@ public class Match {
   private final ItemStack blueChestPlate;
   private final ItemStack blueLeggings;
 
-  public final ItemStack sugar;
+//  public final ItemStack sugar;
 
   public Slime cube;
 
@@ -108,10 +107,10 @@ public class Match {
     this.blueChestPlate = this.createColoredArmour(Material.LEATHER_CHESTPLATE, Color.BLUE);
     this.blueLeggings = this.createColoredArmour(Material.LEATHER_LEGGINGS, Color.BLUE);
 
-    String itemName = Lang.SPEED_ITEM_NAME.replace(null);
-    String itemLore = Lang.SPEED_ITEM_LORE.replace(null);
-
-    this.sugar = this.organization.createComplexItem(Material.SUGAR, itemName, new String[]{itemLore});
+//    String itemName = Lang.SPEED_ITEM_NAME.replace(null);
+//    String itemLore = Lang.SPEED_ITEM_LORE.replace(null);
+//
+//    this.sugar = this.organization.createComplexItem(Material.SUGAR, itemName, new String[]{itemLore});
 
     this.scoreboardManager = fcManager.getTabAPI().getScoreboardManager();
 
@@ -283,7 +282,7 @@ public class Match {
 
         if (this.type != 2) {
           playerData.add("matches");
-          player.getInventory().setItem(4, this.sugar);
+//          player.getInventory().setItem(4, this.sugar);
         }
 
         if (this.isRed.get(player)) {
@@ -312,7 +311,7 @@ public class Match {
     this.takePlace.removeIf(player1 -> player1 == null || player1.getUniqueId().equals(uuid));
     this.teamers.removeIf(player1 -> player1 == null || player1.getUniqueId().equals(uuid));
     this.goals.keySet().removeIf(player1 -> player1 == null || player1.getUniqueId().equals(uuid));
-    this.sugarCooldown.remove(player);
+//    this.sugarCooldown.remove(player);
 
     try {
       player.teleport(config.get("lobby") != null ? (Location) config.get("lobby") : player.getWorld().getSpawnLocation());
@@ -346,7 +345,7 @@ public class Match {
       logger.send(p, Lang.WELCOME.replace(new String[]{Lang.BLUE.replace(null)}));
     }
 
-    if (this.type != 2) p.getInventory().setItem(4, this.sugar);
+//    if (this.type != 2) p.getInventory().setItem(4, this.sugar);
     if (this.isRed.containsKey(p) && this.isRed.get(p)) {
       p.getInventory().setChestplate(this.redChestPlate);
       p.getInventory().setLeggings(this.redLeggings);
@@ -617,13 +616,13 @@ public class Match {
       this.endMatch();
     }
 
-    long cutoff = System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(40);
-    this.sugarCooldown.entrySet().removeIf(entry -> {
-      Player player = entry.getKey();
-      boolean expired = cutoff > entry.getValue();
-      if (expired && organization.isInGame(player)) player.getInventory().setItem(4, this.sugar);
-      return expired;
-    });
+//    long cutoff = System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(40);
+//    this.sugarCooldown.entrySet().removeIf(entry -> {
+//      Player player = entry.getKey();
+//      boolean expired = cutoff > entry.getValue();
+//      if (expired && organization.isInGame(player)) player.getInventory().setItem(4, this.sugar);
+//      return expired;
+//    });
   }
 
   private void score(boolean red) {
@@ -821,7 +820,7 @@ public class Match {
       this.isRed.clear();
       this.goals.clear();
       this.ownGoals.clear();
-      this.sugarCooldown.clear();
+//      this.sugarCooldown.clear();
 
       this.lastKickRed = null;
       this.lastKickBlue = null;

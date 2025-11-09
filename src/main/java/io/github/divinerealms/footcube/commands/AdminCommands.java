@@ -407,7 +407,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             break;
 
           case "speed":
-            player.getInventory().addItem(match.sugar);
+//            player.getInventory().addItem(match.sugar);
             logger.send(sender, Lang.MATCHMAN_SPEED.replace(null));
             break;
 

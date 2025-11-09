@@ -11,21 +11,16 @@ import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import java.util.UUID;
 
@@ -162,26 +157,26 @@ public class PlayerEvents implements Listener {
    *
    * @param event the {@link PlayerInteractEvent} triggered on right-click
    */
-  @EventHandler
-  public void playerSpeedConsumption(PlayerInteractEvent event) {
-    Player player = event.getPlayer();
-    if (system.notAllowedToInteract(player)) return;
-
-    Action action = event.getAction();
-    if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
-
-    Match match = MatchHelper.getMatch(org, player);
-
-    if (match == null || !match.isInMatch(player)) return;
-    if (player.getItemInHand() == null || player.getItemInHand().getType() != Material.SUGAR) return;
-
-    // Consume sugar and apply speed boost.
-    player.setItemInHand(new ItemStack(Material.AIR));
-    org.getLogger().send(player, Lang.SPEED_USAGE.replace(new String[]{"", "5", "40"}));
-    match.sugarCooldown.put(player, System.currentTimeMillis());
-    player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 5 * 20, 1));
-    event.setCancelled(true);
-  }
+//  @EventHandler
+//  public void playerSpeedConsumption(PlayerInteractEvent event) {
+//    Player player = event.getPlayer();
+//    if (system.notAllowedToInteract(player)) return;
+//
+//    Action action = event.getAction();
+//    if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
+//
+//    Match match = MatchHelper.getMatch(org, player);
+//
+//    if (match == null || !match.isInMatch(player)) return;
+//    if (player.getItemInHand() == null || player.getItemInHand().getType() != Material.SUGAR) return;
+//
+//    // Consume sugar and apply speed boost.
+//    player.setItemInHand(new ItemStack(Material.AIR));
+//    org.getLogger().send(player, Lang.SPEED_USAGE.replace(new String[]{"", "5", "40"}));
+//    match.sugarCooldown.put(player, System.currentTimeMillis());
+//    player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 5 * 20, 1));
+//    event.setCancelled(true);
+//  }
 
   /** Prevents item drops during a match to maintain fair play. */
   @EventHandler

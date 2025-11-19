@@ -3,8 +3,8 @@ package io.github.divinerealms.footcube.listeners;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingUtils;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -185,15 +185,15 @@ public class SignManipulation implements Listener {
           int type;
           switch (arenaType) {
             case "2v2":
-              type = MatchmakingConstants.TWO_V_TWO;
+              type = MatchConstants.TWO_V_TWO;
               break;
 
             case "3v3":
-              type = MatchmakingConstants.THREE_V_THREE;
+              type = MatchConstants.THREE_V_THREE;
               break;
 
             case "4v4":
-              type = MatchmakingConstants.FOUR_V_FOUR;
+              type = MatchConstants.FOUR_V_FOUR;
               break;
 
             default:
@@ -227,7 +227,7 @@ public class SignManipulation implements Listener {
           break;
 
         case "matches":
-          List<String> matches = MatchmakingUtils.getFormattedMatches(matchManager.getData().getMatches());
+          List<String> matches = MatchUtils.getFormattedMatches(matchManager.getData().getMatches());
           if (!matches.isEmpty()) {
             logger.send(player, Lang.MATCHES_LIST_HEADER.replace(null));
             matches.forEach(msg -> logger.send(player, msg));

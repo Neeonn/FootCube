@@ -11,7 +11,7 @@ import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
@@ -194,15 +194,15 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         int arenaType;
         switch (type) {
           case "2v2":
-            arenaType = MatchmakingConstants.TWO_V_TWO;
+            arenaType = MatchConstants.TWO_V_TWO;
             break;
 
           case "3v3":
-            arenaType = MatchmakingConstants.THREE_V_THREE;
+            arenaType = MatchConstants.THREE_V_THREE;
             break;
 
           case "4v4":
-            arenaType = MatchmakingConstants.FOUR_V_FOUR;
+            arenaType = MatchConstants.FOUR_V_FOUR;
             break;
 
           default:

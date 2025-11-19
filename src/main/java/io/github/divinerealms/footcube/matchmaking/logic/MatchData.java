@@ -1,7 +1,7 @@
 package io.github.divinerealms.footcube.matchmaking.logic;
 
 import io.github.divinerealms.footcube.matchmaking.Match;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.entity.Player;
@@ -22,9 +22,9 @@ public class MatchData {
   @Setter private boolean matchesEnabled = true;
 
   public MatchData() {
-    playerQueues.put(MatchmakingConstants.TWO_V_TWO, new ConcurrentLinkedQueue<>());
-    playerQueues.put(MatchmakingConstants.THREE_V_THREE, new ConcurrentLinkedQueue<>());
-    playerQueues.put(MatchmakingConstants.FOUR_V_FOUR, new ConcurrentLinkedQueue<>());
-    playerQueues.put(MatchmakingConstants.FIVE_V_FIVE, new ConcurrentLinkedQueue<>());
+    playerQueues.put(MatchConstants.TWO_V_TWO, new ConcurrentLinkedQueue<>());
+    playerQueues.put(MatchConstants.THREE_V_THREE, new ConcurrentLinkedQueue<>());
+    playerQueues.put(MatchConstants.FOUR_V_FOUR, new ConcurrentLinkedQueue<>());
+    playerQueues.put(MatchConstants.FIVE_V_FIVE, new ConcurrentLinkedQueue<>());
   }
 }

@@ -12,8 +12,8 @@ import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingUtils;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.*;
@@ -52,7 +52,7 @@ public class MatchSystem {
       Player player = matchPlayer.getPlayer();
       if (player == null || !player.isOnline()) continue;
 
-      MatchmakingUtils.giveArmor(player, matchPlayer.getTeamColor());
+      MatchUtils.giveArmor(player, matchPlayer.getTeamColor());
       scoreboardManager.showMatchScoreboard(match, player);
       logger.send(player, Lang.MATCH_STARTED.replace(null));
     }
@@ -108,7 +108,7 @@ public class MatchSystem {
   public void handleMatchTimer(Match match) {
     if (match.getPhase() != MatchPhase.IN_PROGRESS) return;
 
-    long matchDuration = match.getArena().getType() == MatchmakingConstants.TWO_V_TWO ? 120 : 300;
+    long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO ? 120 : 300;
     long totalActiveElapsedMillis = (System.currentTimeMillis() - match.getStartTime() - match.getTotalPausedTime());
     long elapsedSeconds = TimeUnit.MILLISECONDS.toSeconds(totalActiveElapsedMillis);
 
@@ -154,22 +154,30 @@ public class MatchSystem {
     String scorerName = Lang.NOBODY.replace(null);
     boolean ownGoal = false;
 
+    Location goalLoc = (scoringTeam == TeamColor.RED) ? match.getArena().getBlueSpawn() : match.getArena().getRedSpawn();
     if (scorer != null) {
       scorerName = fcManager.getChat().getPlayerPrefix(scorer.getPlayer()) + scorer.getPlayer().getName();
+      MatchPlayer second = match.getSecondLastTouch();
+
       if (scorer.getTeamColor() == scoringTeam) {
         scorer.incrementGoals();
-        if (match.getSecondLastTouch() != null && match.getSecondLastTouch() != scorer
-            && match.getSecondLastTouch().getTeamColor() == scoringTeam) {
-          assister = match.getSecondLastTouch();
-          assister.incrementAssists();
+        if (second != null && second.getTeamColor() == scoringTeam) {
+          if (!scorer.equals(second)) {
+            assister = second;
+            assister.incrementAssists();
+          }
         }
       } else {
-        ownGoal = true;
-        scorer.incrementOwnGoals();
+        if (second.getTeamColor() == scoringTeam) {
+          scorer = second;
+          scorer.incrementGoals();
+        } else {
+          ownGoal = true;
+          scorer.incrementOwnGoals();
+        }
       }
     }
 
-    Location goalLoc = (scoringTeam == TeamColor.RED) ? match.getArena().getBlueSpawn() : match.getArena().getRedSpawn();
     for (MatchPlayer p : match.getPlayers()) {
       if (p == null || p.getPlayer() == null || !p.getPlayer().isOnline()) continue;
       Player player = p.getPlayer();
@@ -254,6 +262,7 @@ public class MatchSystem {
             }
           }
 
+          match.getPlayers().stream().filter(Objects::nonNull).forEach(player -> logger.send(player.getPlayer(), Lang.STARTING.replace(null)));
           match.setPhase(MatchPhase.STARTING);
           match.setCountdown(15);
           match.setTick(0);
@@ -320,6 +329,8 @@ public class MatchSystem {
 
           if (match.getCountdown() <= 0) {
             match.setPhase(MatchPhase.IN_PROGRESS);
+            match.getPlayers().stream().filter(Objects::nonNull).filter(p -> p.getPlayer() != null)
+                .forEach(p -> logger.send(p.getPlayer(), Lang.MATCH_PROCEED.replace(null)));
             startRound(match);
           }
         }

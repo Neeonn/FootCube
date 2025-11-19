@@ -12,7 +12,8 @@ import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingUtils;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
 import org.bukkit.Location;
@@ -49,16 +50,17 @@ public class MatchManager {
 
     Team team = teamManager.getTeam(player);
     List<Player> playersToQueue = (team != null) ? team.getMembers() : Collections.singletonList(player);
+    String matchTypeString = matchType + "v" + matchType;
 
     for (Player p : playersToQueue) {
-      if (!data.getPlayerQueues().containsKey(matchType)) { logger.send(p, Lang.JOIN_INVALIDTYPE.replace(new String[]{String.valueOf(matchType), ""})); return; }
+      if (!data.getPlayerQueues().containsKey(matchType)) { logger.send(p, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchTypeString, ""})); return; }
       if (getMatch(p).isPresent() || data.getPlayerQueues().get(matchType).contains(p)) { logger.send(p, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
     }
 
     Queue<Player> queue = data.getPlayerQueues().get(matchType);
     for (Player p : playersToQueue) {
       queue.add(p);
-      logger.send(p, Lang.WELCOME.replace(null));
+      logger.send(p, Lang.JOIN_SUCCESS.replace(new String[]{matchTypeString}));
       p.setLevel(0);
     }
   }
@@ -174,7 +176,7 @@ public class MatchManager {
 
       match.setTakePlaceNeeded(true);
       match.setLastTakePlaceAnnounceTick(0);
-      MatchmakingUtils.clearPlayer(player);
+      MatchUtils.clearPlayer(player);
       scoreboardManager.removeScoreboard(player);
     });
   }
@@ -200,7 +202,7 @@ public class MatchManager {
       if (teamToJoin == TeamColor.RED) player.teleport(match.getArena().getRedSpawn());
       else player.teleport(match.getArena().getBlueSpawn());
 
-      MatchmakingUtils.giveArmor(player, teamToJoin);
+      MatchUtils.giveArmor(player, teamToJoin);
 
       if (match.getPhase() == MatchPhase.LOBBY || match.getPhase() == MatchPhase.STARTING) scoreboardManager.showLobbyScoreboard(match, player);
       else if (match.getPhase() != MatchPhase.ENDED) scoreboardManager.showMatchScoreboard(match, player);
@@ -217,40 +219,53 @@ public class MatchManager {
     TeamColor winner = null;
     if (match.getScoreRed() > match.getScoreBlue()) winner = TeamColor.RED;
     else if (match.getScoreBlue() > match.getScoreRed()) winner = TeamColor.BLUE;
+    String winningTeam = winner == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
       if (matchPlayer == null) continue;
       Player player = matchPlayer.getPlayer();
       if (player == null || !player.isOnline()) continue;
 
-      if (match.getPhase() == MatchPhase.IN_PROGRESS || match.getPhase() == MatchPhase.CONTINUING) {
+      if (match.getPhase() == MatchPhase.ENDED) {
         PlayerData data = fcManager.getDataManager().get(player);
         if (winner == null) {
-          data.add("ties");
+          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+            data.add("ties");
+            data.set("winstreak", 0);
+          }
+
           fcManager.getEconomy().depositPlayer(player, 5);
+          logger.send(player, Lang.MATCH_TIED.replace(null));
           logger.send(player, Lang.MATCH_TIED_CREDITS.replace(null));
         } else if (matchPlayer.getTeamColor() == winner) {
-          data.add("wins");
-          data.add("winstreak");
-          if ((int) data.get("winstreak") > (int) data.get("bestwinstreak"))
-            data.set("bestwinstreak", data.get("winstreak"));
+          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+            data.add("wins");
+            data.add("winstreak");
+
+            if ((int) data.get("winstreak") > (int) data.get("bestwinstreak"))
+              data.set("bestwinstreak", data.get("winstreak"));
+
+            if ((int) data.get("winstreak") > 0 && (int) data.get("winstreak") % 5 == 0) {
+              fcManager.getEconomy().depositPlayer(player, 100);
+              logger.send(player, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
+            }
+          }
 
           fcManager.getEconomy().depositPlayer(player, 15);
+          logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
           logger.send(player, Lang.MATCH_WIN_CREDITS.replace(null));
-
-          if ((int) data.get("winstreak") > 0 && (int) data.get("winstreak") % 5 == 0) {
-            fcManager.getEconomy().depositPlayer(player, 100);
-            logger.send(player, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
-          }
         } else {
-          data.set("winstreak", 0);
-          data.add("losses");
+          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+            data.set("winstreak", 0);
+            data.add("losses");
+          }
+          logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
         }
       }
 
       Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml").get("lobby");
       if (lobby != null) player.teleport(lobby);
-      MatchmakingUtils.clearPlayer(player);
+      MatchUtils.clearPlayer(player);
 
       scoreboardManager.removeScoreboard(player);
       scoreboardManager.unregisterScoreboard(match.getMatchScoreboard());
@@ -319,7 +334,7 @@ public class MatchManager {
     new ArrayList<>(data.getMatches()).forEach(match -> {
       if (match.getPhase() == MatchPhase.LOBBY || match.getPhase() == MatchPhase.STARTING) {
         new ArrayList<>(match.getPlayers()).stream().filter(Objects::nonNull).forEach(p -> {
-          MatchmakingUtils.clearPlayer(p.getPlayer());
+          MatchUtils.clearPlayer(p.getPlayer());
           scoreboardManager.removeScoreboard(p.getPlayer());
           logger.send(p.getPlayer(), Lang.MATCHMAN_FORCE_END.replace(new String[]{match.getArena().getType() + "v" + match.getArena().getType()}));
         });
@@ -337,5 +352,31 @@ public class MatchManager {
         scoreboardManager.createLobbyScoreboard(match);
       } else scoreboardManager.createMatchScoreboard(match);
     });
+  }
+
+  public void teamChat(Player sender, String message) {
+    Optional<Match> matchOpt = getMatch(sender);
+    if (!matchOpt.isPresent()) { logger.send(sender, Lang.LEAVE_NOT_INGAME.replace(null)); return; }
+
+    Match match = matchOpt.get();
+    MatchPlayer senderMP = match.getPlayers().stream()
+        .filter(Objects::nonNull)
+        .filter(mp -> mp.getPlayer() != null && mp.getPlayer().equals(sender))
+        .findFirst()
+        .orElse(null);
+    if (senderMP == null) return;
+
+    TeamColor teamColor = senderMP.getTeamColor();
+    if (teamColor == null) return;
+
+    String prefix = fcManager.getChat().getPlayerPrefix(sender) + sender.getName();
+    String formattedMessage = (teamColor == TeamColor.RED ? Lang.TEAMCHAT_RED.replace(new String[]{prefix}) : Lang.TEAMCHAT_BLUE.replace(new String[]{prefix})) + message;
+
+    for (MatchPlayer matchPlayer : match.getPlayers()) {
+      if (matchPlayer == null) continue;
+      Player player = matchPlayer.getPlayer();
+      if (player == null || !player.isOnline()) continue;
+      if (matchPlayer.getTeamColor() == teamColor) logger.send(player, formattedMessage);
+    }
   }
 }

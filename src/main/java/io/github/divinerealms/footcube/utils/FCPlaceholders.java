@@ -5,7 +5,7 @@ import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -58,7 +58,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
 
     if (identifier.equals("active_lobbies_all")) {
       int count = 0;
-      for (int type : Arrays.asList(MatchmakingConstants.TWO_V_TWO, MatchmakingConstants.THREE_V_THREE, MatchmakingConstants.FOUR_V_FOUR)) {
+      for (int type : Arrays.asList(MatchConstants.TWO_V_TWO, MatchConstants.THREE_V_THREE, MatchConstants.FOUR_V_FOUR)) {
         count += matchManager.countActiveLobbies(type);
       }
       return String.valueOf(count);

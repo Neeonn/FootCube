@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class MatchmakingUtils {
+public class MatchUtils {
 
   public static void giveArmor(Player player, TeamColor color) {
     ItemStack chestplate = createColoredArmor(Material.LEATHER_CHESTPLATE, color == TeamColor.RED ? Color.RED : Color.BLUE);
@@ -82,7 +82,7 @@ public class MatchmakingUtils {
       } else if (match.getPhase() == MatchPhase.STARTING || match.getPhase() == MatchPhase.CONTINUING) {
         timeDisplay = Lang.MATCHES_LIST_STARTING.replace(new String[]{String.valueOf(match.getCountdown())});
       } else {
-        long matchDuration = match.getArena().getType() == MatchmakingConstants.TWO_V_TWO ? 120 : 300;
+        long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO ? 120 : 300;
         long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
         long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 

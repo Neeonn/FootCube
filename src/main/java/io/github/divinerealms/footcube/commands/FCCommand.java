@@ -11,7 +11,7 @@ import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -78,15 +78,15 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         int type;
         switch (matchType) {
           case "2v2":
-            type = MatchmakingConstants.TWO_V_TWO;
+            type = MatchConstants.TWO_V_TWO;
             break;
 
           case "3v3":
-            type = MatchmakingConstants.THREE_V_THREE;
+            type = MatchConstants.THREE_V_THREE;
             break;
 
           case "4v4":
-            type = MatchmakingConstants.FOUR_V_FOUR;
+            type = MatchConstants.FOUR_V_FOUR;
             break;
 
           default:
@@ -172,6 +172,15 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         }
         break;
 
+      case "teamchat":
+      case "tc":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <message>"})); return true; }
+
+        matchManager.teamChat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+        break;
+
       case "team":
       case "t":
         if (!(sender instanceof Player)) return inGameOnly(sender);
@@ -228,9 +237,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             String inviteMatchType = args[1].toLowerCase();
             int inviteType;
             switch (inviteMatchType) {
-              case "2v2": inviteType = MatchmakingConstants.TWO_V_TWO; break;
-              case "3v3": inviteType = MatchmakingConstants.THREE_V_THREE; break;
-              case "4v4": inviteType = MatchmakingConstants.FOUR_V_FOUR; break;
+              case "2v2": inviteType = MatchConstants.TWO_V_TWO; break;
+              case "3v3": inviteType = MatchConstants.THREE_V_THREE; break;
+              case "4v4": inviteType = MatchConstants.FOUR_V_FOUR; break;
               default:
                 logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{inviteMatchType, Lang.OR.replace(null)}));
                 return true;

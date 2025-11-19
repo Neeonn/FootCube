@@ -3,12 +3,18 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.*;
+import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.matchmaking.Match;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.MatchPhase;
+import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
+import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
+import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
-import io.github.divinerealms.footcube.core.MatchHelper;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Difficulty;
@@ -19,14 +25,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.github.divinerealms.footcube.utils.Permissions.*;
@@ -35,10 +38,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Logger logger;
-  private final Organization org;
-  private final FileConfiguration arenas;
+  private final MatchManager matchManager;
+  private final TeamManager teamManager;
   private final PlayerDataManager dataManager;
-
   private final PhysicsData physicsData;
   private final PhysicsSystem system;
 
@@ -46,10 +48,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
-    this.org = fcManager.getOrg();
-    this.arenas = fcManager.getConfigManager().getConfig("arenas.yml");
+    this.matchManager = fcManager.getMatchManager();
+    this.teamManager = matchManager.getTeamManager();
     this.dataManager = fcManager.getDataManager();
-
     this.physicsData = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
   }
@@ -60,7 +61,6 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
     String sub = args[0].toLowerCase();
     Player player;
-    Match match;
     PlayerData playerData;
     PlayerSettings settings;
 
@@ -69,63 +69,68 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
-        if (org.isBanned(player)) return true;
-
+        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (matchManager.getBanManager().isBanned(player)) return true;
         if (args.length < 2 || args[1] == null) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
         String matchType = args[1].toLowerCase();
-        if (org.isInGame(player) || org.getWaitingPlayers().containsKey(player.getName())) {
-          logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null));
-          return true;
+        if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
+
+        int type;
+        switch (matchType) {
+          case "2v2":
+            type = MatchmakingConstants.TWO_V_TWO;
+            break;
+
+          case "3v3":
+            type = MatchmakingConstants.THREE_V_THREE;
+            break;
+
+          case "4v4":
+            type = MatchmakingConstants.FOUR_V_FOUR;
+            break;
+
+          default:
+            logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)}));
+            return true;
         }
 
-        MatchHelper.ArenaData data = MatchHelper.getArenaData(org, matchType);
-        if (data == null || data.lobby < 0 || data.lobby >= data.matches.length) {
-          logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)}));
-          return true;
-        }
-
-        if (arenas.getInt("arenas." + matchType + ".amount", 0) == 0) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
-
-        match = data.matches[data.lobby];
-        if (match == null) { logger.send(player, Lang.JOIN_NOARENA.replace(null)); return true; }
-
-        org.removeTeam(player);
-        match.join(player, false);
-        org.getWaitingPlayers().put(player.getName(), data.size);
-
-        if (player.getAllowFlight()) { player.setFlying(false); player.setAllowFlight(false); }
-        if (player.getGameMode() != GameMode.SURVIVAL) player.setGameMode(GameMode.SURVIVAL);
+        matchManager.joinQueue(player, type);
         break;
 
       case "leave":
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!org.isInGame(player)) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
 
-        match = MatchHelper.getMatch(org, player);
-        if (match != null) {
-          int playerScore, opponentScore;
-
-          if (match.redPlayers.contains(player)) {
-            playerScore = match.scoreRed;
-            opponentScore = match.scoreBlue;
-          } else {
-            playerScore = match.scoreBlue;
-            opponentScore = match.scoreRed;
+        Optional<Match> matchOpt = matchManager.getMatch(player);
+        if (matchOpt.isPresent()) {
+          Match match = matchOpt.get();
+          Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream().filter(Objects::nonNull).filter(p -> p.getPlayer() != null && p.getPlayer().equals(player)).findFirst();
+          if (matchPlayerOpt.isPresent()) {
+            MatchPlayer matchPlayer = matchPlayerOpt.get();
+            int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
+            int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
+            if (match.getPhase() == MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
+              fcManager.getEconomy().withdrawPlayer(player, 200);
+              matchManager.getBanManager().banPlayer(player, 30 * 60 * 1000);
+              logger.send(player, Lang.LEAVE_LOSING.replace(null));
+            }
           }
 
-          boolean freeLeave = match.phase == 2 || playerScore == opponentScore || playerScore > opponentScore;
-          if (!freeLeave) {
-            fcManager.getEconomy().withdrawPlayer(player, 200);
-            long banUntil = System.currentTimeMillis() + (30 * 60 * 1000);
-            org.getLeaveCooldowns().put(player.getUniqueId(), banUntil);
-            logger.send(player, Lang.LEAVE_LOSING.replace(null));
+          matchManager.leaveMatch(player);
+          logger.send(player, Lang.LEFT.replace(null));
+        } else {
+          boolean leftQueue = false;
+          for (int queueType : matchManager.getData().getPlayerQueues().keySet()) {
+            if (matchManager.getData().getPlayerQueues().get(queueType).contains(player)) {
+              matchManager.leaveQueue(player, queueType);
+              leftQueue = true;
+            }
           }
+
+          if (leftQueue) logger.send(player, Lang.LEFT.replace(null));
+          else logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null));
         }
-
-        MatchHelper.leaveMatch(org, player, match, logger, false);
         break;
 
       case "takeplace":
@@ -133,39 +138,37 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
-        if (org.isBanned(player)) return true;
-        if (org.getLeftMatches().length == 0) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
-        if (org.isInGame(player)) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
+        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (matchManager.getBanManager().isBanned(player)) return true;
+        if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
+        if (matchManager.getData().getOpenMatches().isEmpty()) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
 
-        org.getPlayingPlayers().add(player.getName());
-        org.getLeftMatches()[0].takePlace(player);
+        if (args.length < 2) {
+          Match openMatch = matchManager.getData().getOpenMatches().stream().findFirst().get();
+          matchManager.takePlace(player, openMatch.getArena().getId());
+          return true;
+        }
 
-        org.setLeftMatches(Arrays.copyOfRange(org.getLeftMatches(), 1, org.getLeftMatches().length));
-        org.setLeftPlayerIsRed(Arrays.copyOfRange(org.getLeftPlayerIsRed(), 1, org.getLeftPlayerIsRed().length));
-        break;
+        if (args[1].equalsIgnoreCase("list")) {
+          logger.send(player, Lang.TAKEPLACE_AVAILABLE_HEADER.replace(null));
 
-      case "teamchat":
-      case "tc":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
-        player = (Player) sender;
+          for (Match openMatch : matchManager.getData().getOpenMatches()) {
+            long emptySlots = openMatch.getPlayers().stream().filter(Objects::isNull).count();
 
-        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <message>"})); return true; }
+            logger.send(player, Lang.TAKEPLACE_AVAILABLE_ENTRY.replace(new String[]{
+                String.valueOf(openMatch.getArena().getId()),
+                openMatch.getArena().getType() + "v" + openMatch.getArena().getType(),
+                String.valueOf(emptySlots)
+            }));
+          }
+          return true;
+        }
 
-        match = MatchHelper.getMatch(org, player);
-        if (match == null) { logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null)); return true; }
-        if (!match.canUseTeamChat()) { logger.send(player, Lang.TEAMS_NOT_SETUP.replace(null)); return true; }
-
-        match.teamChat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
-        break;
-
-      case "stats":
-        if (sender instanceof Player) {
-          Player p = (Player) sender;
-          org.checkStats(args.length > 1 ? args[1] : p.getName(), sender);
-        } else {
-          if (args.length < 2) { logger.send(sender, "&cYou need to specify a player."); }
-          else { org.checkStats(args[1], sender); }
+        try {
+          int matchId = Integer.parseInt(args[1]);
+          matchManager.takePlace(player, matchId);
+        } catch (NumberFormatException exception) {
+          logger.send(player, Lang.STATSSET_IS_NOT_A_NUMBER.replace(new String[]{args[1]}));
         }
         break;
 
@@ -174,97 +177,102 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, label + " " + sub})); return true; }
-        if (!physicsData.isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
+        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return true; }
         if (args.length < 2) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
 
-        String action = args[1].toLowerCase();
-        String targetName = args.length > 2 ? args[2] : null;
+        String action = args[1].toLowerCase(), targetName;
         Player target;
-        MatchHelper.ArenaData dataTeam;
-
         switch (action) {
-          case "cancel":
-            if (!org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST_SENT.replace(null)); break; }
-            target = org.getTeamReverse().get(player);
-            logger.send(target, Lang.TEAM_CANCEL_OTHER.replace(new String[]{player.getName()}));
-            logger.send(player, Lang.TEAM_CANCEL.replace(null));
-            org.getTeamType().remove(player);
-            org.getTeamReverse().remove(player);
-            org.getTeam().remove(target);
-            break;
-
           case "accept":
-            if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
-            target = org.getTeam().get(player);
-            int sizeTeam = org.getTeamType().get(target);
-            dataTeam = MatchHelper.getArenaData(org, sizeTeam + "v" + sizeTeam);
-            boolean placedInMatch = false;
-            if (dataTeam != null) placedInMatch = dataTeam.matches[dataTeam.lobby].team(player, target);
-            if (!placedInMatch) {
-              org.getWaitingTeamPlayers().add(player);
-              org.getWaitingTeamPlayers().add(target);
-              org.setWaitingTeams(org.extendArray(org.getWaitingTeams(), new Player[]{player, target, null}));
+            if (teamManager.isInTeam(player)) { logger.send(player, Lang.TEAM_ALREADY_IN_TEAM.replace(null)); return true; }
+            if (!teamManager.hasInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
+
+            target = teamManager.getInviter(player);
+            targetName = target != null && target.isOnline() ? target.getName() : "";
+            if (target == null || !target.isOnline()) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); return true; }
+
+            if (teamManager.isInTeam(target)) {
+              logger.send(player, Lang.TEAM_ALREADY_IN_TEAM_2.replace(new String[]{target.getName()}));
+              teamManager.removeInvite(player);
+              return true;
             }
-            logger.send(player, Lang.TEAM_ACCEPT_OTHER.replace(new String[]{target.getName()}));
-            logger.send(target, Lang.TEAM_ACCEPT_SELF.replace(new String[]{player.getName()}));
-            org.getTeam().remove(player);
-            org.getTeamReverse().remove(target);
-            org.getTeamType().remove(target);
+
+            int mType = teamManager.getInviteMatchType(player);
+            teamManager.createTeam(target, player, mType);
+            logger.send(player, Lang.TEAM_ACCEPT_SELF.replace(new String[]{target.getName()}));
+            logger.send(target, Lang.TEAM_ACCEPT_OTHER.replace(new String[]{player.getName()}));
+
+            matchManager.joinQueue(player, mType);
+            teamManager.removeInvite(player);
             break;
 
           case "decline":
-            if (!org.getTeam().containsKey(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); break; }
-            target = org.getTeam().get(player);
-            logger.send(target, Lang.TEAM_DECLINE_OTHER.replace(new String[]{player.getName()}));
+            if (!teamManager.hasInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
+
+            target = teamManager.getInviter(player);
+            if (target != null && target.isOnline()) logger.send(target, Lang.TEAM_DECLINE_OTHER.replace(new String[]{player.getName()}));
+
             logger.send(player, Lang.TEAM_DECLINE_SELF.replace(null));
-            org.getTeamType().remove(target);
-            org.getTeamReverse().remove(target);
-            org.getTeam().remove(player);
-            break;
-
-          case "2v2":
-          case "3v3":
-          case "4v4":
-            if (args.length < 3) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
-            if (targetName == null || !org.isOnlinePlayer(targetName)) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); break; }
-            target = plugin.getServer().getPlayer(targetName);
-            if (player.equals(target)) { logger.send(player, Lang.TEAM_YOURSELF.replace(null)); break; }
-            if (org.isInGame(player) || org.isInGame(target)) { logger.send(player, Lang.TEAM_CANT_SEND_INGAME.replace(null)); break; }
-            if (org.getTeam().containsKey(target) || org.getTeamReverse().containsKey(player)) { logger.send(player, Lang.TEAM_ALREADY_SENT.replace(new String[]{targetName})); break; }
-
-            dataTeam = MatchHelper.getArenaData(org, action);
-            if (dataTeam == null) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); break; }
-
-            org.getTeam().put(target, player);
-            org.getTeamReverse().put(player, target);
-            org.getTeamType().put(player, dataTeam.size);
-            logger.send(target, Lang.TEAM_WANTS_TO_TEAM_OTHER.replace(new String[]{player.getName(), String.valueOf(dataTeam.size)}));
-            logger.send(player, Lang.TEAM_WANTS_TO_TEAM_SELF.replace(new String[]{target.getName(), String.valueOf(dataTeam.size)}));
+            teamManager.removeInvite(player);
             break;
 
           default:
-            logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)}));
+            if (args.length < 3) { logger.send(player, Lang.TEAM_USAGE.replace(new String[]{Lang.OR.replace(null)})); return true; }
+            if (teamManager.isInTeam(player)) { logger.send(player, Lang.TEAM_ALREADY_IN_TEAM.replace(null)); return true; }
+
+            targetName = args[2];
+            target = plugin.getServer().getPlayer(targetName);
+            if (target == null) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); return true; }
+            if (teamManager.isInTeam(target)) { logger.send(player, Lang.TEAM_ALREADY_IN_TEAM_2.replace(new String[]{target.getName()})); return true; }
+
+            String inviteMatchType = args[1].toLowerCase();
+            int inviteType;
+            switch (inviteMatchType) {
+              case "2v2": inviteType = MatchmakingConstants.TWO_V_TWO; break;
+              case "3v3": inviteType = MatchmakingConstants.THREE_V_THREE; break;
+              case "4v4": inviteType = MatchmakingConstants.FOUR_V_FOUR; break;
+              default:
+                logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{inviteMatchType, Lang.OR.replace(null)}));
+                return true;
+            }
+
+            teamManager.invite(player, target, inviteType);
+            logger.send(player, Lang.TEAM_WANTS_TO_TEAM_SELF.replace(new String[]{target.getName(), inviteMatchType}));
+            logger.send(target, Lang.TEAM_WANTS_TO_TEAM_OTHER.replace(new String[]{player.getName(), inviteMatchType}));
+            break;
+        }
+        break;
+
+      case "stats":
+        if (sender instanceof Player) {
+          Player p = (Player) sender;
+          fcManager.checkStats(args.length > 1 ? args[1] : p.getName(), sender);
+        } else {
+          if (args.length < 2) logger.send(sender, "&cYou need to specify a player.");
+          else fcManager.checkStats(args[1], sender);
+
         }
         break;
 
       case "highscores":
       case "best":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        org.updateHighScores((Player) sender);
+        if (fcManager.getHighscoreManager().needsUpdate()) fcManager.getHighscoreManager().playerUpdate((Player) sender);
+        else fcManager.getHighscoreManager().addWaitingPlayer((Player) sender);
         break;
 
       case "cube":
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
-        if (!player.hasPermission(PERM_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
-        if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, Lang.PREFIX.replace(null) + "&cDifficulty ne sme biti na peaceful."); return true; }
-        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+        if (!player.hasPermission(PERM_CUBE)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_CUBE, label + " " + sub})); return true; }
+        if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) { logger.send(player, "{prefix-admin}&cDifficulty ne sme biti na peaceful."); return true; }
+        if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
         if (system.cantSpawnYet(player)) return true;
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
         Location spawnLoc;
-        if (player.getGameMode() != GameMode.CREATIVE) {
+        if (player.getGameMode() != GameMode.CREATIVE && !player.isFlying()) {
           spawnLoc = loc.add(dir.multiply(2.0));
           spawnLoc.setY(loc.getY() + 2.5);
         } else spawnLoc = loc;
@@ -278,21 +286,16 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+        if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
-        double closestDistance = 100.0;
+        double closestDistance = 200;
         Slime closest = null;
         for (Slime cube : physicsData.getCubes()) {
           double distance = cube.getLocation().distance(player.getLocation());
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closest = cube;
-          }
+          if (distance < closestDistance) { closestDistance = distance; closest = cube; }
         }
 
-        if (closest != null) {
-          closest.setHealth(0);
-          logger.send(player, Lang.CUBE_CLEAR.replace(null));
+        if (closest != null) { closest.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null));
         } else logger.send(player, Lang.CUBE_NO_CUBES.replace(null));
         break;
 
@@ -300,13 +303,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return inGameOnly(sender);
         player = (Player) sender;
         if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_CUBE, label + " " + sub})); return true; }
-        if (org.isInGame(player)) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+        if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
         int count = 0;
-        for (Slime cube : physicsData.getCubes()) {
-          cube.setHealth(0);
-          count++;
-        }
+        for (Slime cube : physicsData.getCubes()) { cube.setHealth(0); count++; }
         logger.send(player, Lang.CUBE_CLEAR_ALL.replace(new String[]{String.valueOf(count)}));
         break;
 
@@ -316,11 +316,11 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         player = (Player) sender;
         if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <kick|goal|particles|hits> <value|list>"})); return true; }
 
-        String type = args[1].toLowerCase();
+        String toggleType = args[1].toLowerCase();
         playerData = dataManager.get(player);
         if (playerData == null) return true;
         settings = fcManager.getPlayerSettings(player);
-        switch (type) {
+        switch (toggleType) {
           case "kick":
             settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
             playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
@@ -471,8 +471,12 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         break;
 
       case "help":
-      case "h": sendHelp(sender); break;
-      default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
+      case "h":
+        sendHelp(sender);
+        break;
+      default:
+        logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label}));
+        break;
     }
 
     if (sender instanceof Player) system.recordPlayerAction((Player) sender);
@@ -506,7 +510,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
-          "join", "leave", "takeplace", "tkp", "teamchat", "tc", "team", "t",
+          "join", "leave", "takeplace", "tkp", "team", "t",
           "stats", "best", "highscores", "toggles", "ts", "cube", "clearcube",
           "clearcubes", "help", "h", "setsound", "setparticle"
       ));
@@ -514,22 +518,27 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       String sub = args[0].toLowerCase();
       switch (sub) {
         case "join":
-          for (String type : Arrays.asList("2v2", "3v3", "4v4")) if (arenas.getInt("arenas." + type + ".amount", 0) > 0) completions.add(type);
+          completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
           break;
+
         case "team":
         case "t":
-          for (Player p : fcManager.getCachedPlayers())
-            if (!p.equals(sender) && !org.isInGame(p) && !org.getTeam().containsKey(p) && !org.getTeamReverse().containsKey(p)) completions.add(p.getName());
           completions.addAll(Arrays.asList("accept", "decline", "cancel", "2v2", "3v3", "4v4"));
           break;
+
         case "toggles":
         case "ts":
-          completions.addAll(Arrays.asList("kick", "goal", "particles", "hits")); break;
+          completions.addAll(Arrays.asList("kick", "goal", "particles", "hits"));
+          break;
+
         case "setparticle":
           completions.add("list");
           completions.addAll(PlayerSettings.getAllowedParticles());
           break;
-        case "setsound": completions.addAll(Arrays.asList("kick", "goal")); break;
+
+        case "setsound":
+          completions.addAll(Arrays.asList("kick", "goal"));
+          break;
       }
     } else if (args.length == 3) {
       String sub = args[0].toLowerCase();
@@ -546,8 +555,13 @@ public class FCCommand implements CommandExecutor, TabCompleter {
               .collect(Collectors.toList()));
         }
       } else if (sub.equalsIgnoreCase("setparticle")) {
-        if (args[1].equalsIgnoreCase("list")) completions.addAll(PlayerSettings.getAllowedParticles());
-        else if (args[1].equalsIgnoreCase("redstone")) completions.addAll(PlayerSettings.getAllowedColorNames());
+        if (args[1].equalsIgnoreCase("list")) {
+          completions.addAll(PlayerSettings.getAllowedParticles());
+        } else if (args[1].equalsIgnoreCase("redstone")) {
+          completions.addAll(PlayerSettings.getAllowedColorNames());
+        }
+      } else if (sub.equalsIgnoreCase("team") || sub.equalsIgnoreCase("t")) {
+        fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
       }
     }
 

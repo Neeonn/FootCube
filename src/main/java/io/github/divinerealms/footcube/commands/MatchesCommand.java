@@ -2,7 +2,8 @@ package io.github.divinerealms.footcube.commands;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingUtils;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.command.Command;
@@ -15,28 +16,24 @@ import java.util.List;
 public class MatchesCommand implements CommandExecutor {
   private final FCManager fcManager;
   private final Logger logger;
-
   private final PhysicsSystem system;
 
   public MatchesCommand(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-
     this.system = fcManager.getPhysicsSystem();
   }
 
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    Organization org = fcManager.getOrg();
-    List<String> output = org.getMatches();
+    MatchManager matchManager = fcManager.getMatchManager();
+    List<String> output = MatchmakingUtils.getFormattedMatches(matchManager.getData().getMatches());
 
     if (!output.isEmpty()) {
       logger.send(sender, Lang.MATCHES_LIST_HEADER.replace(null));
       output.forEach(msg -> logger.send(sender, msg));
       logger.send(sender, Lang.MATCHES_LIST_FOOTER.replace(null));
-    } else {
-      logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
-    }
+    } else logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
 
     if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;

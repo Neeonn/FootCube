@@ -3,17 +3,20 @@ package io.github.divinerealms.footcube.commands;
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.core.*;
+import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.matchmaking.Match;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
+import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
-import net.luckperms.api.node.types.PermissionNode;
 import org.bukkit.DyeColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -35,29 +38,28 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Logger logger;
-  private final Organization org;
+  private final MatchManager matchManager;
+  private final ArenaManager arenaManager;
+  private final BanManager banManager;
   private final DisableCommands disableCommands;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
-
   private final PhysicsData data;
   private final PhysicsSystem system;
-
-  private final FileConfiguration arenas, config, practice;
+  private final FileConfiguration config, practice;
 
   public AdminCommands(FCManager fcManager, DisableCommands disableCommands) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
-    this.org = fcManager.getOrg();
+    this.matchManager = fcManager.getMatchManager();
+    this.arenaManager = matchManager.getArenaManager();
+    this.banManager = matchManager.getBanManager();
     this.disableCommands = disableCommands;
     this.configManager = fcManager.getConfigManager();
     this.dataManager = fcManager.getDataManager();
-
     this.data = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
-
-    this.arenas = configManager.getConfig("arenas.yml");
     this.config = configManager.getConfig("config.yml");
     this.practice = configManager.getConfig("practice.yml");
   }
@@ -66,11 +68,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) { logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); return true; }
 
-    String sub = args[0].toLowerCase(), formattedTime, type;
-    Player player, target;
-    Match match;
+    String sub = args[0].toLowerCase();
+    Player player;
+    Player target;
     PlayerData playerData;
-    long banUntil;
 
     switch (sub) {
       case "reload":
@@ -95,17 +96,9 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       case "toggle":
         if (!sender.hasPermission(PERM_TOGGLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_TOGGLE, label + " " + sub})); return true; }
-        boolean state = data.isMatchesEnabled();
-        data.matchesEnabled = !state;
-        fcManager.getLuckPerms().getGroupManager().modifyGroup("vip", group -> {
-          if (state) {
-            group.data().add(PermissionNode.builder("essentials.gamemode.spectator").build());
-            group.data().add(PermissionNode.builder("essentials.gamemode.survival").build());
-          } else {
-            group.data().remove(PermissionNode.builder("essentials.gamemode.spectator").build());
-            group.data().remove(PermissionNode.builder("essentials.gamemode.survival").build());
-          }
-        });
+        boolean state = matchManager.getData().isMatchesEnabled();
+        matchManager.getData().setMatchesEnabled(!state);
+        if (!matchManager.getData().isMatchesEnabled()) matchManager.clearLobbiesAndQueues();
         logger.send(sender, Lang.FC_TOGGLE.replace(new String[]{state ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
         break;
 
@@ -116,24 +109,18 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         target = plugin.getServer().getPlayer(args[1]);
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-        int seconds;
         try {
-          seconds = Utilities.parseTime(args[2]);
+          int seconds = Utilities.parseTime(args[2]);
+          if (seconds <= 0) {
+            logger.send(sender, Lang.USAGE.replace(new String[]{label + " ban <player> <time>"}));
+            return true;
+          }
+
+          banManager.banPlayer(target, seconds * 1000L);
+          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na &e" + Utilities.formatTime(seconds) + "&c.");
         } catch (NumberFormatException exception) {
           logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player> <time>"}));
-          return true;
         }
-
-        if (seconds <= 0) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " ban <player> <time>"})); return true; }
-        banUntil = System.currentTimeMillis() + (seconds * 1000L);
-        org.getLeaveCooldowns().put(target.getUniqueId(), banUntil);
-
-        playerData = dataManager.get(target);
-        playerData.set("ban", banUntil);
-        dataManager.savePlayerData(target.getName());
-
-        formattedTime = Utilities.formatTime(seconds);
-        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan iz FC na &e" + formattedTime + "&c.");
         break;
 
       case "unban":
@@ -143,15 +130,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         target = plugin.getServer().getPlayer(args[1]);
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-        if (org.getLeaveCooldowns().remove(target.getUniqueId()) != null) {
-          playerData = dataManager.get(target);
-          playerData.set("ban", null);
-          dataManager.savePlayerData(target.getName());
-
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&a je unbanovan.");
-        } else {
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
-        }
+        banManager.unbanPlayer(target);
+        logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&a je unbanovan.");
         break;
 
       case "checkban":
@@ -161,32 +141,14 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         target = plugin.getServer().getPlayer(args[1]);
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-        if (org.getLeaveCooldowns().containsKey(target.getUniqueId())) {
-          banUntil = org.getLeaveCooldowns().get(target.getUniqueId());
-          long now = System.currentTimeMillis();
-
-          if (now >= banUntil) {
-            org.getLeaveCooldowns().remove(target.getUniqueId());
-
-            playerData = dataManager.get(target);
-            if (playerData != null) {
-              playerData.set("ban", null);
-              dataManager.savePlayerData(target.getName());
-            }
-
-            logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
-          } else {
-            long secondsLeft = (banUntil - now) / 1000L;
-            formattedTime = Utilities.formatTime(secondsLeft);
-            logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + formattedTime + "&c.");
-          }
-        } else {
-          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
-        }
+        if (banManager.isBanned(target)) {
+          long banTime = banManager.getBannedPlayers().get(target.getUniqueId());
+          long secondsLeft = (banTime - System.currentTimeMillis()) / 1000L;
+          logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c je banovan još &e" + Utilities.formatTime(secondsLeft) + "&c.");
+        } else logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + target.getDisplayName() + "&c nije banovan.");
         break;
 
       case "statset":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
         if (!sender.hasPermission(PERM_STAT_SET)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_STAT_SET, label + " " + sub})); return true; }
         if (args.length < 4) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <player> <stat> <amount|clear>"})); return true; }
 
@@ -199,32 +161,23 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         int amount = 0;
 
         if (!clear) {
-          try { amount = Integer.parseInt(args[3]); }
-          catch (NumberFormatException e) {
+          try {
+            amount = Integer.parseInt(args[3]);
+          } catch (NumberFormatException e) {
             logger.send(sender, Lang.STATSSET_IS_NOT_A_NUMBER.replace(new String[]{args[3]}));
             return true;
           }
         }
 
-        switch (stat) {
-          case "wins": case "matches": case "ties": case "goals": case "assists": case "owngoals": case "winstreak": case "bestwinstreak":
-            playerData.set(stat, clear ? 0 : amount);
-            break;
-
-          case "all":
-            playerData.set("wins", clear ? 0 : amount);
-            playerData.set("matches", clear ? 0 : amount);
-            playerData.set("ties", clear ? 0 : amount);
-            playerData.set("goals", clear ? 0 : amount);
-            playerData.set("assists", clear ? 0 : amount);
-            playerData.set("owngoals", clear ? 0 : amount);
-            playerData.set("winstreak", clear ? 0 : amount);
-            playerData.set("bestwinstreak", clear ? 0 : amount);
-            break;
-
-          default:
-            logger.send(sender, Lang.STATSSET_NOT_A_STAT.replace(new String[]{stat}));
-            return true;
+        if (Arrays.asList("wins", "matches", "ties", "goals", "assists", "owngoals", "winstreak", "bestwinstreak").contains(stat)) {
+          playerData.set(stat, clear ? 0 : amount);
+        } else if (stat.equals("all")) {
+          int finalAmount = amount;
+          Arrays.asList("wins", "matches", "ties", "goals", "assists", "owngoals", "winstreak", "bestwinstreak")
+              .forEach(s -> playerData.set(s, clear ? 0 : finalAmount));
+        } else {
+          logger.send(sender, Lang.STATSSET_NOT_A_STAT.replace(new String[]{stat}));
+          return true;
         }
 
         dataManager.savePlayerData(target.getName());
@@ -233,83 +186,66 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
 
       case "setuparena":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
-        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
-
         player = (Player) sender;
-        type = args[1].toLowerCase();
-        if (!Arrays.asList("2v2", "3v3", "4v4").contains(type)) { logger.send(sender, "&cInvalid type. Use 2v2, 3v3, or 4v4."); return true; }
-        if (org.getSetupGuy() != null) { logger.send(sender, Lang.SETUP_ARENA_ALREADY_SOMEONE.replace(new String[]{org.getSetupGuy()})); return true; }
+        if (!player.hasPermission(PERM_SETUP_ARENA)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <2v2|3v3|4v4>"})); return true; }
 
-        MatchHelper.ArenaData setup = MatchHelper.getArenaData(org, type);
-        if (setup == null) { logger.send(sender, Lang.JOIN_INVALIDTYPE.replace(new String[]{type, Lang.OR.replace(null)})); return true; }
+        String type = args[1].toLowerCase();
+        int arenaType;
+        switch (type) {
+          case "2v2":
+            arenaType = MatchmakingConstants.TWO_V_TWO;
+            break;
 
-        org.setSetupType(setup.size);
-        org.setSetupGuy(player.getName());
-        logger.send(sender, Lang.SETUP_ARENA_START.replace(null));
+          case "3v3":
+            arenaType = MatchmakingConstants.THREE_V_THREE;
+            break;
+
+          case "4v4":
+            arenaType = MatchmakingConstants.FOUR_V_FOUR;
+            break;
+
+          default:
+            logger.send(player, "&cInvalid type. Use 2v2, 3v3, or 4v4.");
+            return true;
+        }
+
+        arenaManager.getSetupWizards().put(player, new ArenaManager.ArenaSetup(arenaType));
+        logger.send(player, Lang.SETUP_ARENA_START.replace(null));
         break;
 
       case "set":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
         player = (Player) sender;
+        if (!player.hasPermission(PERM_SETUP_ARENA)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
 
-        if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "Not setting up an arena"); return true; }
-        int arenaType = org.getSetupType();
-        String typeString = arenaType + "v" + arenaType;
+        ArenaManager.ArenaSetup setup = arenaManager.getSetupWizards().get(player);
+        if (setup == null) { logger.send(player, Lang.PREFIX_ADMIN.replace(null) + "You are not setting up an arena."); return true; }
 
-        if (org.getSetupLoc() == null) {
-          org.setSetupLoc(player.getLocation());
-          logger.send(sender, Lang.SETUP_ARENA_FIRST_SET.replace(null));
-          return true;
+        if (setup.getBlueSpawn() == null) {
+          setup.setBlueSpawn(player.getLocation());
+          logger.send(player, Lang.SETUP_ARENA_FIRST_SET.replace(null));
+        } else {
+          arenaManager.createArena(setup.getType(), setup.getBlueSpawn(), player.getLocation());
+          arenaManager.getSetupWizards().remove(player);
+          logger.send(player, Lang.SETUP_ARENA_SUCCESS.replace(null));
         }
 
-        int index = arenas.getInt("arenas." + typeString + ".amount", 0) + 1;
-        Location blue = org.getSetupLoc();
-        Location red = player.getLocation();
-
-        arenas.set("arenas." + typeString + ".amount", index);
-        arenas.set("arenas.world", player.getWorld().getName());
-
-        String bluePath = "arenas." + typeString + "." + index + ".blue.";
-        String redPath = "arenas." + typeString + "." + index + ".red.";
-
-        arenas.set(bluePath + "x", blue.getX()); arenas.set(bluePath + "y", blue.getY()); arenas.set(bluePath + "z", blue.getZ());
-        arenas.set(bluePath + "pitch", blue.getPitch()); arenas.set(bluePath + "yaw", blue.getYaw());
-
-        arenas.set(redPath + "x", red.getX()); arenas.set(redPath + "y", red.getY()); arenas.set(redPath + "z", red.getZ());
-        arenas.set(redPath + "pitch", red.getPitch()); arenas.set(redPath + "yaw", red.getYaw());
-
-        configManager.saveConfig("arenas.yml");
-        org.addArena(arenaType, blue, red);
-        org.setSetupGuy(null); org.setSetupType(0); org.setSetupLoc(null);
-
-        logger.send(sender, Lang.SETUP_ARENA_SUCCESS.replace(null));
         break;
 
       case "undo":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (!sender.hasPermission(PERM_SETUP_ARENA)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
         player = (Player) sender;
+        if (!player.hasPermission(PERM_SETUP_ARENA)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_SETUP_ARENA, label + " " + sub})); return true; }
 
-        if (!player.getName().equals(org.getSetupGuy())) { logger.send(sender, Lang.PREFIX_ADMIN.replace(null) + "Not setting up an arena"); return true; }
-
-        org.setSetupGuy(null); org.setSetupType(0); org.setSetupLoc(null);
-        logger.send(sender, Lang.UNDO.replace(null));
+        if (arenaManager.getSetupWizards().remove(player) != null) logger.send(player, Lang.UNDO.replace(null));
+        else logger.send(player, Lang.PREFIX_ADMIN.replace(null) + "You are not setting up an arena.");
         break;
 
       case "cleararenas":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
         if (!sender.hasPermission(PERM_CLEAR_ARENAS)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_ARENAS, label + " " + sub})); return true; }
 
-        arenas.set("arenas", null);
-        for (String t : Arrays.asList("2v2", "3v3", "4v4")) {
-          arenas.addDefault("arenas." + t + ".amount", 0);
-          MatchHelper.ArenaData arenaData = MatchHelper.getArenaData(org, t);
-          if (arenaData != null) arenaData.matches = new Match[0];
-        }
-
-        configManager.saveConfig("arenas.yml");
+        arenaManager.clearArenas();
         logger.send(sender, Lang.CLEAR_ARENAS_SUCCESS.replace(null));
         break;
 
@@ -320,10 +256,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         player = (Player) sender;
         config.set("lobby", player.getLocation());
         configManager.saveConfig("config.yml");
-        logger.send(sender, Lang.PRACTICE_AREA_SET.replace(new String[]{"lobby",
-            String.valueOf(player.getLocation().getX()),
-            String.valueOf(player.getLocation().getY()),
-            String.valueOf(player.getLocation().getZ())}));
+        logger.send(sender, Lang.PRACTICE_AREA_SET.replace(new String[]{"lobby", String.valueOf(player.getLocation().getX()), String.valueOf(player.getLocation().getY()), String.valueOf(player.getLocation().getZ())}));
         break;
 
       case "setpracticearea":
@@ -336,16 +269,15 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         String name = args[1];
         practice.set("practice-areas." + name, player.getLocation());
         configManager.saveConfig("practice.yml");
-
-        logger.send(sender, Lang.PRACTICE_AREA_SET.replace(new String[]{name,
-            String.valueOf(player.getLocation().getX()),
-            String.valueOf(player.getLocation().getY()),
-            String.valueOf(player.getLocation().getZ())}));
+        logger.send(sender, Lang.PRACTICE_AREA_SET.replace(new String[]{
+            name, String.valueOf(player.getLocation().getX()), String.valueOf(player.getLocation().getY()), String.valueOf(player.getLocation().getZ())
+        }));
         break;
 
       case "hitsdebug":
       case "hits":
         if (!sender.hasPermission(PERM_HIT_DEBUG)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_HIT_DEBUG, label + " " + sub})); return true; }
+
         boolean status = data.isHitDebugEnabled();
         data.hitDebugEnabled = !status;
         logger.send(sender, Lang.TOGGLES_HIT_DEBUG.replace(new String[]{status ? Lang.OFF.replace(null) : Lang.ON.replace(null)}));
@@ -384,35 +316,24 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       case "matchman":
       case "mm":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (!sender.hasPermission(PERM_MATCHMAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MATCHMAN, label + " " + sub})); return true; }
-        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end|speed>"})); return true; }
-
         player = (Player) sender;
-        match = MatchHelper.getMatch(org, player);
-        if (match == null) { logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return true; }
-        int matchSize = MatchHelper.getMatchSize(org, match);
-        String matchType = matchSize + "v" + matchSize;
-
+        if (!sender.hasPermission(PERM_MATCHMAN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_MATCHMAN, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end>"})); return true; }
         switch (args[1].toLowerCase()) {
           case "start":
-            for (int i = 1; i <= (match.type * 2) - 1; i++) { match.join(player, false); org.getWaitingPlayers().put(player.getName(), match.type); }
-            match.countdown = 5;
-            logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{matchType}));
+            matchManager.forceStartMatch(player);
             break;
 
           case "end":
-            match.endMatch();
-            org.endMatch(player);
-            logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{matchType}));
-            break;
-
-          case "speed":
-//            player.getInventory().addItem(match.sugar);
-            logger.send(sender, Lang.MATCHMAN_SPEED.replace(null));
+            Optional<Match> match = matchManager.getMatch(player);
+            if (match.isPresent()) {
+              matchManager.endMatch(match.get());
+              logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{match.get().getArena().getType() + "v" + match.get().getArena().getType()}));
+            } else logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
             break;
 
           default:
-            logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end|speed>"}));
+            logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <start|end>"}));
         }
         break;
 
@@ -424,25 +345,24 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         target = plugin.getServer().getPlayer(args[1]);
         if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
-        match = MatchHelper.getMatch(org, target);
-        MatchHelper.leaveMatch(org, target, match, logger, true);
+        matchManager.leaveMatch(target);
         logger.send(sender, Lang.FORCE_LEAVE.replace(new String[]{target.getDisplayName()}));
         break;
 
       case "setbutton":
       case "sb":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (!sender.hasPermission(PERM_SETBUTON)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{label + " " + sub})); return true; }
+        player = (Player) sender;
+        if (!sender.hasPermission(PERM_SETBUTON)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SETBUTON, label + " " + sub})); return true; }
         if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <spawn|clearcube>"})); return true; }
 
-        player = (Player) sender;
         Block targetBlock = player.getTargetBlock((Set<Material>) null, 5);
         if (targetBlock == null || targetBlock.getType() == Material.AIR) { logger.send(player, Lang.SET_BLOCK_TOO_FAR.replace(null)); return true; }
 
         targetBlock.setType(Material.WOOL);
         BlockState targetBlockState = targetBlock.getState();
-        type = args[1].toLowerCase();
-        switch (type) {
+        String buttonType = args[1].toLowerCase();
+        switch (buttonType) {
           case "spawn":
             targetBlockState.setData(new Wool(DyeColor.LIME));
             break;
@@ -457,22 +377,24 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         }
 
         targetBlockState.update(true);
-
         Block aboveTargetBlock = targetBlock.getRelative(BlockFace.UP);
         aboveTargetBlock.setType(Material.STONE_BUTTON);
-
         BlockState aboveTargetBlockState = aboveTargetBlock.getState();
         Button buttonData = new Button();
         buttonData.setFacingDirection(BlockFace.UP);
         aboveTargetBlockState.setData(buttonData);
         aboveTargetBlockState.update(true);
-
-        logger.send(player, Lang.SET_BLOCK_SUCCESS.replace(new String[]{type}));
+        logger.send(player, Lang.SET_BLOCK_SUCCESS.replace(new String[]{buttonType}));
         break;
 
       case "help":
-      case "h": sendHelp(sender); break;
-      default: logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label})); break;
+      case "h":
+        sendHelp(sender);
+        break;
+
+      default:
+        logger.send(sender, Lang.UNKNOWN_COMMAND.replace(new String[]{label}));
+        break;
     }
 
     if (sender instanceof Player) system.recordPlayerAction((Player) sender);
@@ -493,34 +415,52 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     if (!sender.hasPermission(PERM_ADMIN)) return Collections.emptyList();
 
     List<String> completions = new ArrayList<>();
-
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
-          "reload", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
+          "reload", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
           "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd", "forceleave",
           "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
       ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
-        case "reload": completions.addAll(Arrays.asList("configs", "all")); break;
+        case "reload":
+          completions.addAll(Arrays.asList("configs", "all"));
+          break;
+
         case "statset":
         case "forceleave":
         case "fl":
         case "ban":
         case "unban":
-        case "checkban": fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName())); break;
+        case "checkban":
+          fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
+          break;
+
         case "setuparena":
-        case "set": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;
+          completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
+          break;
+
         case "matchman":
-        case "mm": completions.addAll(Arrays.asList("start", "end", "speed")); break;
+        case "mm":
+          completions.addAll(Arrays.asList("start", "end"));
+          break;
+
         case "commanddisabler":
-        case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
+        case "cd":
+          completions.addAll(Arrays.asList("add", "remove", "list"));
+          break;
+
         case "setbutton":
-        case "sb": completions.addAll(Arrays.asList("spawn", "clearcube")); break;
+        case "sb":
+          completions.addAll(Arrays.asList("spawn", "clearcube"));
+          break;
       }
     } else if (args.length == 3) {
-      if (args[0].equalsIgnoreCase("ban")) completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
-      else if (args[0].equalsIgnoreCase("statset")) completions.addAll(Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak", "bestwinstreak"));
+      if (args[0].equalsIgnoreCase("ban")) {
+        completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
+      } else if (args[0].equalsIgnoreCase("statset")) {
+        completions.addAll(Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak", "bestwinstreak"));
+      }
     }
 
     if (!completions.isEmpty()) {

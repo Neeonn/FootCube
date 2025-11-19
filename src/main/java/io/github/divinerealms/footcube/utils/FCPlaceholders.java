@@ -2,19 +2,29 @@ package io.github.divinerealms.footcube.utils;
 
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.MatchHelper;
-import io.github.divinerealms.footcube.core.Organization;
+import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.Queue;
 
 public class FCPlaceholders extends PlaceholderExpansion {
-  private final FCManager fcManager;
+  private final PluginDescriptionFile pluginDescriptionFile;
+  private final MatchManager matchManager;
+  private final HighScoreManager highscoreManager;
+  private final PlayerDataManager dataManager;
 
   public FCPlaceholders(FCManager fcManager) {
-    this.fcManager = fcManager;
+    this.pluginDescriptionFile = fcManager.getPlugin().getDescription();
+    this.matchManager = fcManager.getMatchManager();
+    this.highscoreManager = fcManager.getHighscoreManager();
+    this.dataManager = fcManager.getDataManager();
   }
 
   @Override
@@ -39,60 +49,49 @@ public class FCPlaceholders extends PlaceholderExpansion {
 
   @Override
   public @NotNull String getVersion() {
-    return fcManager.getPlugin().getDescription().getVersion();
+    return pluginDescriptionFile.getVersion();
   }
 
   @Override
   public String onPlaceholderRequest(Player player, @NotNull String identifier) {
-    Organization org = fcManager.getOrg();
-
-    if (identifier.equals("enabled")) return fcManager.getPhysicsData().isMatchesEnabled() ? "YES" : "NO";
+    if (identifier.equals("enabled")) return matchManager.getData().isMatchesEnabled() ? "YES" : "NO";
 
     if (identifier.equals("active_lobbies_all")) {
       int count = 0;
-      for (String type : Arrays.asList("2v2", "3v3", "4v4")) {
-        count += MatchHelper.countActiveLobbies(org, type);
+      for (int type : Arrays.asList(MatchmakingConstants.TWO_V_TWO, MatchmakingConstants.THREE_V_THREE, MatchmakingConstants.FOUR_V_FOUR)) {
+        count += matchManager.countActiveLobbies(type);
       }
       return String.valueOf(count);
     }
 
     if (identifier.equalsIgnoreCase("active_players_all")) {
-      return String.valueOf(org.playingPlayers.size() + org.waitingPlayers.size());
+      int playersInMatches = matchManager.getData().getMatches().stream().mapToInt(m -> m.getPlayers().size()).sum();
+      int playersInQueues = matchManager.getData().getPlayerQueues().values().stream().mapToInt(Queue::size).sum();
+      return String.valueOf(playersInMatches + playersInQueues);
     }
 
-    // Active lobbies
     if (identifier.startsWith("active_lobbies_")) {
       String type = identifier.replace("active_lobbies_", "");
-      return String.valueOf(MatchHelper.countActiveLobbies(org, type));
+      return String.valueOf(matchManager.countActiveLobbies(Integer.parseInt(type.substring(0, 1))));
     }
 
-    // Players in arena
     if (identifier.startsWith("players_")) {
       String type = identifier.replace("players_", "");
-      return String.valueOf(MatchHelper.countPlayers(org, type));
+      return String.valueOf(matchManager.countPlayersInMatches(Integer.parseInt(type.substring(0, 1))));
     }
 
-    // Waiting players
     if (identifier.startsWith("waiting_")) {
       String type = identifier.replace("waiting_", "");
-      return String.valueOf(MatchHelper.countWaitingPlayers(org, type));
+      return String.valueOf(matchManager.countWaitingPlayers(Integer.parseInt(type.substring(0, 1))));
     }
 
-    // List players
     if (identifier.startsWith("listplayers_")) {
       String type = identifier.replace("listplayers_", "");
-      return MatchHelper.listPlayers(org, type);
+      return matchManager.listPlayersInMatches(Integer.parseInt(type.substring(0, 1)));
     }
 
-    // Best stats placeholders
     if (identifier.startsWith("best_")) {
-      HighScores highScores = org.getHighscores();
-      if (highScores == null
-          || highScores.topSkillNames == null
-          || highScores.topGoalsNames == null
-          || highScores.topAssistsNames == null
-          || highScores.topWinsNames == null
-          || highScores.topStreakNames == null) return "---";
+      if (highscoreManager == null || highscoreManager.topSkillNames == null) return "---";
 
       String[] parts = identifier.split("_");
       if (parts.length != 4) return null;
@@ -109,37 +108,36 @@ public class FCPlaceholders extends PlaceholderExpansion {
 
       switch (category) {
         case "rating":
-          if ("name".equals(parts[3])) return highScores.topSkillNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.bestRatings[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topSkillNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.bestRatings[rank]);
           break;
         case "goals":
-          if ("name".equals(parts[3])) return highScores.topGoalsNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.mostGoals[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topGoalsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.mostGoals[rank]);
           break;
         case "assists":
-          if ("name".equals(parts[3])) return highScores.topAssistsNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.mostAssists[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topAssistsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.mostAssists[rank]);
           break;
         case "owngoals":
-          if ("name".equals(parts[3])) return highScores.topOwnGoalsNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.mostOwnGoals[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topOwnGoalsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.mostOwnGoals[rank]);
           break;
         case "wins":
-          if ("name".equals(parts[3])) return highScores.topWinsNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.mostWins[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topWinsNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.mostWins[rank]);
           break;
         case "streak":
-          if ("name".equals(parts[3])) return highScores.topStreakNames[rank];
-          if ("value".equals(parts[3])) return String.valueOf(highScores.longestStreak[rank]);
+          if ("name".equals(parts[3])) return highscoreManager.topStreakNames[rank];
+          if ("value".equals(parts[3])) return String.valueOf(highscoreManager.longestStreak[rank]);
           break;
       }
       return "---";
     }
 
-    // Player-specific stats
     if (identifier.startsWith("stats_") && player != null) {
       String statKey = identifier.replace("stats_", "").toLowerCase();
-      PlayerData data = fcManager.getDataManager().get(player);
+      PlayerData data = dataManager.get(player);
       if (data == null || !data.has("matches")) return "---";
 
       int matches = (int) data.get("matches");

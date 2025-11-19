@@ -1,8 +1,6 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.TouchType;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
@@ -23,16 +21,14 @@ import static io.github.divinerealms.footcube.physics.PhysicsConstants.CUBE_JUMP
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
 
 public class CubeTapListener implements Listener {
-  private final Organization org;
+  private final FCManager fcManager;
   private final Logger logger;
-
   private final PhysicsData data;
   private final PhysicsSystem system;
 
   public CubeTapListener(FCManager fcManager) {
-    this.org = fcManager.getOrg();
+    this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-
     this.data = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
   }
@@ -55,10 +51,14 @@ public class CubeTapListener implements Listener {
       Player player = event.getPlayer();
       UUID playerId = player.getUniqueId();
 
+      // Prevent AFK or unauthorized players from interacting.
       if (system.notAllowedToInteract(player)) return;
+
+      // Enforce cooldown.
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().computeIfAbsent(playerId, key -> new ConcurrentHashMap<>());
       if (touches.containsKey(CubeTouchType.RISE)) return;
 
+      // Apply vertical boost and play sound.
       Vector previousVelocity = cube.getVelocity().clone();
       double newY = Math.max(previousVelocity.getY(), CUBE_JUMP_RIGHT_CLICK);
       cube.setVelocity(previousVelocity.setY(newY));
@@ -68,7 +68,7 @@ public class CubeTapListener implements Listener {
       touches.put(CubeTouchType.RISE, new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
       data.getRaised().put(cube.getUniqueId(), System.currentTimeMillis());
       system.recordPlayerAction(player);
-      org.ballTouch(player, TouchType.HIT);
+      fcManager.getMatchManager().kick(player);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");

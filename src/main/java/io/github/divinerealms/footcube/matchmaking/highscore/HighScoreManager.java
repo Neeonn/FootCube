@@ -1,10 +1,11 @@
-package io.github.divinerealms.footcube.utils;
+package io.github.divinerealms.footcube.matchmaking.highscore;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class HighScores {
+public class HighScoreManager {
   private final Plugin plugin;
   private final Logger logger;
   private final Utilities utilities;
@@ -25,26 +26,26 @@ public class HighScores {
   private int taskID;
   private long lastUpdate;
 
-  double[] bestRatings;
-  int[] mostGoals;
-  int[] mostAssists;
-  int[] mostOwnGoals;
-  int[] mostWins;
-  int[] longestStreak;
+  public double[] bestRatings;
+  public int[] mostGoals;
+  public int[] mostAssists;
+  public int[] mostOwnGoals;
+  public int[] mostWins;
+  public int[] longestStreak;
 
-  String[] topSkillNames;
-  String[] topGoalsNames;
-  String[] topAssistsNames;
-  String[] topOwnGoalsNames;
-  String[] topWinsNames;
-  String[] topStreakNames;
+  public String[] topSkillNames;
+  public String[] topGoalsNames;
+  public String[] topAssistsNames;
+  public String[] topOwnGoalsNames;
+  public String[] topWinsNames;
+  public String[] topStreakNames;
 
   private int lastUpdatedParticipant;
   private String[] participants;
   private final ArrayList<Player> waitingPlayers = new ArrayList<>();
   public boolean isUpdating;
 
-  public HighScores(FCManager fcManager) {
+  public HighScoreManager(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
     this.utilities = fcManager.getUtilities();

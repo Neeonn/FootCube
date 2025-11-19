@@ -163,7 +163,6 @@ public class Logger {
    *
    * @param player  the player to whom the title and subtitle will be sent
    * @param title   the main title text to display, including optional color codes
-   * @param subtitle the subtitle text to display beneath the title, including optional color codes
    * @param fadeIn  the time in ticks for the title and subtitle to fade in
    * @param stay    the time in ticks for the title and subtitle to remain on screen
    * @param fadeOut the time in ticks for the title and subtitle to fade out

@@ -2,7 +2,7 @@ package io.github.divinerealms.footcube.commands;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
@@ -22,14 +22,13 @@ import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD_OTHER
 
 public class BuildCommand implements CommandExecutor, TabCompleter {
   private final FCManager fcManager;
-  private final Organization org;
+  private final MatchManager matchManager;
   private final Logger logger;
-
   private final PhysicsSystem system;
 
   public BuildCommand(FCManager fcManager) {
     this.fcManager = fcManager;
-    this.org = fcManager.getOrg();
+    this.matchManager = fcManager.getMatchManager();
     this.logger = fcManager.getLogger();
     this.system = fcManager.getPhysicsSystem();
   }
@@ -43,7 +42,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
       Player player = (Player) sender;
       PlayerSettings settings = fcManager.getPlayerSettings(player);
 
-      if (org.isInGame(player)) { logger.send(sender, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+      if (matchManager.getMatch(player).isPresent()) { logger.send(sender, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
 
       settings.toggleBuild();
       String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
@@ -57,7 +56,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
 
     PlayerSettings settings = fcManager.getPlayerSettings(target);
-    if (org.isInGame(target)) { logger.send(sender, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{target.getDisplayName()})); return true; }
+    if (matchManager.getMatch(target).isPresent()) { logger.send(sender, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{target.getDisplayName()})); return true; }
 
     settings.toggleBuild();
     String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
@@ -73,10 +72,7 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
     if (!sender.hasPermission(PERM_BUILD_OTHER)) return Collections.emptyList();
 
     List<String> completions = new ArrayList<>();
-
-    if (args.length == 1) {
-      fcManager.getCachedPlayers().forEach(player -> completions.add(player.getName()));
-    }
+    if (args.length == 1) fcManager.getCachedPlayers().forEach(player -> completions.add(player.getName()));
 
     if (!completions.isEmpty()) {
       String lastWord = args[args.length - 1].toLowerCase();

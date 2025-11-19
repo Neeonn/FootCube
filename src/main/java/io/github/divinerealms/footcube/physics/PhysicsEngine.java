@@ -1,9 +1,8 @@
 package io.github.divinerealms.footcube.physics;
 
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.TouchType;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -23,7 +22,7 @@ import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 
 public class PhysicsEngine {
   private final FCManager fcManager;
-  private final Organization org;
+  private final MatchManager matchManager;
   private final Logger logger;
 
   private final PhysicsData data;
@@ -32,7 +31,7 @@ public class PhysicsEngine {
 
   public PhysicsEngine(FCManager fcManager) {
     this.fcManager = fcManager;
-    this.org = fcManager.getOrg();
+    this.matchManager = fcManager.getMatchManager();
     this.logger = fcManager.getLogger();
 
     this.data = fcManager.getPhysicsData();
@@ -119,7 +118,7 @@ public class PhysicsEngine {
             newVelocity.add(cubeSpeed < LOW_VELOCITY_THRESHOLD ? push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER) : push);
 
             // Register the touch interaction with the organization system.
-            org.ballTouch(player, TouchType.MOVE);
+            matchManager.kick(player);
             wasMoved = true;
 
             // Trigger sound effect if impact force exceeds threshold.
@@ -221,7 +220,7 @@ public class PhysicsEngine {
       }
 
       // Finalize scheduled physics actions.
-      system.scheduleSound();// Dispatch queued sound events to players.
+      system.scheduleSound(); // Dispatch queued sound events to players.
       system.scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
@@ -364,7 +363,6 @@ public class PhysicsEngine {
       data.getLastTouches().clear();
 
       // Reset control flags and counters.
-      data.matchesEnabled = true;
       data.hitDebugEnabled = false;
       data.tickCounter = 0;
     } finally {

@@ -13,7 +13,7 @@ public class PhysicsConstants {
   public static final long GLOW_TASK_INTERVAL_TICKS = 10;
   public static final long CUBE_REMOVAL_DELAY_TICKS = 20;
   public static final int CLEANUP_LAST_TOUCHES_INTERVAL = 10;
-  public static final int EXP_UPDATE_INTERVAL_TICKS = 3;
+  public static final int EXP_UPDATE_INTERVAL_TICKS = 2;
 
   // --- Timeouts & Cooldowns (Milliseconds) ---
   public static final long REGULAR_KICK_COOLDOWN = 150;

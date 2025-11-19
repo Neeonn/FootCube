@@ -12,6 +12,7 @@ public class FootCube extends JavaPlugin {
   public void onEnable() {
     try {
       this.fcManager = new FCManager(this);
+      fcManager.setEnabling(true);
       fcManager.getLogger().info("&aSuccessfully enabled.");
     } catch (Exception exception) {
       getLogger().log(Level.SEVERE, "Failed to initialize FootCube", exception);
@@ -21,8 +22,9 @@ public class FootCube extends JavaPlugin {
 
   public void onDisable() {
     if (fcManager != null) {
+      fcManager.setDisabling(true);
+      if (fcManager.getMatchManager() != null) fcManager.getMatchManager().forceLeaveAllPlayers();
       fcManager.saveAll();
-      if (fcManager.getOrg() != null) fcManager.getOrg().cleanup();
       fcManager.getPhysicsEngine().cleanup();
       fcManager.shutdownTasks();
       getServer().getScheduler().cancelTasks(this);

@@ -2,8 +2,6 @@ package io.github.divinerealms.footcube.physics.listeners;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.core.TouchType;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
@@ -34,23 +32,17 @@ import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class CubeKickListener implements Listener {
   private final FCManager fcManager;
-  private final Organization org;
-
   private final BukkitScheduler scheduler;
   private final Plugin plugin;
   private final Logger logger;
-
   private final PhysicsSystem system;
   private final PhysicsData data;
 
   public CubeKickListener(FCManager fcManager) {
     this.fcManager = fcManager;
-    this.org = fcManager.getOrg();
-
     this.scheduler = fcManager.getScheduler();
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
-
     this.system = fcManager.getPhysicsSystem();
     this.data = fcManager.getPhysicsData();
   }
@@ -99,7 +91,7 @@ public class CubeKickListener implements Listener {
       // Register player hit cooldown and record interaction.
       touches.put(kickType, new CubeTouchInfo(System.currentTimeMillis(), kickType));
       system.recordPlayerAction(player);
-      org.ballTouch(player, TouchType.HIT);
+      fcManager.getMatchManager().kick(player);
 
       // Schedule post-processing for player sound feedback and debug info.
       // #TODO: Change to lastTouches.

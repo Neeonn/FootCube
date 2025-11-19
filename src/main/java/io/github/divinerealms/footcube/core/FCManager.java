@@ -11,12 +11,21 @@ import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.ListenerManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
+import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
+import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
+import io.github.divinerealms.footcube.matchmaking.logic.MatchData;
+import io.github.divinerealms.footcube.matchmaking.logic.MatchSystem;
+import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
+import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.PhysicsEngine;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.*;
 import lombok.Getter;
+import lombok.Setter;
 import me.neznamy.tab.api.TabAPI;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.chat.Chat;
@@ -24,6 +33,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -47,7 +57,15 @@ public class FCManager {
   private final Utilities utilities;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
-  private final Organization org;
+
+  private final ArenaManager arenaManager;
+  private final ScoreManager scoreboardManager;
+  private final MatchData matchData;
+  private final TeamManager teamManager;
+  private final MatchSystem matchSystem;
+  private final BanManager banManager;
+  private final HighScoreManager highscoreManager;
+  private final MatchManager matchManager;
 
   private final CubeCleaner cubeCleaner;
   private final DisableCommands disableCommands;
@@ -67,14 +85,16 @@ public class FCManager {
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
 
-  private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false;
-  private int cubeCleanerTaskID, physicsTaskID, glowTaskID;
+  private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false, matchRunning = false;
+  private int cubeCleanerTaskID, physicsTaskID, glowTaskID, matchTaskID;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   private static final String CONFIG_PARTICLES_BASE = "particles.";
 
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
+
+  @Setter private boolean enabling = false, disabling = false;
 
   public FCManager(FootCube plugin) throws IllegalStateException {
     instance = this;
@@ -91,31 +111,39 @@ public class FCManager {
     this.setupDependencies();
 
     this.utilities = new Utilities(this);
-    this.org = new Organization(this);
+
+    this.arenaManager = new ArenaManager(this);
+    this.scoreboardManager = new ScoreManager(this);
+    this.matchData = new MatchData();
+    this.teamManager = new TeamManager();
+    this.matchSystem = new MatchSystem(this);
+    this.banManager = new BanManager();
+    this.highscoreManager = new HighScoreManager(this);
+    this.matchManager = new MatchManager(this);
 
     this.cubeCleaner = new CubeCleaner(this);
     this.disableCommands = new DisableCommands(this);
     this.scheduler = plugin.getServer().getScheduler();
 
     this.physicsData = new PhysicsData();
-    this.physicsSystem = new PhysicsSystem(physicsData, logger, getScheduler(), plugin);
+    this.physicsSystem = new PhysicsSystem(physicsData, logger, scheduler, plugin);
     this.physicsFormulae = new PhysicsFormulae(logger);
     this.physicsEngine = new PhysicsEngine(this);
 
     this.listenerManager = new ListenerManager(this);
 
     new FCPlaceholders(this).register();
+    enabling = false;
     this.reload();
   }
 
   public void reload() {
     initializeCachedPlayers();
-    configManager.reloadAllConfigs();
+    if (!enabling) configManager.reloadAllConfigs();
     setupConfig();
     setupMessages();
     registerCommands();
     initTasks();
-    org.loadArenas();
     listenerManager.registerAll();
     List<UUID> onlinePlayers = cachedPlayers.stream().map(Player::getUniqueId).collect(Collectors.toList());
     scheduler.runTaskAsynchronously(plugin, () -> onlinePlayers.forEach(uuid -> {
@@ -151,11 +179,14 @@ public class FCManager {
     this.glowRunning = true;
     this.glowTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
+    this.matchRunning = true;
+    this.matchTaskID = scheduler.runTaskTimer(plugin, matchManager::update, 1L, 1L).getTaskId();
+
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
     scheduler.runTaskLaterAsynchronously(plugin, () -> {
       logger.info("&a✔ &2Updating &eHighScores&2...");
-      org.getHighscores().update();
+      highscoreManager.update();
     }, 20L);
   }
 
@@ -168,6 +199,11 @@ public class FCManager {
     if (glowRunning) {
       scheduler.cancelTask(glowTaskID);
       this.glowRunning = false;
+    }
+
+    if (matchRunning) {
+      scheduler.cancelTask(matchTaskID);
+      this.matchRunning = false;
     }
 
     physicsSystem.removeCubes();
@@ -228,13 +264,26 @@ public class FCManager {
 
     if (plugin.getServer().getPluginManager().isPluginEnabled("TAB")) {
       this.tabAPI = TabAPI.getInstance();
-      logger.info("&a✔ &2Hooked into &dTAB &2successfully!");
     } else {
       this.tabAPI = null;
       logger.info("&eTAB plugin not found. Scoreboard features will be disabled.");
     }
 
-    logger.info("&a✔ &2Hooked into &dLuckPerms &2and &dVault &2successfully!");
+    logger.info("&a✔ &2Hooked into &dLuckPerms&2, &dTAB &2and &dVault &2successfully!");
+  }
+
+  public void reloadTabAPI() {
+    if (plugin.getServer().getPluginManager().isPluginEnabled("TAB")) {
+      plugin.getServer().getScheduler().runTask(plugin, () -> {
+        this.tabAPI = TabAPI.getInstance();
+        logger.info("&a✔ &2Re-hooked into &dTAB &2successfully!");
+        if (scoreboardManager != null) scoreboardManager.refreshTabAPI();
+        if (matchManager != null) matchManager.recreateScoreboards();
+      });
+    } else {
+      this.tabAPI = null;
+      logger.info("&eTAB plugin not found. Scoreboard features will be disabled.");
+    }
   }
 
   private void setDefaultIfMissing(FileConfiguration file, String path, Object value) {
@@ -274,7 +323,34 @@ public class FCManager {
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
     if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
-    if (playerData.has("ban")) org.getLeaveCooldowns().put(player.getUniqueId(), (Long) playerData.get("ban"));
+    if (playerData.has("ban")) matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
+  }
+
+  public void checkStats(String playerName, CommandSender asker) {
+    PlayerData data = dataManager.get(playerName);
+    if (data == null || !data.has("matches")) {
+      logger.send(asker, Lang.STATS_NONE.replace(new String[]{playerName}));
+      return;
+    }
+
+    int matches = (int) data.get("matches");
+    int wins = (int) data.get("wins");
+    int ties = (int) data.get("ties");
+    int bestWinStreak = (int) data.get("bestwinstreak");
+    int losses = matches - wins - ties;
+
+    double winsPerMatch = (matches > 0) ? (double) wins / matches : 0;
+
+    int goals = (int) data.get("goals");
+    int assists = (int) data.get("assists");
+    int ownGoals = (int) data.get("owngoals");
+    double goalsPerMatch = (matches > 0) ? (double) goals / matches : 0;
+
+    logger.send(asker, Lang.STATS.replace(new String[]{
+        playerName, String.valueOf(matches), String.valueOf(wins), String.valueOf(losses),
+        String.valueOf(ties), String.format("%.2f", winsPerMatch), String.valueOf(bestWinStreak),
+        String.valueOf(goals), String.format("%.2f", goalsPerMatch), String.valueOf(assists), String.valueOf(ownGoals)
+    }));
   }
 
   public void saveAll() {

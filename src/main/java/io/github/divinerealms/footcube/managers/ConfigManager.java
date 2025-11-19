@@ -23,12 +23,12 @@ public class ConfigManager {
     this.folderName = folderName;
   }
 
-  public FileConfiguration createNewFile(String name, String header) {
+  public void createNewFile(String name, String header) {
     File file = new File(plugin.getDataFolder(), folderName.isEmpty() ? name : folderName + File.separator + name);
     FileConfiguration cfg;
 
     if (!file.exists()) {
-      copyDefaultsFromResource(name, file);
+      copyDefaultsFromResource(name);
       cfg = YamlConfiguration.loadConfiguration(file);
       cfg.options().header(header);
       cfg.options().copyDefaults(true);
@@ -41,7 +41,6 @@ public class ConfigManager {
 
     configs.put(name, cfg);
     files.put(name, file);
-    return cfg;
   }
 
   public FileConfiguration getConfig(String name) {
@@ -61,7 +60,7 @@ public class ConfigManager {
     File file = new File(plugin.getDataFolder(), folderName.isEmpty() ? name : folderName + File.separator + name);
 
     if (!file.exists()) {
-      copyDefaultsFromResource(name, file);
+      copyDefaultsFromResource(name);
     }
 
     FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
@@ -86,7 +85,7 @@ public class ConfigManager {
     configs.keySet().forEach(this::saveConfig);
   }
 
-  private void copyDefaultsFromResource(String name, File file) {
+  private void copyDefaultsFromResource(String name) {
     try {
       String resourcePath = folderName.isEmpty() ? name : folderName + File.separator + name;
       if (plugin.getResource(resourcePath) != null) {

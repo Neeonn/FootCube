@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 public class PlayerDataManager {
+  private final FCManager fcManager;
   private final Plugin plugin;
   private final ConfigManager configManager;
   private final Logger logger;
@@ -27,6 +28,7 @@ public class PlayerDataManager {
   private volatile boolean saveScheduled = false;
 
   public PlayerDataManager(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.configManager = fcManager.getConfigManager();
     this.logger = fcManager.getLogger();
@@ -147,6 +149,7 @@ public class PlayerDataManager {
   }
 
   private void scheduleSave() {
+    if (fcManager.isDisabling()) return;
     if (saveScheduled) return;
     saveScheduled = true;
 

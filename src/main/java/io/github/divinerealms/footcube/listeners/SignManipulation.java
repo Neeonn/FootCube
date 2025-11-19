@@ -2,8 +2,9 @@ package io.github.divinerealms.footcube.listeners;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.core.Organization;
-import io.github.divinerealms.footcube.managers.ConfigManager;
+import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingConstants;
+import io.github.divinerealms.footcube.matchmaking.util.MatchmakingUtils;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -14,7 +15,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
@@ -36,20 +36,14 @@ import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
 public class SignManipulation implements Listener {
   private final FCManager fcManager;
   private final Logger logger;
-  private final Organization org;
-  private final FileConfiguration arenas;
-
+  private final MatchManager matchManager;
   private final PhysicsData data;
   private final PhysicsSystem system;
 
   public SignManipulation(FCManager fcManager) {
     this.fcManager = fcManager;
     this.logger = fcManager.getLogger();
-    this.org = fcManager.getOrg();
-
-    ConfigManager configManager = fcManager.getConfigManager();
-    this.arenas = configManager.getConfig("arenas.yml");
-
+    this.matchManager = fcManager.getMatchManager();
     this.data = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
   }
@@ -67,31 +61,38 @@ public class SignManipulation implements Listener {
           String arena = event.getLine(2).toLowerCase();
           event.setLine(0, "[FootCube]");
           event.setLine(1, ChatColor.AQUA + "join");
+
           switch (arena) {
             case "2v2":
               event.setLine(2, ChatColor.GREEN + "2v2");
               break;
+
             case "3v3":
               event.setLine(2, ChatColor.GREEN + "3v3");
               break;
+
             case "4v4":
               event.setLine(2, ChatColor.GREEN + "4v4");
               break;
           }
+
           event.setLine(3, "");
           break;
+
         case "stats":
           event.setLine(0, "[FootCube]");
           event.setLine(1, ChatColor.AQUA + "stats");
           event.setLine(2, "See how much");
           event.setLine(3, "you score & win");
           break;
+
         case "cube":
           event.setLine(0, "[FootCube]");
           event.setLine(1, ChatColor.AQUA + "cube");
           event.setLine(2, "Spawn a");
           event.setLine(3, "cube");
           break;
+
         case "balance":
         case "money":
           event.setLine(0, "[FootCube]");
@@ -99,6 +100,7 @@ public class SignManipulation implements Listener {
           event.setLine(2, "Check your");
           event.setLine(3, "balance");
           break;
+
         case "highscores":
         case "best":
           event.setLine(0, "[FootCube]");
@@ -106,6 +108,7 @@ public class SignManipulation implements Listener {
           event.setLine(2, "Check all");
           event.setLine(3, "highscores");
           break;
+
         case "matches":
           event.setLine(0, "[FootCube]");
           event.setLine(1, ChatColor.AQUA + "matches");
@@ -173,49 +176,35 @@ public class SignManipulation implements Listener {
       String line1 = ChatColor.stripColor(sign.getLine(1));
       switch (line1.toLowerCase()) {
         case "join":
-          if (!player.hasPermission(PERM_PLAY)) {
-            logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, "fc join"}));
-            return;
-          }
-          if (org.isBanned(player)) return;
-          if (org.isInGame(player)) {
-            logger.send(player, Lang.JOIN_INTEAM.replace(null));
-            return;
-          }
-          if (!data.isMatchesEnabled()) {
-            logger.send(player, Lang.FC_DISABLED.replace(null));
-            return;
-          }
+          if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, "fc join"})); return; }
+          if (matchManager.getBanManager().isBanned(player)) return;
+          if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_INTEAM.replace(null)); return; }
+          if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return; }
 
           String arenaType = ChatColor.stripColor(sign.getLine(2)).toLowerCase();
-
+          int type;
           switch (arenaType) {
             case "2v2":
-              if (arenas.getInt("arenas.2v2.amount") != 0) {
-                org.getMatches2v2()[org.getLobby2v2()].join(player, false);
-                org.getWaitingPlayers().put(player.getName(), 2);
-                org.removeTeam(player);
-              } else logger.send(player, Lang.JOIN_NOARENA.replace(null));
+              type = MatchmakingConstants.TWO_V_TWO;
               break;
+
             case "3v3":
-              if (arenas.getInt("arenas.3v3.amount") != 0) {
-                org.getMatches3v3()[org.getLobby3v3()].join(player, false);
-                org.getWaitingPlayers().put(player.getName(), 3);
-                org.removeTeam(player);
-              } else logger.send(player, Lang.JOIN_NOARENA.replace(null));
+              type = MatchmakingConstants.THREE_V_THREE;
               break;
+
             case "4v4":
-              if (arenas.getInt("arenas.4v4.amount") != 0) {
-                org.getMatches4v4()[org.getLobby4v4()].join(player, false);
-                org.getWaitingPlayers().put(player.getName(), 4);
-                org.removeTeam(player);
-              } else logger.send(player, Lang.JOIN_NOARENA.replace(null));
+              type = MatchmakingConstants.FOUR_V_FOUR;
               break;
+
+            default:
+              return;
           }
+
+          matchManager.joinQueue(player, type);
           break;
 
         case "stats":
-          org.checkStats(player.getName(), player);
+          fcManager.checkStats(player.getName(), player);
           break;
 
         case "cube":
@@ -234,12 +223,11 @@ public class SignManipulation implements Listener {
           break;
 
         case "highscores":
-          org.updateHighScores(player);
+          fcManager.getHighscoreManager().playerUpdate(player);
           break;
 
         case "matches":
-          List<String> matches = org.getMatches();
-
+          List<String> matches = MatchmakingUtils.getFormattedMatches(matchManager.getData().getMatches());
           if (!matches.isEmpty()) {
             logger.send(player, Lang.MATCHES_LIST_HEADER.replace(null));
             matches.forEach(msg -> logger.send(player, msg));

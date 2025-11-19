@@ -31,7 +31,6 @@ public class PhysicsData {
   private final Queue<CubeSoundAction> soundQueue = new ConcurrentLinkedQueue<>();
   private final Map<UUID, Long> buttonCooldowns = new ConcurrentHashMap<>();
 
-  public boolean matchesEnabled = true;
   public boolean hitDebugEnabled = false;
   public int tickCounter = 0;
 }

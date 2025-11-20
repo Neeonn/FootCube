@@ -6,9 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -18,6 +16,7 @@ public class MatchData {
   private final List<Match> matches = new CopyOnWriteArrayList<>();
   private final List<Match> openMatches = new CopyOnWriteArrayList<>();
   private final Map<Integer, Queue<Player>> playerQueues = new ConcurrentHashMap<>();
+  private final Set<Integer> lockedQueues = ConcurrentHashMap.newKeySet();
 
   @Setter private boolean matchesEnabled = true;
 

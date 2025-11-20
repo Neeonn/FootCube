@@ -47,6 +47,7 @@ public class MatchManager {
 
   public void joinQueue(Player player, int matchType) {
     if (banManager.isBanned(player)) return;
+    if (system.isInAnyQueue(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
 
     Team team = teamManager.getTeam(player);
     List<Player> playersToQueue = (team != null) ? team.getMembers() : Collections.singletonList(player);

@@ -6,6 +6,7 @@ import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
@@ -24,6 +25,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -97,6 +99,14 @@ public class PlayerEvents implements Listener {
     fcManager.getCachedPlayers().remove(player);
     fcManager.getPlayerSettings().remove(player.getUniqueId());
 
+    fcManager.getMatchData().getPlayerQueues().values().forEach(queue -> queue.remove(player));
+    fcManager.getMatchData().getMatches().stream()
+        .filter(match -> match.getPhase() == MatchPhase.LOBBY)
+        .forEach(match -> {
+          match.getPlayers().removeIf(matchPlayer -> player.equals(matchPlayer.getPlayer()));
+          fcManager.getScoreboardManager().updateScoreboard(match);
+        });
+
     if (teamManager.isInTeam(player)) {
       Team team = teamManager.getTeam(player);
       if (team != null) {
@@ -110,7 +120,10 @@ public class PlayerEvents implements Listener {
     Optional<Match> matchOpt = matchManager.getMatch(player);
     if (matchOpt.isPresent()) {
       Match match = matchOpt.get();
-      Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream().filter(p -> p.getPlayer().equals(player)).findFirst();
+      Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream()
+          .filter(Objects::nonNull)
+          .filter(p -> p.getPlayer() != null && p.getPlayer().equals(player))
+          .findFirst();
       if (matchPlayerOpt.isPresent()) {
         MatchPlayer matchPlayer = matchPlayerOpt.get();
 

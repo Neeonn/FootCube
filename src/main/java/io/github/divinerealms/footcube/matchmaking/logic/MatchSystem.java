@@ -349,54 +349,62 @@ public class MatchSystem {
 
   public void processQueues() {
     for (Map.Entry<Integer, Queue<Player>> entry : data.getPlayerQueues().entrySet()) {
-      if (entry.getValue().isEmpty()) continue;
-
       int matchType = entry.getKey();
       Queue<Player> queue = entry.getValue();
 
-      while (!queue.isEmpty()) {
-        Player player = queue.peek();
-        if (player == null || !player.isOnline()) {
-          queue.poll();
-          continue;
-        }
+      if (queue.isEmpty()) continue;
+      if (!data.getLockedQueues().add(matchType)) continue;
 
-        Team team = teamManager.getTeam(player);
-        List<Player> playerGroup;
-
-        if (team != null) {
-          playerGroup = new ArrayList<>(team.getMembers());
-          if (!new HashSet<>(queue).containsAll(playerGroup)) continue;
-        } else playerGroup = Collections.singletonList(player);
-
-        if (playerGroup.isEmpty()) continue;
-
-        Optional<Match> lobbyOpt = findLobbyForGroup(matchType, playerGroup.size());
-        Match targetMatch = lobbyOpt.orElseGet(() -> createNewLobby(matchType));
-
-        if (targetMatch == null) {
-          playerGroup.forEach(p -> logger.send(p, Lang.JOIN_NOARENA.replace(null)));
-          break;
-        }
-
-        if (targetMatch.getLobbyScoreboard() == null) scoreboardManager.createLobbyScoreboard(targetMatch);
-
-        queue.removeAll(playerGroup);
-        for (Player p : playerGroup) {
-          targetMatch.getPlayers().add(new MatchPlayer(p, null));
-          scoreboardManager.showLobbyScoreboard(targetMatch, p);
-        }
-
-        scoreboardManager.updateScoreboard(targetMatch);
+      try {
+        processSingleQueue(matchType, queue);
+      } finally {
+        data.getLockedQueues().remove(matchType);
       }
     }
   }
 
-  private synchronized Optional<Match> findLobbyForGroup(int matchType, int groupSize) {
+  private void processSingleQueue(int matchType, Queue<Player> queue) {
+    while (!queue.isEmpty()) {
+      queue.removeIf(p -> p == null || !p.isOnline());
+      Player player = queue.peek();
+      if (player == null || !player.isOnline()) { queue.poll(); continue; }
+
+      Team team = teamManager.getTeam(player);
+      List<Player> playerGroup;
+      if (team != null) {
+        playerGroup = new ArrayList<>(team.getMembers());
+        playerGroup.removeIf(p -> p == null || !p.isOnline());
+        if (!playerGroup.contains(player)) { queue.poll(); continue; }
+        if (!queue.containsAll(playerGroup)) return;
+      } else playerGroup = Collections.singletonList(player);
+
+      Match targetMatch = findLobbyForGroup(matchType, playerGroup.size())
+          .orElseGet(() -> createNewLobby(matchType));
+      if (targetMatch == null) { playerGroup.forEach(p -> logger.send(p, Lang.JOIN_NOARENA.replace(null))); break; }
+      if (targetMatch.getLobbyScoreboard() == null) scoreboardManager.createLobbyScoreboard(targetMatch);
+
+      for (Player p : playerGroup) {
+        queue.remove(p);
+        targetMatch.getPlayers().add(new MatchPlayer(p, null));
+        scoreboardManager.showLobbyScoreboard(targetMatch, p);
+      }
+
+      scoreboardManager.updateScoreboard(targetMatch);
+    }
+  }
+
+  public boolean isInAnyQueue(Player player) {
+    return data.getPlayerQueues().values().stream().anyMatch(queue -> queue.contains(player));
+  }
+
+  private Optional<Match> findLobbyForGroup(int matchType, int groupSize) {
+    int maxPlayers = matchType * 2;
+
     return data.getMatches().stream()
-        .filter(m -> m.getArena().getType() == matchType && m.getPhase() == MatchPhase.LOBBY)
-        .filter(m -> (m.getPlayers().size() + groupSize) <= (m.getArena().getType() * 2))
-        .findFirst();
+        .filter(m -> m.getArena().getType() == matchType)
+        .filter(m -> m.getPhase() == MatchPhase.LOBBY)
+        .filter(m -> m.getPlayers().size() + groupSize <= maxPlayers)
+        .min(Comparator.comparingInt(m -> maxPlayers - m.getPlayers().size()));
   }
 
   private synchronized Match createNewLobby(int matchType) {

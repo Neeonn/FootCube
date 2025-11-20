@@ -115,7 +115,7 @@ public class FCManager {
     this.arenaManager = new ArenaManager(this);
     this.scoreboardManager = new ScoreManager(this);
     this.matchData = new MatchData();
-    this.teamManager = new TeamManager();
+    this.teamManager = new TeamManager(this);
     this.matchSystem = new MatchSystem(this);
     this.banManager = new BanManager();
     this.highscoreManager = new HighScoreManager(this);

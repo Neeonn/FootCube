@@ -105,26 +105,39 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         Optional<Match> matchOpt = matchManager.getMatch(player);
         if (matchOpt.isPresent()) {
           Match match = matchOpt.get();
-          Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream().filter(Objects::nonNull).filter(p -> p.getPlayer() != null && p.getPlayer().equals(player)).findFirst();
-          if (matchPlayerOpt.isPresent()) {
-            MatchPlayer matchPlayer = matchPlayerOpt.get();
-            int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
-            int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
-            if (match.getPhase() == MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
-              fcManager.getEconomy().withdrawPlayer(player, 200);
-              matchManager.getBanManager().banPlayer(player, 30 * 60 * 1000);
-              logger.send(player, Lang.LEAVE_LOSING.replace(null));
+          MatchPhase matchPhase = match.getPhase();
+          if (matchPhase == MatchPhase.IN_PROGRESS) {
+            Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream()
+                .filter(Objects::nonNull)
+                .filter(p -> p.getPlayer() != null && p.getPlayer().equals(player))
+                .findFirst();
+
+            if (matchPlayerOpt.isPresent()) {
+              MatchPlayer matchPlayer = matchPlayerOpt.get();
+
+              int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
+              int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
+
+              if (playerScore < opponentScore) {
+                fcManager.getEconomy().withdrawPlayer(player, 200);
+                matchManager.getBanManager().banPlayer(player, 30 * 60 * 1000);
+                logger.send(player, Lang.LEAVE_LOSING.replace(null));
+              }
             }
           }
 
           matchManager.leaveMatch(player);
           logger.send(player, Lang.LEFT.replace(null));
+
+          teamManager.forceDisbandTeam(player);
         } else {
           boolean leftQueue = false;
           for (int queueType : matchManager.getData().getPlayerQueues().keySet()) {
-            if (matchManager.getData().getPlayerQueues().get(queueType).contains(player)) {
+            Queue<Player> queue = matchManager.getData().getPlayerQueues().get(queueType);
+            if (queue.contains(player)) {
               matchManager.leaveQueue(player, queueType);
               leftQueue = true;
+              teamManager.disbandTeamIfInLobby(player);
             }
           }
 
@@ -194,7 +207,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         switch (action) {
           case "accept":
             if (teamManager.isInTeam(player)) { logger.send(player, Lang.TEAM_ALREADY_IN_TEAM.replace(null)); return true; }
-            if (!teamManager.hasInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
+            if (teamManager.noInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
 
             target = teamManager.getInviter(player);
             targetName = target != null && target.isOnline() ? target.getName() : "";
@@ -216,7 +229,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             break;
 
           case "decline":
-            if (!teamManager.hasInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
+            if (teamManager.noInvite(player)) { logger.send(player, Lang.TEAM_NO_REQUEST.replace(null)); return true; }
 
             target = teamManager.getInviter(player);
             if (target != null && target.isOnline()) logger.send(target, Lang.TEAM_DECLINE_OTHER.replace(new String[]{player.getName()}));
@@ -233,6 +246,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             target = plugin.getServer().getPlayer(targetName);
             if (target == null) { logger.send(player, Lang.TEAM_NOT_ONLINE.replace(new String[]{targetName})); return true; }
             if (teamManager.isInTeam(target)) { logger.send(player, Lang.TEAM_ALREADY_IN_TEAM_2.replace(new String[]{target.getName()})); return true; }
+            if (fcManager.getMatchSystem().isInAnyQueue(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
+            if (fcManager.getMatchSystem().isInAnyQueue(target)) { logger.send(player, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{targetName})); return true; }
+            if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return true; }
+            if (matchManager.getMatch(target).isPresent()) { logger.send(player, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{targetName})); return true; }
 
             String inviteMatchType = args[1].toLowerCase();
             int inviteType;

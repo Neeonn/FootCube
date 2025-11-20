@@ -1,5 +1,9 @@
 package io.github.divinerealms.footcube.matchmaking.team;
 
+import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.core.FCManager;
+import io.github.divinerealms.footcube.matchmaking.MatchPhase;
+import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
@@ -10,8 +14,15 @@ import java.util.UUID;
 
 @Getter
 public class TeamManager {
+  private final FCManager fcManager;
+  private final Logger logger;
   private final Map<Player, Map<Player, Integer>> teamInvites = new HashMap<>();
   private final Map<UUID, Team> playerTeams = new HashMap<>();
+
+  public TeamManager(FCManager fcManager) {
+    this.fcManager = fcManager;
+    this.logger = fcManager.getLogger();
+  }
 
   public void invite(Player inviter, Player invited, int matchType) {
     teamInvites.put(invited, Collections.singletonMap(inviter, matchType));
@@ -33,8 +44,8 @@ public class TeamManager {
     teamInvites.remove(invited);
   }
 
-  public boolean hasInvite(Player invited) {
-    return teamInvites.containsKey(invited);
+  public boolean noInvite(Player invited) {
+    return !teamInvites.containsKey(invited);
   }
 
   public Team getTeam(Player player) {
@@ -53,5 +64,36 @@ public class TeamManager {
 
   public void disbandTeam(Team team) {
     team.getMembers().forEach(member -> playerTeams.remove(member.getUniqueId()));
+  }
+
+  public void disbandTeamIfInLobby(Player leaver) {
+    Team team = getTeam(leaver);
+    if (team == null) return;
+
+    boolean anyInMatchLobby = fcManager.getMatchManager().getMatch(leaver)
+        .filter(m -> m.getPhase() == MatchPhase.LOBBY)
+        .isPresent();
+
+    boolean anyInQueue = fcManager.getMatchManager().getData().getPlayerQueues().values().stream().
+        anyMatch(q -> q.contains(leaver));
+
+    if (!anyInMatchLobby && !anyInQueue) return;
+
+    for (Player player : team.getMembers()) {
+      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+    }
+
+    disbandTeam(team);
+  }
+
+  public void forceDisbandTeam(Player leaver) {
+    Team team = getTeam(leaver);
+    if (team == null) return;
+
+    for (Player player : team.getMembers()) {
+      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+    }
+
+    disbandTeam(team);
   }
 }

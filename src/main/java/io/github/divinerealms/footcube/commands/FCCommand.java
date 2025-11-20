@@ -272,10 +272,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       case "stats":
         if (sender instanceof Player) {
           Player p = (Player) sender;
-          fcManager.checkStats(args.length > 1 ? args[1] : p.getName(), sender);
+          fcManager.getMatchSystem().checkStats(args.length > 1 ? args[1] : p.getName(), sender);
         } else {
           if (args.length < 2) logger.send(sender, "&cYou need to specify a player.");
-          else fcManager.checkStats(args[1], sender);
+          else fcManager.getMatchSystem().checkStats(args[1], sender);
 
         }
         break;

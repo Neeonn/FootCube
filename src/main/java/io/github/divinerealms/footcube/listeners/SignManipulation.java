@@ -204,7 +204,7 @@ public class SignManipulation implements Listener {
           break;
 
         case "stats":
-          fcManager.checkStats(player.getName(), player);
+          fcManager.getMatchSystem().checkStats(player.getName(), player);
           break;
 
         case "cube":

@@ -1,6 +1,7 @@
 package io.github.divinerealms.footcube.matchmaking.logic;
 
 import io.github.divinerealms.footcube.configs.Lang;
+import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
@@ -17,6 +18,7 @@ import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
 import org.bukkit.*;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
@@ -391,6 +393,72 @@ public class MatchSystem {
 
       scoreboardManager.updateScoreboard(targetMatch);
     }
+  }
+
+  public void checkStats(String playerName, CommandSender asker) {
+    PlayerData data = fcManager.getDataManager().get(playerName);
+    if (data == null || !data.has("matches")) {
+      logger.send(asker, Lang.STATS_NONE.replace(new String[]{playerName}));
+      return;
+    }
+
+    int matches = (int) data.get("matches");
+    int wins = (int) data.get("wins");
+    int ties = (int) data.get("ties");
+    int bestWinStreak = (int) data.get("bestwinstreak");
+    int losses = matches - wins - ties;
+
+    double winsPerMatch = (matches > 0) ? (double) wins / matches : 0;
+
+    int goals = (int) data.get("goals");
+    int assists = (int) data.get("assists");
+    int ownGoals = (int) data.get("owngoals");
+    double goalsPerMatch = (matches > 0) ? (double) goals / matches : 0;
+    double multiplier = 1.0 - Math.pow(0.9, matches);
+    double goalBonus = matches > 0
+        ? (goals == matches ? 1.0 : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
+        : 0.5;
+
+    double addition = 0.0;
+    if (matches > 0 && wins + ties > 0) {
+      addition = 8.0 * (1.0 / ((100.0 * matches) / (wins + 0.5 * ties) / 100.0)) - 4.0;
+    } else if (matches > 0) {
+      addition = -4.0;
+    }
+
+    double skillLevel = Math.min(5.0 + goalBonus + addition * multiplier, 10.0);
+    int rank = (int) (skillLevel * 2.0 - 0.5);
+    String rang;
+
+    switch (rank) {
+      case 1: rang = "Nub"; break;
+      case 2: rang = "Luzer"; break;
+      case 3: rang = "Beba"; break;
+      case 4: rang = "Učenik"; break;
+      case 5: rang = "Loš"; break;
+      case 6: rang = ":("; break;
+      case 7: rang = "Eh"; break;
+      case 8: rang = "Igrač"; break;
+      case 9: rang = "Ok"; break;
+      case 10: rang = "Prosečan"; break;
+      case 11: rang = "Dobar"; break;
+      case 12: rang = "Odličan"; break;
+      case 13: rang = "Kralj"; break;
+      case 14: rang = "Super"; break;
+      case 15: rang = "Pro"; break;
+      case 16: rang = "Maradona"; break;
+      case 17: rang = "Supermen"; break;
+      case 18: rang = "Bog"; break;
+      case 19: rang = "h4x0r"; break;
+      default: rang = "Nema"; break;
+    }
+
+    logger.send(asker, Lang.STATS.replace(new String[]{
+        playerName, String.valueOf(matches), String.valueOf(wins), String.valueOf(losses),
+        String.valueOf(ties), String.format("%.2f", winsPerMatch), String.valueOf(bestWinStreak),
+        String.valueOf(goals), String.format("%.2f", goalsPerMatch), String.valueOf(assists),
+        String.format("%.2f", skillLevel), rang, String.valueOf(ownGoals)
+    }));
   }
 
   public boolean isInAnyQueue(Player player) {

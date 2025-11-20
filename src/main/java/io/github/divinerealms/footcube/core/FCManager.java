@@ -33,7 +33,6 @@ import net.milkbowl.vault.economy.Economy;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -324,33 +323,6 @@ public class FCManager {
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
     if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
     if (playerData.has("ban")) matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
-  }
-
-  public void checkStats(String playerName, CommandSender asker) {
-    PlayerData data = dataManager.get(playerName);
-    if (data == null || !data.has("matches")) {
-      logger.send(asker, Lang.STATS_NONE.replace(new String[]{playerName}));
-      return;
-    }
-
-    int matches = (int) data.get("matches");
-    int wins = (int) data.get("wins");
-    int ties = (int) data.get("ties");
-    int bestWinStreak = (int) data.get("bestwinstreak");
-    int losses = matches - wins - ties;
-
-    double winsPerMatch = (matches > 0) ? (double) wins / matches : 0;
-
-    int goals = (int) data.get("goals");
-    int assists = (int) data.get("assists");
-    int ownGoals = (int) data.get("owngoals");
-    double goalsPerMatch = (matches > 0) ? (double) goals / matches : 0;
-
-    logger.send(asker, Lang.STATS.replace(new String[]{
-        playerName, String.valueOf(matches), String.valueOf(wins), String.valueOf(losses),
-        String.valueOf(ties), String.format("%.2f", winsPerMatch), String.valueOf(bestWinStreak),
-        String.valueOf(goals), String.format("%.2f", goalsPerMatch), String.valueOf(assists), String.valueOf(ownGoals)
-    }));
   }
 
   public void saveAll() {

@@ -27,7 +27,7 @@ public class PlayerData {
   }
 
   public Object get(String path) {
-    return config.get(path, 0);
+    return config == null ? 0 : config.get(path, 0);
   }
 
   public void set(String path, Object value) {

@@ -177,9 +177,10 @@ public class SignManipulation implements Listener {
       switch (line1.toLowerCase()) {
         case "join":
           if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, "fc join"})); return; }
-          if (matchManager.getBanManager().isBanned(player)) return;
-          if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_INTEAM.replace(null)); return; }
           if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return; }
+          if (matchManager.getBanManager().isBanned(player)) return;
+          if (matchManager.getBanManager().isBanned(player)) return;
+          if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
 
           String arenaType = ChatColor.stripColor(sign.getLine(2)).toLowerCase();
           int type;

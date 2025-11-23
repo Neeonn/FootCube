@@ -28,7 +28,6 @@ import lombok.Getter;
 import lombok.Setter;
 import me.neznamy.tab.api.TabAPI;
 import net.luckperms.api.LuckPerms;
-import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Bukkit;
@@ -80,7 +79,6 @@ public class FCManager {
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
 
   private Economy economy;
-  private Chat chat;
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
 
@@ -139,6 +137,7 @@ public class FCManager {
   public void reload() {
     initializeCachedPlayers();
     if (!enabling) configManager.reloadAllConfigs();
+    arenaManager.reloadArenas();
     setupConfig();
     setupMessages();
     registerCommands();
@@ -256,10 +255,6 @@ public class FCManager {
     RegisteredServiceProvider<Economy> economyRsp = plugin.getServer().getServicesManager().getRegistration(Economy.class);
     this.economy = economyRsp == null ? null : economyRsp.getProvider();
     if (economy == null) throw new IllegalStateException("Vault not found!");
-
-    RegisteredServiceProvider<Chat> chatRsp = plugin.getServer().getServicesManager().getRegistration(Chat.class);
-    this.chat = chatRsp == null ? null : chatRsp.getProvider();
-    if (chat == null) throw new IllegalStateException("Vault not found!");
 
     if (plugin.getServer().getPluginManager().isPluginEnabled("TAB")) {
       this.tabAPI = TabAPI.getInstance();

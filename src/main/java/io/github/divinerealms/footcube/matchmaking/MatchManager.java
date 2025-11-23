@@ -3,6 +3,7 @@ package io.github.divinerealms.footcube.matchmaking;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
 import io.github.divinerealms.footcube.matchmaking.logic.MatchData;
@@ -16,6 +17,7 @@ import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -32,6 +34,7 @@ public class MatchManager {
   private final MatchData data;
   private final MatchSystem system;
   private final BanManager banManager;
+  private final Utilities utilities;
   private final Logger logger;
 
   public MatchManager(FCManager fcManager) {
@@ -42,12 +45,13 @@ public class MatchManager {
     this.teamManager = fcManager.getTeamManager();
     this.system = fcManager.getMatchSystem();
     this.banManager = fcManager.getBanManager();
+    this.utilities = fcManager.getUtilities();
     this.logger = fcManager.getLogger();
   }
 
-  public void joinQueue(Player player, int matchType) {
+  public synchronized void joinQueue(Player player, int matchType) {
     if (banManager.isBanned(player)) return;
-    if (system.isInAnyQueue(player)) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
+    if (system.isInAnyQueue(player) || getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
 
     Team team = teamManager.getTeam(player);
     List<Player> playersToQueue = (team != null) ? team.getMembers() : Collections.singletonList(player);
@@ -55,7 +59,7 @@ public class MatchManager {
 
     for (Player p : playersToQueue) {
       if (!data.getPlayerQueues().containsKey(matchType)) { logger.send(p, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchTypeString, ""})); return; }
-      if (getMatch(p).isPresent() || data.getPlayerQueues().get(matchType).contains(p)) { logger.send(p, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
+      if (getMatch(p).isPresent() || system.isInAnyQueue(player)) { logger.send(p, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
     }
 
     Queue<Player> queue = data.getPlayerQueues().get(matchType);
@@ -370,14 +374,23 @@ public class MatchManager {
     TeamColor teamColor = senderMP.getTeamColor();
     if (teamColor == null) return;
 
-    String prefix = fcManager.getChat().getPlayerPrefix(sender) + sender.getName();
-    String formattedMessage = (teamColor == TeamColor.RED ? Lang.TEAMCHAT_RED.replace(new String[]{prefix}) : Lang.TEAMCHAT_BLUE.replace(new String[]{prefix})) + message;
+    UUID uuid = sender.getUniqueId();
+    String playerName = sender.getName();
 
-    for (MatchPlayer matchPlayer : match.getPlayers()) {
-      if (matchPlayer == null) continue;
-      Player player = matchPlayer.getPlayer();
-      if (player == null || !player.isOnline()) continue;
-      if (matchPlayer.getTeamColor() == teamColor) logger.send(player, formattedMessage);
-    }
+    utilities.getPrefixedName(uuid, playerName).thenAcceptAsync(prefixedName ->
+        Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> {
+          String formattedMessage = (teamColor == TeamColor.RED
+              ? Lang.TEAMCHAT_RED.replace(new String[]{prefixedName})
+              : Lang.TEAMCHAT_BLUE.replace(new String[]{prefixedName})) + message;
+
+          for (MatchPlayer matchPlayer : match.getPlayers()) {
+            if (matchPlayer == null) continue;
+            Player player = matchPlayer.getPlayer();
+            if (player == null || !player.isOnline()) continue;
+
+            if (matchPlayer.getTeamColor() == teamColor) logger.send(player, formattedMessage);
+          }
+        })
+    );
   }
 }

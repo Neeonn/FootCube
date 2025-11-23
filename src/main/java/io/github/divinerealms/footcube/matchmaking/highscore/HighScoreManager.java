@@ -126,7 +126,7 @@ public class HighScoreManager {
     }
 
     lastUpdatedParticipant = 0;
-    taskID = scheduler.runTaskTimerAsynchronously(plugin, this::continueUpdate, 1L, 1L).getTaskId();
+    taskID = scheduler.runTaskTimer(plugin, this::continueUpdate, 1L, 1L).getTaskId();
   }
 
   public void playerUpdate(Player requester) {

@@ -36,6 +36,14 @@ public class ArenaManager {
     loadArenas();
   }
 
+  public void reloadArenas() {
+    logger.info("&eReloading arenas...");
+    arenas.clear();
+    configManager.reloadConfig("arenas.yml");
+    loadArenas();
+    logger.info("&aArenas reloaded successfully! Total arenas: " + arenas.size());
+  }
+
   private void loadArenas() {
     if (arenaConfig == null) { logger.info("&carenas.yml not found!"); return; }
 
@@ -63,6 +71,18 @@ public class ArenaManager {
   }
 
   public void createArena(int type, Location blueSpawn, Location redSpawn) {
+    blueSpawn = normalizeLocation(blueSpawn);
+    redSpawn = normalizeLocation(redSpawn);
+
+    boolean isXAxis = Math.abs(blueSpawn.getX() - redSpawn.getX()) > Math.abs(blueSpawn.getZ() - redSpawn.getZ());
+    boolean blueIsLess = isXAxis ? blueSpawn.getX() < redSpawn.getX() : blueSpawn.getZ() < redSpawn.getZ();
+
+    blueSpawn.setYaw(isXAxis ? (blueIsLess ? 90.0F : -90.0F) : (blueIsLess ? 180.0F : 0.0F));
+    redSpawn.setYaw(isXAxis ? (blueIsLess ? -90.0F : 90.0F) : (blueIsLess ? 0.0F : 180.0F));
+
+    blueSpawn.setPitch(0.0F);
+    redSpawn.setPitch(0.0F);
+
     String typeString = type + "v" + type;
     int index = arenaConfig.getInt("arenas." + typeString + ".amount", 0) + 1;
 
@@ -77,6 +97,14 @@ public class ArenaManager {
 
     configManager.saveConfig("arenas.yml");
     addArena(type, blueSpawn, redSpawn);
+  }
+
+  private Location normalizeLocation(Location location) {
+    Location normalized = location.clone();
+    normalized.setX(Math.round(location.getX() - 0.5) + 0.5);
+    normalized.setY(Math.floor(location.getY()));
+    normalized.setZ(Math.round(location.getZ() - 0.5) + 0.5);
+    return normalized;
   }
 
   private void addArena(int type, Location blue, Location red) {

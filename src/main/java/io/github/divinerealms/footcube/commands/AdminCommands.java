@@ -89,6 +89,11 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             logger.send(sender, Lang.RELOAD.replace(new String[]{"all"}));
             return true;
 
+          case "arenas":
+            arenaManager.reloadArenas();
+            logger.send(sender, Lang.RELOAD.replace(new String[]{"arenas"}));
+            return true;
+
           default:
             logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <configs|all>"}));
             return true;
@@ -424,7 +429,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
         case "reload":
-          completions.addAll(Arrays.asList("configs", "all"));
+          completions.addAll(Arrays.asList("configs", "all", "arenas"));
           break;
 
         case "statset":

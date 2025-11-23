@@ -103,7 +103,8 @@ public class PlayerEvents implements Listener {
     fcManager.getMatchData().getMatches().stream()
         .filter(match -> match.getPhase() == MatchPhase.LOBBY)
         .forEach(match -> {
-          match.getPlayers().removeIf(matchPlayer -> player.equals(matchPlayer.getPlayer()));
+          match.getPlayers().removeIf(matchPlayer ->
+              matchPlayer == null || matchPlayer.getPlayer() == null || player.equals(matchPlayer.getPlayer()));
           fcManager.getScoreboardManager().updateScoreboard(match);
         });
 

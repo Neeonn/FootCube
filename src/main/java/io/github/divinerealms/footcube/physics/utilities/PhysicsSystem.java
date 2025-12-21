@@ -292,7 +292,6 @@ public class PhysicsSystem {
 
       data.getSpeed().remove(uuid);
       data.getCharges().remove(uuid);
-      data.getRaised().remove(uuid);
       data.getLastAction().remove(uuid);
       data.getCubeHits().remove(uuid);
     } finally {

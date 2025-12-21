@@ -72,34 +72,37 @@ public class CubeKickListener implements Listener {
         cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return;
       }
 
-      // Prevent AFK or unauthorized players from interacting.
+      // Prevent unauthorized players from interacting.
       if (system.notAllowedToInteract(player)) return;
 
-      // Calculate kick result and enforce cooldown.
+      // Check & Enforce cooldown.
+      CubeTouchType kickType = player.isSneaking() ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
+      Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
+      if (touches != null && touches.containsKey(kickType)) { event.setCancelled(true); return; }
+
+      // Calculate kick result.
       PlayerKickResult kickResult = system.calculateKickPower(player);
-      Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().computeIfAbsent(playerId, key -> new ConcurrentHashMap<>());
-      CubeTouchType kickType = kickResult.isChargedHit() ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
-      if (touches.containsKey(kickType)) return;
 
       // Compute final kick direction and apply impulse.
       Location playerLocation = player.getLocation();
       Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(KICK_VERTICAL_BOOST);
-
       cube.setVelocity(cube.getVelocity().add(kick));
-      system.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.75F, 1.0F);
 
       // Register player hit cooldown and record interaction.
-      touches.put(kickType, new CubeTouchInfo(System.currentTimeMillis(), kickType));
+      data.getLastTouches().computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
+          .put(kickType, new CubeTouchInfo(System.currentTimeMillis(), kickType));
       system.recordPlayerAction(player);
       fcManager.getMatchManager().kick(player);
 
+      // Register player hit cooldown and record interaction.
+      system.queueSound(cube.getLocation(), Sound.SLIME_WALK, 0.75F, 1.0F);
+
       // Schedule post-processing for player sound feedback and debug info.
-      // #TODO: Change to lastTouches.
-      // if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
       scheduler.runTask(plugin, () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings != null && settings.isKickSoundEnabled()) system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);
         if (data.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, playerLocation, 100, system.onHitDebug(player, kickResult));
+        if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
       });
 
       event.setCancelled(true);

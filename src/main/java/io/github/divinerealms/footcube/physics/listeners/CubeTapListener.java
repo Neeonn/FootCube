@@ -55,20 +55,24 @@ public class CubeTapListener implements Listener {
       if (system.notAllowedToInteract(player)) return;
 
       // Enforce cooldown.
-      Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().computeIfAbsent(playerId, key -> new ConcurrentHashMap<>());
-      if (touches.containsKey(CubeTouchType.RISE)) return;
+      Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
+      if (touches != null && touches.containsKey(CubeTouchType.RISE)) { event.setCancelled(true); return; }
 
       // Apply vertical boost and play sound.
       Vector previousVelocity = cube.getVelocity().clone();
       double newY = Math.max(previousVelocity.getY(), CUBE_JUMP_RIGHT_CLICK);
       cube.setVelocity(previousVelocity.setY(newY));
-      system.queueSound(cube.getLocation());
 
       // Mark player action to prevent spamming.
-      touches.put(CubeTouchType.RISE, new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
+      data.getLastTouches().computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
+          .put(CubeTouchType.RISE, new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
       data.getRaised().put(cube.getUniqueId(), System.currentTimeMillis());
+
       system.recordPlayerAction(player);
       fcManager.getMatchManager().kick(player);
+
+      // Play feedback sound.
+      system.queueSound(cube.getLocation());
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");

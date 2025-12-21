@@ -41,8 +41,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.GLOW_TASK_INTERVAL_TICKS;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.PHYSICS_TASK_INTERVAL_TICKS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 
 @Getter
 public class FCManager {
@@ -81,8 +80,8 @@ public class FCManager {
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
 
-  private boolean cubeCleanerRunning = false, physicsRunning = false, glowRunning = false, matchRunning = false;
-  private int cubeCleanerTaskID, physicsTaskID, glowTaskID, matchTaskID;
+  private boolean cubeCleanerRunning = false, physicsRunning = false, touchesCleanupRunning = false, playerUpdatesRunning = false, glowRunning = false, matchRunning = false;
+  private int cubeCleanerTaskID, physicsTaskID, touchesCleanupTaskID, playerUpdatesTaskID, glowTaskID, matchTaskID;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
@@ -179,11 +178,17 @@ public class FCManager {
     this.physicsRunning = true;
     this.physicsTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeProcess, PHYSICS_TASK_INTERVAL_TICKS, PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
 
+    this.touchesCleanupRunning = true;
+    this.touchesCleanupTaskID = scheduler.runTaskTimer(plugin, physicsEngine::touchesCleanup, CLEANUP_LAST_TOUCHES_INTERVAL, CLEANUP_LAST_TOUCHES_INTERVAL).getTaskId();
+
+    this.playerUpdatesRunning = true;
+    this.playerUpdatesTaskID = scheduler.runTaskTimer(plugin, physicsEngine::playerUpdate, EXP_UPDATE_INTERVAL_TICKS, EXP_UPDATE_INTERVAL_TICKS).getTaskId();
+
     this.glowRunning = true;
     this.glowTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
     this.matchRunning = true;
-    this.matchTaskID = scheduler.runTaskTimer(plugin, matchManager::update, 1L, 1L).getTaskId();
+    this.matchTaskID = scheduler.runTaskTimer(plugin, matchManager::update, MATCH_TASK_INTERVAL_TICKS, MATCH_TASK_INTERVAL_TICKS).getTaskId();
 
     logger.info("&a✔ &2Restarted all plugin tasks.");
 
@@ -194,27 +199,13 @@ public class FCManager {
   }
 
   public void shutdownTasks() {
-    if (physicsRunning) {
-      scheduler.cancelTask(physicsTaskID);
-      this.physicsRunning = false;
-    }
-
-    if (glowRunning) {
-      scheduler.cancelTask(glowTaskID);
-      this.glowRunning = false;
-    }
-
-    if (matchRunning) {
-      scheduler.cancelTask(matchTaskID);
-      this.matchRunning = false;
-    }
-
+    if (physicsRunning) { scheduler.cancelTask(physicsTaskID); this.physicsRunning = false; }
+    if (touchesCleanupRunning) { scheduler.cancelTask(touchesCleanupTaskID); this.touchesCleanupRunning = false; }
+    if (playerUpdatesRunning) { scheduler.cancelTask(playerUpdatesTaskID); this.playerUpdatesRunning = false; }
+    if (glowRunning) { scheduler.cancelTask(glowTaskID); this.glowRunning = false; }
+    if (matchRunning) { scheduler.cancelTask(matchTaskID); this.matchRunning = false; }
     physicsSystem.removeCubes();
-
-    if (cubeCleanerRunning) {
-      scheduler.cancelTask(cubeCleanerTaskID);
-      this.cubeCleanerRunning = false;
-    }
+    if (cubeCleanerRunning) { scheduler.cancelTask(cubeCleanerTaskID); this.cubeCleanerRunning = false; }
   }
 
   public void registerCommands() {

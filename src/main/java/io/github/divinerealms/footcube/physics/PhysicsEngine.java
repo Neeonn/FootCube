@@ -54,34 +54,13 @@ public class PhysicsEngine {
     long start = System.nanoTime();
     try {
       // Skip processing if there are no active players or cubes.
-      if (fcManager.getCachedPlayers().isEmpty()) return;
-      if (data.getCubes().isEmpty()) return;
+      if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) return;
 
       ++data.tickCounter;
-      // Remove players from the 'lastTouches' cache if their timeout expired.
-      if (data.tickCounter % CLEANUP_LAST_TOUCHES_INTERVAL == 0) system.cleanupExpiredTouches();
-
-      // Regenerate player charge values gradually, visualized via the experience bar.
-      Iterator<Map.Entry<UUID, Double>> chargesIterator = data.getCharges().entrySet().iterator();
-      while (chargesIterator.hasNext()) {
-        Map.Entry<UUID, Double> entry = chargesIterator.next();
-        UUID uuid = entry.getKey();
-        Player player = Bukkit.getPlayer(uuid);
-        if (player == null) { chargesIterator.remove(); continue; }
-
-        double currentCharge = entry.getValue();
-        double recoveredCharge = CHARGE_BASE_VALUE - (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
-        entry.setValue(recoveredCharge);
-
-        // Only update player XP every few ticks to reduce overhead.
-        if (data.tickCounter % EXP_UPDATE_INTERVAL_TICKS == 0) player.setExp((float) recoveredCharge);
-      }
 
       // Main cube processing loop.
-      Iterator<Slime> cubeIterator = data.getCubes().iterator();
-      while (cubeIterator.hasNext()) {
-        Slime cube = cubeIterator.next();
-        if (cube.isDead()) { data.getCubesToRemove().add(cube); cubeIterator.remove(); continue; }
+      for (Slime cube : data.getCubes()) {
+        if (cube.isDead()) { data.getCubesToRemove().add(cube); continue; }
 
         UUID cubeId = cube.getUniqueId();
         Location cubeLocation = cube.getLocation();
@@ -93,6 +72,7 @@ public class PhysicsEngine {
         // Process all nearby entities within hit range.
         double distance = -1, cubeSpeed = -1;
         List<Entity> nearbyEntities = cube.getNearbyEntities(PLAYER_CLOSE, PLAYER_CLOSE, PLAYER_CLOSE);
+
         for (Entity entity : nearbyEntities) {
           if (!(entity instanceof Player)) continue;
           Player player = (Player) entity;
@@ -225,6 +205,60 @@ public class PhysicsEngine {
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsEngine#cubeProcess() &ftook &e" + ms + "ms");
+    }
+  }
+
+  /**
+   * Maintenance task to be run at a lower frequency (e.g., every 5-10 seconds).
+   * <p>
+   * Cleans up expired touch data and other non-critical cache structures to
+   * keep memory usage lean without interrupting the primary physics calculations.
+   * </p>
+   */
+  public void touchesCleanup() {
+    long start = System.nanoTime();
+    try {
+      long now = System.currentTimeMillis();
+      if (!data.getLastTouches().isEmpty()) {
+        data.getLastTouches().values().removeIf(playerTouches -> {
+          playerTouches.entrySet().removeIf(entry ->
+              (now - entry.getValue().getTimestamp()) > entry.getKey().getCooldown());
+          return playerTouches.isEmpty();
+        });
+      }
+
+      if (!data.getRaised().isEmpty()) data.getRaised().entrySet().removeIf(entry -> (now - entry.getValue()) > 1000L);
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&7PhysicsEngine#touchesCleanup() &ftook &e" + ms + "ms");
+    }
+  }
+
+  /**
+   * Handles player-specific updates like charge recovery.
+   * Can be run at a lower frequency (e.g., 2-5 ticks) to save CPU.
+   */
+  public void playerUpdate() {
+    long start = System.nanoTime();
+    try {
+      if (data.getCharges().isEmpty()) return;
+
+      Iterator<Map.Entry<UUID, Double>> chargesIterator = data.getCharges().entrySet().iterator();
+      while (chargesIterator.hasNext()) {
+        Map.Entry<UUID, Double> entry = chargesIterator.next();
+        UUID uuid = entry.getKey();
+        Player player = Bukkit.getPlayer(uuid);
+        if (player == null) { chargesIterator.remove(); continue; }
+
+        double currentCharge = entry.getValue();
+        double recoveredCharge = CHARGE_BASE_VALUE - (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
+        entry.setValue(recoveredCharge);
+
+        player.setExp((float) recoveredCharge);
+      }
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&7PhysicsEngine#playerUpdate() &ftook &e" + ms + "ms");
     }
   }
 

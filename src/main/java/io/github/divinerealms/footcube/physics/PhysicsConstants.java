@@ -10,15 +10,16 @@ public class PhysicsConstants {
 
   // --- Task Intervals (Ticks) ---
   public static final long PHYSICS_TASK_INTERVAL_TICKS = 1;
+  public static final long MATCH_TASK_INTERVAL_TICKS = 1;
   public static final long GLOW_TASK_INTERVAL_TICKS = 10;
   public static final long CUBE_REMOVAL_DELAY_TICKS = 20;
-  public static final int CLEANUP_LAST_TOUCHES_INTERVAL = 10;
+  public static final int CLEANUP_LAST_TOUCHES_INTERVAL = 2;
   public static final int EXP_UPDATE_INTERVAL_TICKS = 2;
 
   // --- Timeouts & Cooldowns (Milliseconds) ---
   public static final long REGULAR_KICK_COOLDOWN = 150;
   public static final long CHARGED_KICK_COOLDOWN = 500;
-  public static final long RISE_COOLDOWN = 300;
+  public static final long RISE_COOLDOWN = 500;
   public static final long AFK_THRESHOLD = 60_000;
   public static final long SPAWN_COOLDOWN_MS = 3_000L;
 

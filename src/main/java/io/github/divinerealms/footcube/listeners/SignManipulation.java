@@ -142,7 +142,14 @@ public class SignManipulation implements Listener {
         case LIME:
           if (system.cantSpawnYet(player)) return;
           Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100, 100);
-          if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
+          int slimeCount = 0;
+          if (nearbyEntities != null) {
+            for (Entity entity : nearbyEntities) {
+              if (entity instanceof Slime) slimeCount++;
+            }
+          }
+
+          if (slimeCount < 10) {
             system.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));
@@ -212,7 +219,14 @@ public class SignManipulation implements Listener {
           if (system.cantSpawnYet(player)) return;
           Location location = player.getLocation();
           Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
-          if (nearbyEntities.stream().filter(entity -> entity instanceof Slime).count() < 10) {
+          int slimeCount = 0;
+          if (nearbyEntities != null) {
+            for (Entity entity : nearbyEntities) {
+              if (entity instanceof Slime) slimeCount++;
+            }
+          }
+
+          if (slimeCount < 10) {
             system.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
             logger.send(player, Lang.CUBE_SPAWN.replace(null));

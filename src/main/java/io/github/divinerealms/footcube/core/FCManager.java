@@ -40,7 +40,6 @@ import org.bukkit.scheduler.BukkitScheduler;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.GLOW_TASK_INTERVAL_TICKS;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.PHYSICS_TASK_INTERVAL_TICKS;
@@ -143,7 +142,13 @@ public class FCManager {
     registerCommands();
     initTasks();
     listenerManager.registerAll();
-    List<UUID> onlinePlayers = cachedPlayers.stream().map(Player::getUniqueId).collect(Collectors.toList());
+
+    List<UUID> onlinePlayers = new ArrayList<>(cachedPlayers.size());
+    for (Player p : cachedPlayers) {
+      if (p == null) continue;
+      onlinePlayers.add(p.getUniqueId());
+    }
+
     scheduler.runTaskAsynchronously(plugin, () -> onlinePlayers.forEach(uuid -> {
       Player asyncPlayer = plugin.getServer().getPlayer(uuid);
       if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
@@ -326,7 +331,11 @@ public class FCManager {
   }
 
   public void sendBanner() {
-    String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + plugin.getDescription().getAuthors().stream().map(String::valueOf).collect(Collectors.joining(", ")) + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
+    StringJoiner joiner = new StringJoiner(", ");
+    List<String> authors = plugin.getDescription().getAuthors();
+    for (String author : authors) joiner.add(author);
+
+    String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + joiner.toString() + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
 
     for (String line : banner) {
       plugin.getServer().getConsoleSender().sendMessage(logger.getConsolePrefix() + logger.color(line));

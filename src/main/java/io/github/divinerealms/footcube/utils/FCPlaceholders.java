@@ -3,6 +3,7 @@ package io.github.divinerealms.footcube.utils;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
 import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
@@ -65,8 +66,23 @@ public class FCPlaceholders extends PlaceholderExpansion {
     }
 
     if (identifier.equalsIgnoreCase("active_players_all")) {
-      int playersInMatches = matchManager.getData().getMatches().stream().mapToInt(m -> m.getPlayers().size()).sum();
-      int playersInQueues = matchManager.getData().getPlayerQueues().values().stream().mapToInt(Queue::size).sum();
+      int playersInMatches = 0;
+      if (matchManager.getData().getMatches() != null) {
+        for (Match match : matchManager.getData().getMatches()) {
+          if (match == null) continue;
+          if (match.getPlayers() == null) continue;
+          playersInMatches += match.getPlayers().size();
+        }
+      }
+
+      int playersInQueues = 0;
+      if (matchManager.getData().getPlayerQueues() != null) {
+        for (Queue<Player> q : matchManager.getData().getPlayerQueues().values()) {
+          if (q == null) continue;
+          playersInQueues += q.size();
+        }
+      }
+
       return String.valueOf(playersInMatches + playersInQueues);
     }
 

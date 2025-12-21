@@ -8,6 +8,7 @@ import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
+import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
@@ -25,9 +26,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_DISABLED_COMMANDS;
 
@@ -99,21 +98,24 @@ public class PlayerEvents implements Listener {
     fcManager.getCachedPlayers().remove(player);
     fcManager.getPlayerSettings().remove(player.getUniqueId());
 
-    fcManager.getMatchData().getPlayerQueues().values().forEach(queue -> queue.remove(player));
-    fcManager.getMatchData().getMatches().stream()
-        .filter(match -> match.getPhase() == MatchPhase.LOBBY)
-        .forEach(match -> {
-          match.getPlayers().removeIf(matchPlayer ->
-              matchPlayer == null || matchPlayer.getPlayer() == null || player.equals(matchPlayer.getPlayer()));
-          fcManager.getScoreboardManager().updateScoreboard(match);
-        });
+    Collection<Queue<Player>> playerQueues = fcManager.getMatchData().getPlayerQueues().values();
+    for (Queue<Player> queue : playerQueues) if (queue != null) queue.remove(player);
+
+    List<Match> matches = fcManager.getMatchData().getMatches();
+    if (matches != null) {
+      for (Match match : matches) {
+        if (match != null && match.getPhase() == MatchPhase.LOBBY) {
+          List<MatchPlayer> players = match.getPlayers();
+          if (players != null) players.removeIf(mp -> mp == null || mp.getPlayer() == null || mp.getPlayer().equals(player));
+        }
+        fcManager.getScoreboardManager().updateScoreboard(match);
+      }
+    }
 
     if (teamManager.isInTeam(player)) {
       Team team = teamManager.getTeam(player);
-      if (team != null) {
-        team.getMembers().stream()
-            .filter(p -> p != null && p.isOnline() && !p.equals(player))
-            .forEach(p -> logger.send(p, Lang.TEAM_DISBANDED.replace(new String[]{player.getName()})));
+      if (team != null && team.getMembers() != null) {
+        for (Player p : team.getMembers()) if (p != null && p.isOnline() && !p.equals(player)) logger.send(p, Lang.TEAM_DISBANDED.replace(new String[]{player.getName()}));
         teamManager.disbandTeam(team);
       }
     }
@@ -121,16 +123,19 @@ public class PlayerEvents implements Listener {
     Optional<Match> matchOpt = matchManager.getMatch(player);
     if (matchOpt.isPresent()) {
       Match match = matchOpt.get();
-      Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream()
-          .filter(Objects::nonNull)
-          .filter(p -> p.getPlayer() != null && p.getPlayer().equals(player))
-          .findFirst();
-      if (matchPlayerOpt.isPresent()) {
-        MatchPlayer matchPlayer = matchPlayerOpt.get();
+      MatchPlayer matchPlayer = null;
+      List<MatchPlayer> players = match.getPlayers();
+      if (players != null) {
+        for (MatchPlayer mp : players) {
+          if (mp != null && mp.getPlayer() != null && mp.getPlayer().equals(player)) { matchPlayer = mp; break; }
+        }
+      }
 
-        int playerScore = matchPlayer.getTeamColor() == io.github.divinerealms.footcube.matchmaking.player.TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
-        int opponentScore = matchPlayer.getTeamColor() == io.github.divinerealms.footcube.matchmaking.player.TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
-        if (match.getPhase() == io.github.divinerealms.footcube.matchmaking.MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
+      if (matchPlayer != null) {
+        int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
+        int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
+
+        if (match.getPhase() == MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
           fcManager.getEconomy().withdrawPlayer(player, 200);
           matchManager.getBanManager().banPlayer(player, 30 * 60 * 1000);
         }

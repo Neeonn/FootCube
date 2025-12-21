@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Getter
 public class MatchData {
@@ -17,6 +18,7 @@ public class MatchData {
   private final List<Match> openMatches = new CopyOnWriteArrayList<>();
   private final Map<Integer, Queue<Player>> playerQueues = new ConcurrentHashMap<>();
   private final Set<Integer> lockedQueues = ConcurrentHashMap.newKeySet();
+  private final Map<Integer, ReentrantLock> queueLocks = new ConcurrentHashMap<>();
 
   @Setter private boolean matchesEnabled = true;
 

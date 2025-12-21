@@ -6,6 +6,7 @@ import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.PhysicsEngine;
 import io.github.divinerealms.footcube.physics.actions.CubeSoundAction;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
+import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
 import io.github.divinerealms.footcube.utils.Logger;
 import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
@@ -300,42 +301,44 @@ public class PhysicsSystem {
     }
   }
 
-// #TODO: Change to lastTouches
-//  /**
-//   * Displays hit-related information to the player and manages the cooldown logic for hits
-//   * based on whether the hit is a charged or regular hit. This method also logs any performance
-//   * overhead if the execution time exceeds a millisecond.
-//   *
-//   * @param player The player who performed the hit. This parameter must not be null.
-//   * @param kickResult The result of the kick action, containing details such as kick power,
-//   *                   charge level, and whether the hit was charged. This parameter must not be null.
-//   */
-//  public void showHits(Player player, PlayerKickResult kickResult) {
-//    long start = System.nanoTime();
-//    try {
-//      UUID playerId = player.getUniqueId();
-//      boolean isChargedHit = kickResult.isChargedHit();
-//      double finalKickPower = kickResult.getFinalKickPower();
-//
-//      long cooldownDuration = isChargedHit ? CHARGED_KICK_COOLDOWN : REGULAR_KICK_COOLDOWN;
-//      long lastHitTime = data.getKicked().getOrDefault(playerId, 0L);
-//
-//      long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
-//      long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsedSinceLastHit);
-//
-//      logger.sendActionBar(player, (isChargedHit
-//          ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
-//          String.format("%.2f", finalKickPower),
-//          String.format("%.2f", kickResult.getPower()),
-//          String.format("%.2f", kickResult.getCharge())
-//      })
-//          : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{String.format("%.2f", finalKickPower)})
-//      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)}));
-//    } finally {
-//      long ms = (System.nanoTime() - start) / 1_000_000;
-//      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
-//    }
-//  }
+  /**
+   * Displays hit-related information to the player and manages the cooldown logic for hits
+   * based on whether the hit is a charged or regular hit. This method also logs any performance
+   * overhead if the execution time exceeds a millisecond.
+   *
+   * @param player The player who performed the hit. This parameter must not be null.
+   * @param kickResult The result of the kick action, containing details such as kick power,
+   *                   charge level, and whether the hit was charged. This parameter must not be null.
+   */
+  public void showHits(Player player, PlayerKickResult kickResult) {
+    long start = System.nanoTime();
+    try {
+      UUID playerId = player.getUniqueId();
+      boolean isChargedHit = kickResult.isChargedHit();
+      double finalKickPower = kickResult.getFinalKickPower();
+      CubeTouchType type = isChargedHit ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
+
+      Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
+      long lastHitTime = 0L;
+      if (touches != null && touches.containsKey(type)) lastHitTime = touches.get(type).getTimestamp();
+
+      long cooldownDuration = isChargedHit ? CHARGED_KICK_COOLDOWN : REGULAR_KICK_COOLDOWN;
+      long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
+      long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsedSinceLastHit);
+
+      logger.sendActionBar(player, (isChargedHit
+          ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
+          String.format("%.2f", finalKickPower),
+          String.format("%.2f", kickResult.getPower()),
+          String.format("%.2f", kickResult.getCharge())
+      })
+          : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{String.format("%.2f", finalKickPower)})
+      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)}));
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
+    }
+  }
 
   /**
    * Generates a debug message for a player's hit action based on whether the hit

@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
+import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -15,9 +16,8 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class MatchUtils {
 
@@ -51,30 +51,38 @@ public class MatchUtils {
 
   public static List<String> getFormattedMatches(List<Match> matches) {
     List<String> output = new ArrayList<>();
+    if (matches == null) return output;
+
     boolean firstBlock = true;
 
     for (Match match : matches) {
-      if (match.getPlayers().stream().allMatch(Objects::isNull)) continue;
+      if (match == null || match.getPlayers() == null) continue;
+
+      boolean allNull = true;
+      for (MatchPlayer mp : match.getPlayers()) { if (mp != null) { allNull = false; break; } }
+      if (allNull) continue;
 
       if (!firstBlock) output.add("");
       firstBlock = false;
 
       String type = match.getArena().getType() + "v" + match.getArena().getType();
-      List<String> redPlayers = match.getPlayers().stream()
-          .filter(Objects::nonNull)
-          .filter(p -> p.getPlayer() != null && p.getTeamColor() == TeamColor.RED)
-          .map(p -> p.getPlayer().getName())
-          .collect(Collectors.toList());
-      List<String> bluePlayers = match.getPlayers().stream()
-          .filter(Objects::nonNull)
-          .filter(p -> p.getPlayer() != null && p.getTeamColor() == TeamColor.BLUE)
-          .map(p -> p.getPlayer().getName())
-          .collect(Collectors.toList());
-      List<String> waitingPlayers = match.getPlayers().stream()
-          .filter(Objects::nonNull)
-          .filter(p -> p.getPlayer() != null && p.getTeamColor() == null)
-          .map(p -> p.getPlayer().getName())
-          .collect(Collectors.toList());
+
+      List<String> redPlayers = new ArrayList<>();
+      List<String> bluePlayers = new ArrayList<>();
+      List<String> waitingPlayers = new ArrayList<>();
+
+      for (MatchPlayer mp : match.getPlayers()) {
+        if (mp == null || mp.getPlayer() == null) continue;
+
+        String name = mp.getPlayer().getName();
+        if (mp.getTeamColor() == TeamColor.RED) {
+          redPlayers.add(name);
+        } else if (mp.getTeamColor() == TeamColor.BLUE) {
+          bluePlayers.add(name);
+        } else if (mp.getTeamColor() == null) {
+          waitingPlayers.add(name);
+        }
+      }
 
       String timeDisplay;
       if (match.getPhase() == MatchPhase.LOBBY) {
@@ -91,27 +99,29 @@ public class MatchUtils {
 
       if (match.getPhase() == MatchPhase.LOBBY) {
         output.add(Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(match.getArena().getId())}));
-        output.add(Lang.MATCHES_LIST_WAITINGPLAYERS.replace(new String[]{
-            waitingPlayers.isEmpty() ? "/" : String.join(", ", waitingPlayers)
-        }));
+        output.add(Lang.MATCHES_LIST_WAITINGPLAYERS.replace(new String[]{waitingPlayers.isEmpty() ? "/" : joinStrings(waitingPlayers)}));
         output.add(Lang.MATCHES_LIST_STATUS.replace(new String[]{timeDisplay}));
       } else if (match.getPhase() == MatchPhase.STARTING) {
         output.add(Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(match.getArena().getId())}));
-        output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{
-            redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)
-        }));
-        output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{
-            bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)
-        }));
+        output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : joinStrings(redPlayers)}));
+        output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : joinStrings(bluePlayers)}));
         output.add(Lang.MATCHES_LIST_STATUS.replace(new String[]{timeDisplay}));
       } else {
         output.add(Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(match.getArena().getId())}));
-        output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()),
-            Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay})}));
-        output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : String.join(", ", redPlayers)}));
-        output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : String.join(", ", bluePlayers)}));
+        output.add(Lang.MATCHES_LIST_RESULT.replace(new String[]{String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()), Lang.MATCHES_LIST_TIMELEFT.replace(new String[]{timeDisplay})}));
+        output.add(Lang.MATCHES_LIST_REDPLAYERS.replace(new String[]{redPlayers.isEmpty() ? "/" : joinStrings(redPlayers)}));
+        output.add(Lang.MATCHES_LIST_BLUEPLAYERS.replace(new String[]{bluePlayers.isEmpty() ? "/" : joinStrings(bluePlayers)}));
       }
     }
     return output;
+  }
+
+  private static String joinStrings(List<String> list) {
+    if (list == null || list.isEmpty()) return "/";
+    StringJoiner joiner = new StringJoiner(", ");
+    for (String s : list) {
+      if (s != null) joiner.add(s);
+    }
+    return joiner.toString();
   }
 }

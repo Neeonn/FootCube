@@ -15,13 +15,11 @@ import me.neznamy.tab.api.scoreboard.ScoreboardManager;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ScoreManager {
   private final FCManager fcManager;
@@ -125,49 +123,50 @@ public class ScoreManager {
     if (tabAPI == null) return;
     TabPlayer tabPlayer = tabAPI.getPlayer(player.getUniqueId());
     if (tabPlayer == null) return;
-
     manager.resetScoreboard(tabPlayer);
   }
 
   private String buildLobbyScoreboard(Match match) {
-    List<Player> redPlayers = match.getPlayers().stream()
-        .filter(Objects::nonNull)
-        .filter(p -> p.getPlayer() != null && p.getTeamColor() == TeamColor.RED)
-        .map(MatchPlayer::getPlayer)
-        .collect(Collectors.toList());
+    List<Player> redPlayers = new ArrayList<>();
+    List<Player> bluePlayers = new ArrayList<>();
+    List<Player> waitingPlayers = new ArrayList<>();
 
-    List<Player> bluePlayers = match.getPlayers().stream()
-        .filter(Objects::nonNull)
-        .filter(p -> p.getPlayer() != null && p.getTeamColor() == TeamColor.BLUE)
-        .map(MatchPlayer::getPlayer)
-        .collect(Collectors.toList());
-
-    List<Player> waitingPlayers = match.getPlayers().stream()
-        .filter(Objects::nonNull)
-        .filter(p -> p.getPlayer() != null && p.getTeamColor() == null)
-        .map(MatchPlayer::getPlayer)
-        .collect(Collectors.toList());
+    List<MatchPlayer> matchPlayers = match.getPlayers();
+    if (matchPlayers != null) {
+      for (MatchPlayer mp : matchPlayers) {
+        if (mp != null && mp.getPlayer() != null) {
+          if (mp.getTeamColor() == TeamColor.RED) redPlayers.add(mp.getPlayer());
+          else if (mp.getTeamColor() == TeamColor.BLUE) bluePlayers.add(mp.getPlayer());
+          else if (mp.getTeamColor() == null) waitingPlayers.add(mp.getPlayer());
+        }
+      }
+    }
 
     StringBuilder playersListBuilder = new StringBuilder();
     if (match.getPhase() == MatchPhase.STARTING) {
-      if (!redPlayers.isEmpty()) {
-        playersListBuilder.append(IntStream.range(0, redPlayers.size()).mapToObj(i -> Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
+      for (int i = 0; i < redPlayers.size(); i++) {
+        if (playersListBuilder.length() > 0) playersListBuilder.append(System.lineSeparator());
+        playersListBuilder.append(Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
             new String[]{String.valueOf(i + 1), redPlayers.get(i).getName()}
-        )).collect(Collectors.joining(System.lineSeparator())));
+        ));
       }
 
-      if (!bluePlayers.isEmpty()) {
-        if (playersListBuilder.length() > 0)
-          playersListBuilder.append(System.lineSeparator()).append(ChatColor.RESET).append(System.lineSeparator());
-        playersListBuilder.append(IntStream.range(0, bluePlayers.size()).mapToObj(i -> Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
+      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) playersListBuilder.append(System.lineSeparator()).append(ChatColor.RESET).append(System.lineSeparator());
+
+      for (int i = 0; i < bluePlayers.size(); i++) {
+        if (i > 0 || (!redPlayers.isEmpty() && playersListBuilder.length() > 0 && !playersListBuilder.toString().endsWith(System.lineSeparator()))) {
+          if (i > 0) playersListBuilder.append(System.lineSeparator());
+        }
+        playersListBuilder.append(Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
             new String[]{String.valueOf(i + 1), bluePlayers.get(i).getName()}
-        )).collect(Collectors.joining(System.lineSeparator())));
+        ));
       }
     } else {
-      if (!waitingPlayers.isEmpty()) {
-        playersListBuilder.append(IntStream.range(0, waitingPlayers.size()).mapToObj(i -> Lang.SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY.replace(
+      for (int i = 0; i < waitingPlayers.size(); i++) {
+        if (i > 0) playersListBuilder.append(System.lineSeparator());
+        playersListBuilder.append(Lang.SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY.replace(
             new String[]{String.valueOf(i + 1), waitingPlayers.get(i).getName()}
-        )).collect(Collectors.joining(System.lineSeparator())));
+        ));
       }
     }
 
@@ -195,7 +194,7 @@ public class ScoreManager {
         Lang.RED.replace(null), String.valueOf(match.getScoreRed()),
         String.valueOf(match.getScoreBlue()), Lang.BLUE.replace(null),
         timeDisplay
-    }) + System.lineSeparator() +  Lang.SCOREBOARD_FOOTER.replace(null);
+    }) + System.lineSeparator() + Lang.SCOREBOARD_FOOTER.replace(null);
   }
 
   public void unregisterScoreboard(Scoreboard scoreboard) {

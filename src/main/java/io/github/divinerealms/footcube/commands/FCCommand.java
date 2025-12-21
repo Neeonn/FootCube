@@ -30,7 +30,6 @@ import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static io.github.divinerealms.footcube.utils.Permissions.*;
 
@@ -77,18 +76,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
         int type;
         switch (matchType) {
-          case "2v2":
-            type = MatchConstants.TWO_V_TWO;
-            break;
-
-          case "3v3":
-            type = MatchConstants.THREE_V_THREE;
-            break;
-
-          case "4v4":
-            type = MatchConstants.FOUR_V_FOUR;
-            break;
-
+          case "2v2": type = MatchConstants.TWO_V_TWO; break;
+          case "3v3": type = MatchConstants.THREE_V_THREE; break;
+          case "4v4": type = MatchConstants.FOUR_V_FOUR; break;
           default:
             logger.send(player, Lang.JOIN_INVALIDTYPE.replace(new String[]{matchType, Lang.OR.replace(null)}));
             return true;
@@ -105,16 +95,13 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         Optional<Match> matchOpt = matchManager.getMatch(player);
         if (matchOpt.isPresent()) {
           Match match = matchOpt.get();
-          MatchPhase matchPhase = match.getPhase();
-          if (matchPhase == MatchPhase.IN_PROGRESS) {
-            Optional<MatchPlayer> matchPlayerOpt = match.getPlayers().stream()
-                .filter(Objects::nonNull)
-                .filter(p -> p.getPlayer() != null && p.getPlayer().equals(player))
-                .findFirst();
+          if (match.getPhase() == MatchPhase.IN_PROGRESS) {
+            MatchPlayer matchPlayer = null;
+            for (MatchPlayer mp : match.getPlayers()) {
+              if (mp != null && mp.getPlayer() != null && mp.getPlayer().equals(player)) { matchPlayer = mp; break; }
+            }
 
-            if (matchPlayerOpt.isPresent()) {
-              MatchPlayer matchPlayer = matchPlayerOpt.get();
-
+            if (matchPlayer != null) {
               int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
               int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
 
@@ -134,13 +121,12 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           boolean leftQueue = false;
           for (int queueType : matchManager.getData().getPlayerQueues().keySet()) {
             Queue<Player> queue = matchManager.getData().getPlayerQueues().get(queueType);
-            if (queue.contains(player)) {
+            if (queue != null && queue.contains(player)) {
               matchManager.leaveQueue(player, queueType);
               leftQueue = true;
               teamManager.disbandTeamIfInLobby(player);
             }
           }
-
           if (leftQueue) logger.send(player, Lang.LEFT.replace(null));
           else logger.send(player, Lang.LEAVE_NOT_INGAME.replace(null));
         }
@@ -156,8 +142,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.TAKEPLACE_INGAME.replace(null)); return true; }
         if (matchManager.getData().getOpenMatches().isEmpty()) { logger.send(player, Lang.TAKEPLACE_NOPLACE.replace(null)); return true; }
 
+        List<Match> openMatches = matchManager.getData().getOpenMatches();
         if (args.length < 2) {
-          Match openMatch = matchManager.getData().getOpenMatches().stream().findFirst().get();
+          Match openMatch = openMatches.iterator().next();
           matchManager.takePlace(player, openMatch.getArena().getId());
           return true;
         }
@@ -165,8 +152,11 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (args[1].equalsIgnoreCase("list")) {
           logger.send(player, Lang.TAKEPLACE_AVAILABLE_HEADER.replace(null));
 
-          for (Match openMatch : matchManager.getData().getOpenMatches()) {
-            long emptySlots = openMatch.getPlayers().stream().filter(Objects::isNull).count();
+          for (Match openMatch : openMatches) {
+            int emptySlots = 0;
+            for (MatchPlayer mp : openMatch.getPlayers()) {
+              if (mp == null) emptySlots++;
+            }
 
             logger.send(player, Lang.TAKEPLACE_AVAILABLE_ENTRY.replace(new String[]{
                 String.valueOf(openMatch.getArena().getId()),
@@ -400,13 +390,17 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         switch (args[1].toLowerCase()) {
           case "kick":
             if (args[2].equalsIgnoreCase("list")) {
-              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              StringJoiner joiner = new StringJoiner(", ");
+              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) joiner.add(s.name());
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), joiner.toString()}));
               return true;
             }
 
             if (!PlayerSettings.ALLOWED_KICK_SOUNDS.contains(sound)) {
               logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
-              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_KICK_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              StringJoiner joiner = new StringJoiner(", ");
+              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) joiner.add(s.name());
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), joiner.toString()}));
               return true;
             }
 
@@ -417,13 +411,17 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
           case "goal":
             if (args[2].equalsIgnoreCase("list")) {
-              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              StringJoiner joiner = new StringJoiner(", ");
+              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) joiner.add(s.name());
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), joiner.toString()}));
               return true;
             }
 
             if (!PlayerSettings.ALLOWED_GOAL_SOUNDS.contains(sound)) {
               logger.send(player, Lang.INVALID_TYPE.replace(new String[]{Lang.SOUND.replace(null)}));
-              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), PlayerSettings.ALLOWED_GOAL_SOUNDS.stream().map(Enum::name).collect(Collectors.joining(", "))}));
+              StringJoiner joiner = new StringJoiner(", ");
+              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) joiner.add(s.name());
+              logger.send(player, Lang.AVAILABLE_TYPE.replace(new String[]{Lang.SOUND.replace(null), joiner.toString()}));
               return true;
             }
 
@@ -515,10 +513,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   private void sendBanner(CommandSender sender) {
     if (sender instanceof Player) {
-      logger.send(sender, Lang.BANNER_PLAYER.replace(new String[]{
-          plugin.getName(), plugin.getDescription().getVersion(),
-          plugin.getDescription().getAuthors().stream().map(String::valueOf).collect(Collectors.joining(", "))
-      }));
+      StringJoiner joiner = new StringJoiner(", ");
+      List<String> authors = plugin.getDescription().getAuthors();
+      if (authors != null) for (String author : authors) joiner.add(author);
+      logger.send(sender, Lang.BANNER_PLAYER.replace(new String[]{plugin.getName(), plugin.getDescription().getVersion(), joiner.toString()}));
     } else {
       fcManager.sendBanner();
       logger.send(sender, "&aKucajte &e/fc help &aza listu dostupnih komandi.");
@@ -569,17 +567,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     } else if (args.length == 3) {
       String sub = args[0].toLowerCase();
       if (sub.equalsIgnoreCase("setsound")) {
-        if (args[1].equalsIgnoreCase("kick")) {
-          completions.add("list");
-          completions.addAll(PlayerSettings.ALLOWED_KICK_SOUNDS.stream()
-              .map(Enum::name)
-              .collect(Collectors.toList()));
-        } else if (args[1].equalsIgnoreCase("goal")) {
-          completions.add("list");
-          completions.addAll(PlayerSettings.ALLOWED_GOAL_SOUNDS.stream()
-              .map(Enum::name)
-              .collect(Collectors.toList()));
-        }
+        completions.add("list");
+        List<Sound> sounds = args[1].equalsIgnoreCase("kick") ? PlayerSettings.ALLOWED_KICK_SOUNDS : PlayerSettings.ALLOWED_GOAL_SOUNDS;
+        for (Sound s : sounds) completions.add(s.name());
       } else if (sub.equalsIgnoreCase("setparticle")) {
         if (args[1].equalsIgnoreCase("list")) {
           completions.addAll(PlayerSettings.getAllowedParticles());

@@ -7,7 +7,6 @@ import org.bukkit.Color;
 import org.bukkit.Sound;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -68,7 +67,11 @@ public class PlayerSettings {
   );
 
   public static List<String> getAllowedParticles() {
-    return Arrays.stream(EnumParticle.values()).filter(p -> !DISALLOWED_PARTICLES.contains(p)).map(EnumParticle::name).collect(Collectors.toList());
+    List<String> allowed = new ArrayList<>();
+    EnumParticle[] particles = EnumParticle.values();
+
+    for (EnumParticle p : particles) if (p != null && !DISALLOWED_PARTICLES.contains(p)) allowed.add(p.name());
+    return allowed;
   }
 
   public static List<String> getAllowedColorNames() {

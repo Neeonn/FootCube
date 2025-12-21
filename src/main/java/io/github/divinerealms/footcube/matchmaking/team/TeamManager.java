@@ -2,15 +2,13 @@ package io.github.divinerealms.footcube.matchmaking.team;
 
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
+import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 public class TeamManager {
@@ -70,17 +68,24 @@ public class TeamManager {
     Team team = getTeam(leaver);
     if (team == null) return;
 
-    boolean anyInMatchLobby = fcManager.getMatchManager().getMatch(leaver)
-        .filter(m -> m.getPhase() == MatchPhase.LOBBY)
-        .isPresent();
+    boolean anyInMatchLobby = false;
+    Optional<Match> matchOpt = fcManager.getMatchManager().getMatch(leaver);
+    if (matchOpt.isPresent()) {
+      Match match = matchOpt.get();
+      if (match.getPhase() == MatchPhase.LOBBY) anyInMatchLobby = true;
+    }
 
-    boolean anyInQueue = fcManager.getMatchManager().getData().getPlayerQueues().values().stream().
-        anyMatch(q -> q.contains(leaver));
+    boolean anyInQueue = false;
+    Collection<Queue<Player>> playerQueues = fcManager.getMatchManager().getData().getPlayerQueues().values();
+    for (Queue<Player> queue : playerQueues) { if (queue != null && queue.contains(leaver)) { anyInQueue = true; break; }}
 
     if (!anyInMatchLobby && !anyInQueue) return;
 
-    for (Player player : team.getMembers()) {
-      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+    List<Player> members = team.getMembers();
+    if (members != null) {
+      for (Player player : members) {
+        if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+      }
     }
 
     disbandTeam(team);

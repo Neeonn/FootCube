@@ -56,7 +56,7 @@ public class CubeTapListener implements Listener {
 
       // Enforce cooldown.
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
-      if (touches != null && touches.containsKey(CubeTouchType.RISE)) { event.setCancelled(true); return; }
+      if (touches != null && touches.containsKey(CubeTouchType.RISE)) return;
 
       // Apply vertical boost and play sound.
       Vector previousVelocity = cube.getVelocity().clone();

@@ -1,5 +1,6 @@
 package io.github.divinerealms.footcube.physics;
 
+import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
@@ -17,8 +18,10 @@ import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
 import java.util.*;
+import java.util.logging.Level;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class PhysicsEngine {
   private final FCManager fcManager;
@@ -56,7 +59,8 @@ public class PhysicsEngine {
       // Skip processing if there are no active players or cubes.
       if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) return;
 
-      ++data.tickCounter;
+      // Build player cache once per tick for all cubes to reuse.
+      Map<UUID, PlayerPhysicsCache> playerCache = buildPlayerCache();
 
       // Main cube processing loop.
       for (Slime cube : data.getCubes()) {
@@ -64,38 +68,55 @@ public class PhysicsEngine {
 
         UUID cubeId = cube.getUniqueId();
         Location cubeLocation = cube.getLocation();
+        if (cubeLocation == null) continue;
 
-        Vector previousVelocity = data.getVelocities().getOrDefault(cubeId, cube.getVelocity().clone());
-        Vector newVelocity = cube.getVelocity().clone();
+        Vector previousVelocity = data.getVelocities().get(cubeId);
+        if (previousVelocity == null) {
+          previousVelocity = cube.getVelocity().clone();
+          data.getVelocities().put(cubeId, previousVelocity);
+        }
 
+        Vector newVelocity = cube.getVelocity();
         boolean wasMoved = false, playSound = false;
+
         // Process all nearby entities within hit range.
-        double distance = -1, cubeSpeed = -1;
         List<Entity> nearbyEntities = cube.getNearbyEntities(PLAYER_CLOSE, PLAYER_CLOSE, PLAYER_CLOSE);
+
+        // Store player interaction data to avoid recalculation in anti-clipping.
+        Map<UUID, PlayerInteraction> playerInteractions = new HashMap<>();
 
         for (Entity entity : nearbyEntities) {
           if (!(entity instanceof Player)) continue;
           Player player = (Player) entity;
           UUID playerId = player.getUniqueId();
-          if (system.notAllowedToInteract(player) || system.isAFK(player)) continue;
+
+          PlayerPhysicsCache cache = playerCache.get(playerId);
+          if (cache == null || !cache.canInteract()) continue;
 
           // --- Player proximity and touch detection ---
           // Determines if the player is close enough to directly affect the cube.
-          Location playerLocation = player.getLocation();
-          distance = formulae.getDistance(cubeLocation, playerLocation);
+          double distance = formulae.getDistance(cubeLocation, cache.location);
+          playerInteractions.put(playerId, new PlayerInteraction(player, cache, distance));
+
           if (distance < HIT_RADIUS) {
-            cubeSpeed = newVelocity.length();
+            double cubeSpeed = newVelocity.length();
+
             // Dampen ball speed if inside proximity and moving too fast to prevent overshoot.
-            if (distance < MIN_RADIUS && cubeSpeed > MIN_SPEED_FOR_DAMPENING)
+            Vector directionToCube = cubeLocation.toVector().subtract(cache.location.toVector()).setY(0).normalize();
+            boolean isLookingAtBall = cache.direction.dot(directionToCube) > VELOCITY_DAMPENING_FACTOR;
+
+            if (distance < MIN_RADIUS && cubeSpeed > MIN_SPEED_FOR_DAMPENING && !isLookingAtBall)
               newVelocity.multiply(VELOCITY_DAMPENING_FACTOR / cubeSpeed);
 
             // Compute the resulting power from player movement and cube velocity.
-            double impactPower = data.getSpeed().getOrDefault(playerId, 1D) / PLAYER_SPEED_TOUCH_DIVISOR
-                + Math.max(previousVelocity.length(), VECTOR_CHANGE_THRESHOLD) / CUBE_SPEED_TOUCH_DIVISOR;
+            double impactPower = cache.speed / PLAYER_SPEED_TOUCH_DIVISOR
+                + Math.max(previousVelocity.length(), VECTOR_CHANGE_THRESHOLD)
+                / CUBE_SPEED_TOUCH_DIVISOR;
 
             // Apply a horizontal directional force in the direction the player is facing.
-            Vector push = playerLocation.getDirection().setY(0).normalize().multiply(impactPower);
-            newVelocity.add(cubeSpeed < LOW_VELOCITY_THRESHOLD ? push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER) : push);
+            Vector push = cache.direction.clone().multiply(impactPower);
+            if (cubeSpeed < LOW_VELOCITY_THRESHOLD) push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER);
+            newVelocity.add(push);
 
             // Register the touch interaction with the organization system.
             matchManager.kick(player);
@@ -142,70 +163,94 @@ public class PhysicsEngine {
         // Queue impact sound effect if any significant collision occurred.
         if (playSound) system.queueSound(cubeLocation);
 
-        for (Entity entity : nearbyEntities) {
-          if (!(entity instanceof Player)) continue;
-          Player player = (Player) entity;
-          if (system.notAllowedToInteract(player) || system.isAFK(player)) continue;
+        double cubeSpeed = newVelocity.length();
 
-          Location playerLocation = player.getLocation();
-          distance = distance != -1 ? distance : formulae.getDistance(cubeLocation, playerLocation);
-          cubeSpeed = cubeSpeed != -1 ? cubeSpeed : newVelocity.length();
-          if (distance < cubeSpeed * PROXIMITY_THRESHOLD_MULTIPLIER) {
-            Vector cubePos = cubeLocation.toVector();
-            Vector projectedNextPos = (new Vector(cubePos.getX(), cubePos.getY(), cubePos.getZ())).add(newVelocity);
+        // --- Anti-clipping / Proximity Logic ---
+        // Prevents the cube from passing through players at high speeds.
+        if (cubeSpeed > VECTOR_CHANGE_THRESHOLD) {
+          Vector cubePos = cubeLocation.toVector();
 
-            // Calculate directional alignment between cube velocity and player.
-            boolean movingTowardPlayer = true;
-            Vector directionToPlayer = new Vector(playerLocation.getX() - cubePos.getX(), 0, playerLocation.getZ() - cubePos.getZ());
-            Vector cubeDirection = (new Vector(newVelocity.getX(), 0, newVelocity.getZ())).normalize();
+          for (PlayerInteraction interaction : playerInteractions.values()) {
+            if (interaction == null || interaction.cache == null) continue;
 
-            // Determine relative direction quadrant using sign comparison.
-            int playerDirX = directionToPlayer.getX() < 0 ? -1 : 1;
-            int playerDirZ = directionToPlayer.getZ() < 0 ? -1 : 1;
-            int cubeDirX = cubeDirection.getX() < 0 ? -1 : 1;
-            int cubeDirZ = cubeDirection.getZ() < 0 ? -1 : 1;
+            PlayerPhysicsCache cache = interaction.cache;
+            double distance = interaction.distance;
 
-            // Complex logic to determine whether cube is traveling away or toward the player.
-            if (playerDirX != cubeDirX && playerDirZ != cubeDirZ
-                || (playerDirX != cubeDirX || playerDirZ != cubeDirZ)
-                && (!(cubeDirX * directionToPlayer.getX() > (cubeDirX * cubeDirZ * playerDirX) * cubeDirection.getZ())
-                || !(cubeDirZ * directionToPlayer.getZ() > (cubeDirZ * cubeDirX * playerDirZ) * cubeDirection.getX()))) {
-              movingTowardPlayer = false;
-            }
+            // Skip if player is too far away for clipping to be possible.
+            if (distance >= cubeSpeed * PROXIMITY_THRESHOLD_MULTIPLIER) continue;
 
-            // --- Height (Y-axis) validation ---
-            // Ensure cube is within player's vertical interaction range.
-            double playerY = playerLocation.getY();
-            boolean withinVerticalRange = cubePos.getY() < playerY + PLAYER_HEAD_LEVEL
-                && cubePos.getY() > playerY - PLAYER_FOOT_LEVEL
-                && projectedNextPos.getY() < playerY + PLAYER_HEAD_LEVEL
-                && projectedNextPos.getY() > playerY - PLAYER_FOOT_LEVEL;
+            double playerLocationY = cache.location.getY();
+            Vector projectedNextPos = cubePos.clone().add(newVelocity);
 
-            // --- Collision line proximity correction ---
-            // Prevents the cube from clipping through the player when moving directly toward them.
-            if (movingTowardPlayer && withinVerticalRange) {
-              double velocityX = newVelocity.getX();
-              if (Math.abs(velocityX) < TOLERANCE_VELOCITY_CHECK) continue;
+            // Check if the cube's vertical position aligns with player's height.
+            boolean withinY = (cubePos.getY() < playerLocationY + PLAYER_HEAD_LEVEL &&
+                              cubePos.getY() > playerLocationY - PLAYER_FOOT_LEVEL)
+                           || (projectedNextPos.getY() < playerLocationY + PLAYER_HEAD_LEVEL &&
+                              projectedNextPos.getY() > playerLocationY - PLAYER_FOOT_LEVEL);
 
-              // Reduce velocity to avoid tunneling effect when too close.
-              if (formulae.getPerpendicularDistance(newVelocity, cubePos, player) < MIN_RADIUS)
+            // If vertically aligned, check if the cube's path intersects player's collision radius.
+            if (withinY && formulae.getPerpendicularDistance(newVelocity, cubePos, interaction.player) < MIN_RADIUS) {
+              Vector toPlayer = cache.location.toVector().subtract(cubePos).setY(0).normalize();
+              Vector ballDirection = new Vector(newVelocity.getX(), 0, newVelocity.getZ()).normalize();
+              double dot = toPlayer.dot(ballDirection);
+
+              // Scale back velocity if moving toward player to prevent clipping.
+              if (dot > 0) {
                 newVelocity.multiply(distance / cubeSpeed);
+                cubeSpeed = newVelocity.length(); // Update speed for next anti-clipping interaction.
+              }
             }
           }
         }
 
+        // --- Velocity Capping ---
+        // If the ball exceeds MAX_KP, we scale the vector back to prevent "unreal" speeds.
+        double finalSpeed = newVelocity.length();
+        if (finalSpeed > MAX_KP) {
+          newVelocity.multiply(MAX_KP / finalSpeed);
+          // Log violation to players with debugging permissions.
+          logger.send(PERM_HIT_DEBUG, Lang.HITDEBUG_VELOCITY_CAP.replace(new String[]{String.format("%.2f", finalSpeed), String.valueOf(MAX_KP)}));
+        }
+
         // Apply final computed velocity to the cube and update its tracked state.
         cube.setVelocity(newVelocity);
-        data.getVelocities().put(cubeId, newVelocity);
+        data.getVelocities().put(cubeId, newVelocity.clone());
       }
 
       // Finalize scheduled physics actions.
       system.scheduleSound(); // Dispatch queued sound events to players.
       system.scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
+    } catch (Exception e) {
+      Bukkit.getLogger().log(Level.SEVERE, "Critical physics error: " + e.getMessage(), e);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsEngine#cubeProcess() &ftook &e" + ms + "ms");
     }
+  }
+
+  /**
+   * Temporary structure to store player interaction data during a single cube's processing.
+   * Prevents recalculating distances and player lookups in the anti-clipping phase.
+   *
+   * <p><b>Lifecycle:</b> Created during touch detection, reused in anti-clipping,
+   * then discarded at the end of each cube's processing.</p>
+   */
+  private static class PlayerInteraction {
+    final Player player;
+    final PlayerPhysicsCache cache;
+    final double distance;
+
+    PlayerInteraction(Player player, PlayerPhysicsCache cache, double distance) {
+      this.player = player;
+      this.cache = cache;
+      this.distance = distance;
+    }
+  }
+
+  private Map<UUID, PlayerPhysicsCache> buildPlayerCache() {
+    Map<UUID, PlayerPhysicsCache> cache = new HashMap<>();
+    for (Player player : fcManager.getCachedPlayers()) cache.put(player.getUniqueId(), new PlayerPhysicsCache(player, system, data));
+    return cache;
   }
 
   /**
@@ -230,7 +275,7 @@ public class PhysicsEngine {
       if (!data.getRaised().isEmpty()) data.getRaised().entrySet().removeIf(entry -> (now - entry.getValue()) > 1000L);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&7PhysicsEngine#touchesCleanup() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsEngine#touchesCleanup() &ftook &e" + ms + "ms");
     }
   }
 
@@ -258,7 +303,7 @@ public class PhysicsEngine {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&7PhysicsEngine#playerUpdate() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsEngine#playerUpdate() &ftook &e" + ms + "ms");
     }
   }
 
@@ -283,84 +328,114 @@ public class PhysicsEngine {
       Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
       if (onlinePlayers.isEmpty() || data.getCubes().isEmpty()) return;
 
-      // Cache player data to avoid redundant lookups.
-      Map<UUID, Location> playerLocations = new HashMap<>(onlinePlayers.size());
-      Map<UUID, PlayerSettings> playerSettings = new HashMap<>(onlinePlayers.size());
+      // Cache player data
+      Map<UUID, Location> playerLocations = new HashMap<>();
+      Map<UUID, PlayerSettings> playerSettings = new HashMap<>();
 
       for (Player p : onlinePlayers) {
         playerLocations.put(p.getUniqueId(), p.getLocation());
         playerSettings.put(p.getUniqueId(), fcManager.getPlayerSettings(p));
       }
 
-      // Iterate over each cube and determine whether particles should be shown.
       for (Slime cube : data.getCubes()) {
         if (cube == null || cube.isDead()) continue;
-        Location cubeLoc = cube.getLocation();
-        if (cubeLoc == null) continue;
 
-        double x = cubeLoc.getX();
-        double y = cubeLoc.getY() + PARTICLE_Y_OFFSET; // Raise particle height slightly above cube.
-        double z = cubeLoc.getZ();
+        Location currentLoc = cube.getLocation();
+        if (currentLoc == null) continue;
 
-        // Determine if any players are far enough away to require particle visibility.
-        boolean anyFarPlayers = false;
-        for (Map.Entry<UUID, PlayerSettings> entry : playerSettings.entrySet()) {
-          PlayerSettings s = entry.getValue();
-          if (s == null || !s.isParticlesEnabled()) continue;
-          Location playerLoc = playerLocations.get(entry.getKey());
-          if (playerLoc == null) continue;
+        UUID cubeId = cube.getUniqueId();
 
-          double dx = playerLoc.getX() - x;
-          double dy = playerLoc.getY() - y;
-          double dz = playerLoc.getZ() - z;
+        // Get stored previous location (from last particle update)
+        Location previousLoc = data.getPreviousCubeLocations().get(cubeId);
 
-          // Check if player is beyond the visual threshold distance.
-          if ((dx * dx + dy * dy + dz * dz) >= DISTANCE_PARTICLE_THRESHOLD_SQUARED) {
-            anyFarPlayers = true;
-            break;
-          }
+        // If no previous location, use current (first frame)
+        if (previousLoc == null) {
+          previousLoc = currentLoc.clone();
+          data.getPreviousCubeLocations().put(cubeId, previousLoc);
+          continue; // Skip first frame to avoid rendering at same position
         }
-        if (!anyFarPlayers) continue;
 
-        // Emit particle trails for players far from the cube.
+        // Calculate distance moved to determine trail density
+        double distanceMoved = currentLoc.distance(previousLoc);
+
+        // Skip if ball barely moved (< 0.1 blocks in 0.1s = stationary)
+        if (distanceMoved < 0.1) {
+          data.getPreviousCubeLocations().put(cubeId, currentLoc.clone());
+          continue;
+        }
+
+        // Adaptive trail points optimized for 2-tick interval
+        // At 2 ticks: fast balls move ~2-4 blocks, slow balls move 0.2-1 blocks
+        int trailPoints;
+        if (distanceMoved > 3.0) trailPoints = 5;
+        else if (distanceMoved > 1.5) trailPoints = 4;
+        else if (distanceMoved > 0.8) trailPoints = 3;
+        else if (distanceMoved > 0.3) trailPoints = 2;
+        else trailPoints = 1;
+
+        double x = currentLoc.getX();
+        double y = currentLoc.getY() + PARTICLE_Y_OFFSET;
+        double z = currentLoc.getZ();
+
+        double prevX = previousLoc.getX();
+        double prevY = previousLoc.getY() + PARTICLE_Y_OFFSET;
+        double prevZ = previousLoc.getZ();
+
+        // Emit particles for eligible players
         for (Player player : onlinePlayers) {
           UUID playerId = player.getUniqueId();
           Location playerLoc = playerLocations.get(playerId);
-          if (playerLoc == null) continue;
+          PlayerSettings settings = playerSettings.get(playerId);
+
+          if (playerLoc == null || settings == null || !settings.isParticlesEnabled()) continue;
 
           double dx = playerLoc.getX() - x;
           double dy = playerLoc.getY() - y;
           double dz = playerLoc.getZ() - z;
-
           double distanceSquared = dx * dx + dy * dy + dz * dz;
-          // Skip players already close enough to see the cube directly.
-          if (distanceSquared < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
-          // Skip players too far away (beyond 160 blocks).
-          if (distanceSquared > MAX_PARTICLE_DISTANCE_SQUARED) continue;
 
-          PlayerSettings settings = playerSettings.get(playerId);
-          if (settings == null || !settings.isParticlesEnabled()) continue;
+          if (distanceSquared < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
+          if (distanceSquared > MAX_PARTICLE_DISTANCE_SQUARED) continue;
 
           EnumParticle particle = settings.getParticle();
 
-          // Render colorized Redstone particles.
-          if (particle == EnumParticle.REDSTONE) {
-            Color color = settings.getRedstoneColor();
-            Utilities.sendParticle(player, EnumParticle.REDSTONE,
-                x, y, z,
-                color.getRed() / 255F, color.getGreen() / 255F, color.getBlue() / 255F,
-                1.0F, 0);
-          } else {
-            // Render standard particle effect.
-            Utilities.sendParticle(player, particle,
-                x, y, z,
-                GENERIC_PARTICLE_OFFSET,
-                GENERIC_PARTICLE_OFFSET,
-                GENERIC_PARTICLE_OFFSET,
-                GENERIC_PARTICLE_SPEED,
-                GENERIC_PARTICLE_COUNT);
+          // Linear interpolation between previous and current position
+          for (int i = 0; i < trailPoints; i++) {
+            double t = (double) i / Math.max(trailPoints - 1, 1);
+
+            // Lerp from previous to current
+            double trailX = prevX + (x - prevX) * t;
+            double trailY = prevY + (y - prevY) * t;
+            double trailZ = prevZ + (z - prevZ) * t;
+
+            if (particle == EnumParticle.REDSTONE) {
+              Color color = settings.getRedstoneColor();
+              // Fade from 0.6 to 1.0 (old to new)
+              float fadeFactor = 0.6f + (float) (t * 0.4f);
+
+              Utilities.sendParticle(player, EnumParticle.REDSTONE,
+                  trailX, trailY, trailZ,
+                  (color.getRed() / 255F) * fadeFactor,
+                  (color.getGreen() / 255F) * fadeFactor,
+                  (color.getBlue() / 255F) * fadeFactor,
+                  1.0F, 0);
+            } else {
+              // Particle count: 60% at oldest point, 100% at newest
+              int particleCount = (int) (GENERIC_PARTICLE_COUNT * (0.6 + t * 0.4));
+
+              Utilities.sendParticle(player, particle,
+                  trailX, trailY, trailZ,
+                  GENERIC_PARTICLE_OFFSET,
+                  GENERIC_PARTICLE_OFFSET,
+                  GENERIC_PARTICLE_OFFSET,
+                  GENERIC_PARTICLE_SPEED,
+                  Math.max(1, particleCount));
+            }
           }
         }
+
+        // Update stored previous location for next frame
+        data.getPreviousCubeLocations().put(cubeId, currentLoc.clone());
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
@@ -395,10 +470,10 @@ public class PhysicsEngine {
       data.getSoundQueue().clear();
       data.getButtonCooldowns().clear();
       data.getLastTouches().clear();
+      data.getPreviousCubeLocations().clear();
 
       // Reset control flags and counters.
       data.hitDebugEnabled = false;
-      data.tickCounter = 0;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsEngine#cleanup() &ftook &e" + ms + "ms");

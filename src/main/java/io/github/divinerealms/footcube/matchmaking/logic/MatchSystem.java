@@ -164,8 +164,6 @@ public class MatchSystem {
     MatchPlayer assister = null;
     boolean ownGoal;
 
-    String defaultName = Lang.NOBODY.replace(null);
-
     Location goalLoc = (scoringTeam == TeamColor.RED) ? match.getArena().getBlueSpawn() : match.getArena().getRedSpawn();
 
     if (scorer != null) {
@@ -210,11 +208,11 @@ public class MatchSystem {
 
     CompletableFuture<String> scorerPrefixFuture = scorerUUID != null
         ? utilities.getPrefixedName(scorerUUID, scorer.getPlayer().getName())
-        : CompletableFuture.completedFuture(defaultName);
+        : CompletableFuture.completedFuture(null);
 
     CompletableFuture<String> assisterPrefixFuture = assisterUUID != null
         ? utilities.getPrefixedName(assisterUUID, assister.getPlayer().getName())
-        : CompletableFuture.completedFuture(defaultName);
+        : CompletableFuture.completedFuture(null);
 
     MatchPlayer finalScorer = scorer;
     scorerPrefixFuture.thenCombine(assisterPrefixFuture, (scorerName, assisterName) -> new String[]{scorerName, assisterName})
@@ -228,15 +226,15 @@ public class MatchSystem {
 
               String goalMessage = ownGoal
                   ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{
-                  scorerName,
-                  scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null)
-              })
+                      scorerName,
+                      scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null)
+                    })
                   : Lang.MATCH_GOAL.replace(new String[]{
-                  scorerName,
-                  scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null),
-                  String.format("%.0f", finalScorer != null ? finalScorer.getPlayer().getLocation().distance(goalLoc) : 0),
-                  (assisterName != null ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{assisterName}) : "")
-              });
+                      scorerName,
+                      scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null),
+                      String.format("%.0f", finalScorer != null ? finalScorer.getPlayer().getLocation().distance(goalLoc) : 0),
+                      (assisterName != null ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{assisterName}) : "")
+                    });
 
               logger.send(player, goalMessage);
               logger.title(
@@ -580,7 +578,7 @@ public class MatchSystem {
 
       for (Player player : Bukkit.getOnlinePlayers()) {
         if (player == null) continue;
-        if (!fcManager.getMatchManager().getMatch(player).isPresent()) logger.send(player, wholeMessage);
+        if (fcManager.getMatchManager().getMatch(player).isEmpty()) logger.send(player, wholeMessage);
       }
     }
   }

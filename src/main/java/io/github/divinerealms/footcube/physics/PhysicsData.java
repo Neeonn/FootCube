@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.physics.actions.CubeSoundAction;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
 import lombok.Getter;
+import org.bukkit.Location;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
@@ -31,6 +32,7 @@ public class PhysicsData {
   private final Queue<CubeSoundAction> soundQueue = new ConcurrentLinkedQueue<>();
   private final Map<UUID, Long> buttonCooldowns = new ConcurrentHashMap<>();
 
+  private final Map<UUID, Location> previousCubeLocations = new ConcurrentHashMap<>();
+
   public boolean hitDebugEnabled = false;
-  public int tickCounter = 0;
 }

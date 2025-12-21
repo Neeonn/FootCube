@@ -42,6 +42,7 @@ public enum Lang {
   HITDEBUG_PLAYER_COOLDOWN("debug.hits-player.cooldown", "&8 [&fCD: {0}{1}ms&8]"),
   HITDEBUG_CHARGED("debug.hits.charged", "{prefix}&dCharged &8| {0} &8| {1}KP &8| &e{2}PW&7, &d{3}CH"),
   HITDEBUG_REGULAR("debug.hits.regular", "{prefix}&aRegular &8| {0} &8| &a{1}KP"),
+  HITDEBUG_VELOCITY_CAP("debug.hits.velocity-cap", "{prefix}&cVelocity Cap Triggered! &7Speed: &e{0} &7-> &a{1} &7| Hitter: &f{2}"),
 
   OR("or", "&e|&b"),
   SPY_ENABLED("spy.enabled", "{prefix}&aSpy mode enabled"),

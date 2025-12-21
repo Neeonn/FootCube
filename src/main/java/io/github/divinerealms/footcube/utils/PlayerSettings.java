@@ -24,24 +24,22 @@ public class PlayerSettings {
 
   private static final Map<String, Color> COLOR_MAP;
   static {
-    Map<String, Color> map = new HashMap<>();
-    map.put("RED", Color.fromRGB(255, 0, 0));
-    map.put("YELLOW", Color.fromRGB(255, 255, 0));
-    map.put("ORANGE", Color.fromRGB(255, 165, 0));
-    map.put("WHITE", Color.fromRGB(255, 255, 255));
-    map.put("BLACK", Color.fromRGB(30, 30, 30));
-    map.put("PURPLE", Color.fromRGB(128, 0, 128));
-    map.put("PINK", Color.fromRGB(255, 105, 180));
-    map.put("MAGENTA", Color.fromRGB(255, 0, 255));
-    map.put("GREEN", Color.fromRGB(50, 205, 50));
-    COLOR_MAP = Collections.unmodifiableMap(map);
+    COLOR_MAP = Map.of(
+        "RED", Color.fromRGB(255, 0, 0),
+        "YELLOW", Color.fromRGB(255, 255, 0),
+        "ORANGE", Color.fromRGB(255, 165, 0),
+        "WHITE", Color.fromRGB(255, 255, 255),
+        "BLACK", Color.fromRGB(30, 30, 30),
+        "PURPLE", Color.fromRGB(128, 0, 128),
+        "PINK", Color.fromRGB(255, 105, 180),
+        "MAGENTA", Color.fromRGB(255, 0, 255),
+        "GREEN", Color.fromRGB(50, 205, 50)
+    );
   }
 
   public void setCustomRedstoneColor(String colorName) {
     Color color = COLOR_MAP.get(colorName.toUpperCase());
-    if (color == null) {
-      throw new IllegalArgumentException("Invalid REDSTONE color: " + colorName);
-    }
+    if (color == null) throw new IllegalArgumentException("Invalid REDSTONE color: " + colorName);
     this.redstoneColor = color;
   }
 
@@ -86,7 +84,9 @@ public class PlayerSettings {
       Sound.DIG_STONE,
       Sound.DIG_WOOD,
       Sound.DIG_GRASS,
-      Sound.SUCCESSFUL_HIT
+      Sound.SUCCESSFUL_HIT,
+      Sound.SLIME_WALK,
+      Sound.SLIME_WALK2
   );
 
   public static final List<Sound> ALLOWED_GOAL_SOUNDS = Arrays.asList(

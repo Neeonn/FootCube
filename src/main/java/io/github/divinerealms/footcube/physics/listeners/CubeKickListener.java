@@ -78,7 +78,7 @@ public class CubeKickListener implements Listener {
       // Check & Enforce cooldown.
       CubeTouchType kickType = player.isSneaking() ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
-      if (touches != null && touches.containsKey(kickType)) { event.setCancelled(true); return; }
+      if (touches != null && touches.containsKey(kickType)) return;
 
       // Calculate kick result.
       PlayerKickResult kickResult = system.calculateKickPower(player);

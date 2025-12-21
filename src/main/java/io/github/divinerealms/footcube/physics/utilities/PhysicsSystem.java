@@ -46,37 +46,6 @@ public class PhysicsSystem {
   }
 
   /**
-   * Removes expired cube touch entries from the system.
-   * <p>
-   * This method iterates through the stored touch data in {@link PhysicsData}
-   * and removes any {@link CubeTouchInfo} records whose cooldowns have elapsed.
-   * After cleanup, players without remaining active touches are also removed
-   * to keep the data set compact and up-to-date.
-   * </p>
-   * <p>
-   * Used to maintain synchronization between player interactions and cube cooldowns
-   * during physics updates.
-   * </p>
-   */
-  public void cleanupExpiredTouches() {
-    long now = System.currentTimeMillis();
-
-    if (!data.getLastTouches().isEmpty()) {
-      data.getLastTouches().forEach((playerId, touchMap) ->
-          touchMap.entrySet().removeIf(entry -> {
-            CubeTouchInfo info = entry.getValue();
-            return now > info.getTimestamp() + info.getType().getCooldown();
-          })
-      );
-
-      // Remove players who no longer have any active touches
-      data.getLastTouches().entrySet().removeIf(entry -> entry.getValue().isEmpty());
-    }
-
-    if (!data.getRaised().isEmpty()) data.getRaised().entrySet().removeIf(entry -> now - entry.getValue() > 1000L);
-  }
-
-  /**
    * Checks if the cube was recently lifted by a player.
    * This check prevents {@link PhysicsEngine} from overwriting cube's Y level.
    *
@@ -322,8 +291,12 @@ public class PhysicsSystem {
       if (touches != null && touches.containsKey(type)) lastHitTime = touches.get(type).getTimestamp();
 
       long cooldownDuration = isChargedHit ? CHARGED_KICK_COOLDOWN : REGULAR_KICK_COOLDOWN;
-      long timeElapsedSinceLastHit = System.currentTimeMillis() - lastHitTime;
-      long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsedSinceLastHit);
+      long currentTime = System.currentTimeMillis();
+      long timeElapsed = currentTime - lastHitTime;
+      long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsed);
+
+      String timeFormatted = String.format("%.1f", timeRemainingMillis / 1000.0);
+      String color = timeRemainingMillis > 50 ? "&c" : "&a";
 
       logger.sendActionBar(player, (isChargedHit
           ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
@@ -332,7 +305,7 @@ public class PhysicsSystem {
           String.format("%.2f", kickResult.getCharge())
       })
           : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{String.format("%.2f", finalKickPower)})
-      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{timeRemainingMillis > 0 ? "&c" : "&a", String.valueOf(timeRemainingMillis)}));
+      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{color, timeFormatted}));
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");

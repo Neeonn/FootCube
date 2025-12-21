@@ -179,13 +179,13 @@ public class FCManager {
     this.physicsTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeProcess, PHYSICS_TASK_INTERVAL_TICKS, PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
 
     this.touchesCleanupRunning = true;
-    this.touchesCleanupTaskID = scheduler.runTaskTimer(plugin, physicsEngine::touchesCleanup, CLEANUP_LAST_TOUCHES_INTERVAL, CLEANUP_LAST_TOUCHES_INTERVAL).getTaskId();
+    this.touchesCleanupTaskID = scheduler.runTaskTimerAsynchronously(plugin, physicsEngine::touchesCleanup, CLEANUP_LAST_TOUCHES_INTERVAL, CLEANUP_LAST_TOUCHES_INTERVAL).getTaskId();
 
     this.playerUpdatesRunning = true;
     this.playerUpdatesTaskID = scheduler.runTaskTimer(plugin, physicsEngine::playerUpdate, EXP_UPDATE_INTERVAL_TICKS, EXP_UPDATE_INTERVAL_TICKS).getTaskId();
 
     this.glowRunning = true;
-    this.glowTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
+    this.glowTaskID = scheduler.runTaskTimerAsynchronously(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
 
     this.matchRunning = true;
     this.matchTaskID = scheduler.runTaskTimer(plugin, matchManager::update, MATCH_TASK_INTERVAL_TICKS, MATCH_TASK_INTERVAL_TICKS).getTaskId();
@@ -326,7 +326,7 @@ public class FCManager {
     List<String> authors = plugin.getDescription().getAuthors();
     for (String author : authors) joiner.add(author);
 
-    String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + joiner.toString() + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
+    String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + joiner + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
 
     for (String line : banner) {
       plugin.getServer().getConsoleSender().sendMessage(logger.getConsolePrefix() + logger.color(line));

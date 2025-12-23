@@ -133,13 +133,13 @@ public class PlayerDataManager {
       try {
         configManager.saveConfig("player_uuids.yml");
         uuidsChanged = false;
-        logger.info("Saved all player UUIDs.");
+        logger.info("&a✔ &2Saved all player UUIDs.");
       } catch (Exception exception) {
         plugin.getLogger().log(Level.SEVERE, "Failed to save UUID config.", exception);
       }
     }
 
-    logger.info("Saved all player data.");
+    logger.info("&a✔ &2Saved all player data.");
   }
 
   public void savePlayerData(String playerName) {

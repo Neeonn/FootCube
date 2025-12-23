@@ -37,11 +37,10 @@ public class ArenaManager {
   }
 
   public void reloadArenas() {
-    logger.info("&eReloading arenas...");
     arenas.clear();
     configManager.reloadConfig("arenas.yml");
     loadArenas();
-    logger.info("&aArenas reloaded successfully! Total arenas: " + arenas.size());
+    logger.info("&a✔ &2Arenas reloaded successfully! Total arenas: " + arenas.size());
   }
 
   private void loadArenas() {

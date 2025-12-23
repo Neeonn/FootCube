@@ -17,7 +17,7 @@ public class PhysicsConstants {
   public static final int EXP_UPDATE_INTERVAL_TICKS = 1;
 
   // --- Timeouts & Cooldowns (Milliseconds) ---
-  public static final long REGULAR_KICK_COOLDOWN = 200;
+  public static final long REGULAR_KICK_COOLDOWN = 150;
   public static final long CHARGED_KICK_COOLDOWN = 500;
   public static final long RISE_COOLDOWN = 500;
   public static final long AFK_THRESHOLD = 60_000;
@@ -61,11 +61,11 @@ public class PhysicsConstants {
   public static final double PLAYER_SPEED_TOUCH_DIVISOR = 3;
   public static final double CUBE_SPEED_TOUCH_DIVISOR = 6;
   public static final double PROXIMITY_THRESHOLD_MULTIPLIER = 1.3;
+  public static final double ANTI_CLIP_DOT_THRESHOLD = 0.5;
 
   // --- Physics Math Thresholds ---
   public static final double VECTOR_CHANGE_THRESHOLD = 0.1;
   public static final double VERTICAL_BOUNCE_THRESHOLD = 0.05;
-  public static final double TOLERANCE_VELOCITY_CHECK = 1.0E-6;
 
   // --- Player / Location Offsets ---
   public static final int PLAYER_HEAD_LEVEL = 2;

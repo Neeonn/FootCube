@@ -23,6 +23,7 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 
 @Getter
 public class MatchManager {
@@ -109,7 +110,7 @@ public class MatchManager {
 
   public void forceStartMatch(Player player) {
     Optional<Match> matchOpt = getMatch(player);
-    if (!matchOpt.isPresent()) { logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return; }
+    if (matchOpt.isEmpty()) { logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return; }
 
     Match targetMatch = matchOpt.get();
     if (targetMatch.getPhase() != MatchPhase.LOBBY) { logger.send(player, Lang.MATCH_ALREADY_STARTED.replace(null)); return; }
@@ -256,7 +257,7 @@ public class MatchManager {
       }
     }
 
-    if (!matchOpt.isPresent()) { logger.send(player, Lang.TAKEPLACE_INVALID_ID.replace(new String[]{String.valueOf(matchId)})); return; }
+    if (matchOpt.isEmpty()) { logger.send(player, Lang.TAKEPLACE_INVALID_ID.replace(new String[]{String.valueOf(matchId)})); return; }
 
     Match match = matchOpt.get();
     long redTeamCount = 0, blueTeamCount = 0;
@@ -370,9 +371,8 @@ public class MatchManager {
     if (matches == null || matches.isEmpty()) {
       try {
         system.processQueues();
-      } catch (Exception e) {
-        Bukkit.getLogger().severe("Error processing queues: " + e.getMessage());
-        e.printStackTrace();
+      } catch (Exception exception) {
+        Bukkit.getLogger().log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
       }
       return;
     }
@@ -382,24 +382,22 @@ public class MatchManager {
       if (match == null) continue;
       try {
         system.updateMatch(match);
-      } catch (Exception e) {
+      } catch (Exception exception) {
         String arenaId = (match.getArena() != null) ? String.valueOf(match.getArena().getId()) : "unknown";
-        Bukkit.getLogger().severe("Error updating match (arena=" + arenaId + "): " + e.getMessage());
-        e.printStackTrace();
+        Bukkit.getLogger().log(Level.SEVERE, "Error updating match (arena=" + arenaId + "): " + exception.getMessage(), exception);
       }
     }
 
     try {
       system.processQueues();
-    } catch (Exception e) {
-      Bukkit.getLogger().severe("Error processing queues: " + e.getMessage());
-      e.printStackTrace();
+    } catch (Exception exception) {
+      Bukkit.getLogger().log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
     }
   }
 
   public void kick(Player player) {
     Optional<Match> opt = getMatch(player);
-    if (!opt.isPresent()) return;
+    if (opt.isEmpty()) return;
     Match match = opt.get();
     if (match.getPlayers() == null) return;
 
@@ -538,7 +536,7 @@ public class MatchManager {
 
   public void teamChat(Player sender, String message) {
     Optional<Match> matchOpt = getMatch(sender);
-    if (!matchOpt.isPresent()) { logger.send(sender, Lang.LEAVE_NOT_INGAME.replace(null)); return; }
+    if (matchOpt.isEmpty()) { logger.send(sender, Lang.LEAVE_NOT_INGAME.replace(null)); return; }
 
     Match match = matchOpt.get();
     MatchPlayer senderMP = null;

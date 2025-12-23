@@ -296,7 +296,32 @@ public enum Lang {
   MATCHES_LIST_FOOTER("matches.list.footer", String.join(System.lineSeparator(),
       "&r &r",
       "&7&o Koristite &6/&efc join &2<&a2v2&2|&a3v3&2|&a4v4&2> &7&oza ulaz...",
-      "&e---------------------------------------------"));
+      "&e---------------------------------------------")),
+
+  PERFORMANCE_REPORT("plugin-stats.report.performance", String.join(System.lineSeparator(),
+      "&e-------------[ &6&lTask Performance &e]----------------",
+      "&r &r",
+      "&e  &lPhysics Tasks:&r",
+      "&6  ┣ &dCubeProcess&f: &a{0}ms",
+      "&6  ┣ &dTouchCleanup&f: &a{1}ms",
+      "&6  ┣ &dPlayerUpdate&f: &a{2}ms",
+      "&6  ┗ &dParticleTrail&f: &a{3}ms",
+      "&r &r",
+      "&a  &lGeneral Tasks:&r",
+      "&2  ┣ &aCubeCleaner&f: &a{4}ms",
+      "&2  ┗ &aMatchmaking&f: &a{5}ms",
+      "&r &r",
+      "&f &lOverall Average Tick Time:&r &a{6}ms",
+      "&e---------------------------------------------")),
+  TASKS_REPORT_HEADER("plugin-stats.report.tasks.header", String.join(System.lineSeparator(),
+      "&e-------------[ &6&lTask Status &e]----------------",
+      "&r &r",
+      "&7  Running: &e{0} &8/ &7{1}",
+      "&r &r")),
+  TASKS_REPORT_ENTRY("plugin-stats.report.tasks.entry","  {2} &d{3} &8({4} runs)"),
+  TASKS_REPORT_FOOTER("plugin-stats.report.tasks.footer", "&e---------------------------------------------"),
+  TASKS_RESTART("plugin-stats.report.tasks.restart", "{prefix-admin}&aAll tasks have been restarted."),
+  TASKS_RESET_STATS("plugin-stats.report.tasks.reset-stats", "{prefix-admin}&aAll task statistics have been reset.");
 
   private static FileConfiguration LANG;
   private final String path;

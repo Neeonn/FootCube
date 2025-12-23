@@ -20,7 +20,7 @@ import io.github.divinerealms.footcube.matchmaking.logic.MatchSystem;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
-import io.github.divinerealms.footcube.physics.PhysicsEngine;
+import io.github.divinerealms.footcube.managers.TaskManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.*;
@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
 
 @Getter
 public class FCManager {
@@ -69,19 +70,16 @@ public class FCManager {
 
   private final PhysicsData physicsData;
   private final PhysicsSystem physicsSystem;
-  private final PhysicsEngine physicsEngine;
   private final PhysicsFormulae physicsFormulae;
 
   private final ListenerManager listenerManager;
+  private final TaskManager taskManager;
 
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
 
   private Economy economy;
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
-
-  private boolean cubeCleanerRunning = false, physicsRunning = false, touchesCleanupRunning = false, playerUpdatesRunning = false, glowRunning = false, matchRunning = false;
-  private int cubeCleanerTaskID, physicsTaskID, touchesCleanupTaskID, playerUpdatesTaskID, glowTaskID, matchTaskID;
 
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
@@ -123,9 +121,9 @@ public class FCManager {
     this.physicsData = new PhysicsData();
     this.physicsSystem = new PhysicsSystem(physicsData, logger, scheduler, plugin);
     this.physicsFormulae = new PhysicsFormulae(logger);
-    this.physicsEngine = new PhysicsEngine(this);
 
     this.listenerManager = new ListenerManager(this);
+    this.taskManager = new TaskManager(this);
 
     new FCPlaceholders(this).register();
     enabling = false;
@@ -139,8 +137,13 @@ public class FCManager {
     setupConfig();
     setupMessages();
     registerCommands();
-    initTasks();
     listenerManager.registerAll();
+
+    taskManager.restart();
+    scheduler.runTaskLaterAsynchronously(plugin, () -> {
+      logger.info("&a✔ &2Updating &eHighScores&2...");
+      highscoreManager.update();
+    }, 20L);
 
     List<UUID> onlinePlayers = new ArrayList<>(cachedPlayers.size());
     for (Player p : cachedPlayers) {
@@ -161,51 +164,6 @@ public class FCManager {
     Collection<? extends Player> onlinePlayers = Bukkit.getOnlinePlayers();
     cachedPlayers.clear();
     cachedPlayers.addAll(onlinePlayers);
-  }
-
-  public void initTasks() {
-    shutdownTasks();
-
-    this.cubeCleanerRunning = false;
-    if (cubeCleaner.practiceAreasSet()) {
-      this.cubeCleanerRunning = true;
-      this.cubeCleanerTaskID = scheduler.runTaskTimer(plugin, () -> {
-        cubeCleaner.clearCubes();
-        if (!cubeCleaner.isEmpty()) logger.broadcast(Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(cubeCleaner.getAmount())}));
-      }, 20L, cubeCleaner.getRemoveInterval()).getTaskId();
-    }
-
-    this.physicsRunning = true;
-    this.physicsTaskID = scheduler.runTaskTimer(plugin, physicsEngine::cubeProcess, PHYSICS_TASK_INTERVAL_TICKS, PHYSICS_TASK_INTERVAL_TICKS).getTaskId();
-
-    this.touchesCleanupRunning = true;
-    this.touchesCleanupTaskID = scheduler.runTaskTimerAsynchronously(plugin, physicsEngine::touchesCleanup, CLEANUP_LAST_TOUCHES_INTERVAL, CLEANUP_LAST_TOUCHES_INTERVAL).getTaskId();
-
-    this.playerUpdatesRunning = true;
-    this.playerUpdatesTaskID = scheduler.runTaskTimer(plugin, physicsEngine::playerUpdate, EXP_UPDATE_INTERVAL_TICKS, EXP_UPDATE_INTERVAL_TICKS).getTaskId();
-
-    this.glowRunning = true;
-    this.glowTaskID = scheduler.runTaskTimerAsynchronously(plugin, physicsEngine::cubeParticles, GLOW_TASK_INTERVAL_TICKS, GLOW_TASK_INTERVAL_TICKS).getTaskId();
-
-    this.matchRunning = true;
-    this.matchTaskID = scheduler.runTaskTimer(plugin, matchManager::update, MATCH_TASK_INTERVAL_TICKS, MATCH_TASK_INTERVAL_TICKS).getTaskId();
-
-    logger.info("&a✔ &2Restarted all plugin tasks.");
-
-    scheduler.runTaskLaterAsynchronously(plugin, () -> {
-      logger.info("&a✔ &2Updating &eHighScores&2...");
-      highscoreManager.update();
-    }, 20L);
-  }
-
-  public void shutdownTasks() {
-    if (physicsRunning) { scheduler.cancelTask(physicsTaskID); this.physicsRunning = false; }
-    if (touchesCleanupRunning) { scheduler.cancelTask(touchesCleanupTaskID); this.touchesCleanupRunning = false; }
-    if (playerUpdatesRunning) { scheduler.cancelTask(playerUpdatesTaskID); this.playerUpdatesRunning = false; }
-    if (glowRunning) { scheduler.cancelTask(glowTaskID); this.glowRunning = false; }
-    if (matchRunning) { scheduler.cancelTask(matchTaskID); this.matchRunning = false; }
-    physicsSystem.removeCubes();
-    if (cubeCleanerRunning) { scheduler.cancelTask(cubeCleanerTaskID); this.cubeCleanerRunning = false; }
   }
 
   public void registerCommands() {
@@ -330,6 +288,20 @@ public class FCManager {
 
     for (String line : banner) {
       plugin.getServer().getConsoleSender().sendMessage(logger.getConsolePrefix() + logger.color(line));
+    }
+  }
+
+  public void cleanup() {
+    long start = System.nanoTime();
+    try {
+      // Reset entity and state tracking structures.
+      physicsData.cleanup();
+      playerSettings.clear();
+    } catch (Exception exception) {
+      Bukkit.getLogger().log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);
+    } finally {
+      long ms = (System.nanoTime() - start) / 1_000_000;
+      if (ms > DEBUG_ON_MS) logger.send(PERM_ADMIN, "{prefix-admin}&dCleanup &ftook &e" + ms + "ms &f(threshold: " + DEBUG_ON_MS + "ms)");
     }
   }
 }

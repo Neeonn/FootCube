@@ -35,4 +35,21 @@ public class PhysicsData {
   private final Map<UUID, Location> previousCubeLocations = new ConcurrentHashMap<>();
 
   public boolean hitDebugEnabled = false;
+  public int tickCount = 0;
+
+  public void cleanup() {
+    cubes.clear();
+    cubesToRemove.clear();
+    velocities.clear();
+    speed.clear();
+    charges.clear();
+    lastTouches.clear();
+    raised.clear();
+    lastAction.clear();
+    cubeHits.clear();
+    soundQueue.clear();
+    buttonCooldowns.clear();
+    previousCubeLocations.clear();
+    tickCount = 0;
+  }
 }

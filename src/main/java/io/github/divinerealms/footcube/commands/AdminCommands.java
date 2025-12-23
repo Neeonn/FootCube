@@ -6,6 +6,7 @@ import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.managers.TaskManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
@@ -13,6 +14,8 @@ import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
 import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
+import io.github.divinerealms.footcube.tasks.BaseTask;
+import io.github.divinerealms.footcube.utils.TaskStats;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -98,6 +101,54 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " <configs|all>"}));
             return true;
         }
+
+      case "stats":
+        if (!sender.hasPermission(PERM_ADMIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_ADMIN, label + " " + sub})); return true; }
+        TaskStats stats = fcManager.getTaskManager().getStats();
+
+        logger.send(sender, Lang.PERFORMANCE_REPORT.replace(new String[]{
+            String.format("%.3f", stats.getCubeProcessAvgMs()), String.format("%.3f", stats.getTouchCleanupAvgMs()),
+            String.format("%.3f", stats.getPlayerUpdateAvgMs()), String.format("%.3f", stats.getParticleTrailAvgMs()),
+            String.format("%.3f", stats.getCubeCleanerAvgMs()), String.format("%.3f", stats.getMatchmakingAvgMs()),
+            String.format("%.3f", stats.getAveragePerTask())
+        }));
+        break;
+
+      case "tasks":
+        if (!sender.hasPermission(PERM_ADMIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_ADMIN, label + " " + sub})); return true; }
+        TaskManager taskManager = fcManager.getTaskManager();
+
+        if (args.length == 1) {
+          logger.send(sender, Lang.TASKS_REPORT_HEADER.replace(new String[]{
+              String.valueOf(taskManager.getRunningTaskCount()), String.valueOf(taskManager.getTaskCount())
+          }));
+
+          for (BaseTask task : taskManager.getTasks()) {
+            String status = task.isRunning() ? "&a✔" : "&c✘";
+            logger.send(sender, Lang.TASKS_REPORT_ENTRY.replace(new String[]{
+                status, task.getTaskName(), String.valueOf(task.getTotalExecutions())
+            }));
+          }
+
+          logger.send(sender, Lang.TASKS_REPORT_FOOTER.replace(null));
+        } else {
+          switch (args[1].toLowerCase()) {
+            case "restart":
+              taskManager.restart();
+              logger.send(sender, Lang.TASKS_RESTART.replace(null));
+              return true;
+
+            case "resetstats":
+              taskManager.resetAllStats();
+              logger.send(sender, Lang.TASKS_RESET_STATS.replace(null));
+              return true;
+
+            default:
+              logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " [restart|resetstats]"}));
+              return true;
+          }
+        }
+        break;
 
       case "toggle":
         if (!sender.hasPermission(PERM_TOGGLE)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_TOGGLE, label + " " + sub})); return true; }
@@ -422,43 +473,27 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     List<String> completions = new ArrayList<>();
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
-          "reload", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "cleararenas", "setlobby",
-          "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd", "forceleave",
-          "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
+          "reload", "stats", "tasks", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "cleararenas",
+          "setlobby", "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd",
+          "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
       ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
-        case "reload":
-          completions.addAll(Arrays.asList("configs", "all", "arenas"));
-          break;
-
+        case "reload": completions.addAll(Arrays.asList("configs", "all", "arenas")); break;
+        case "tasks": completions.addAll(Arrays.asList("restart", "resetstats")); break;
         case "statset":
         case "forceleave":
         case "fl":
         case "ban":
         case "unban":
-        case "checkban":
-          fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
-          break;
-
-        case "setuparena":
-          completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
-          break;
-
+        case "checkban": fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName())); break;
+        case "setuparena": completions.addAll(Arrays.asList("2v2", "3v3", "4v4")); break;
         case "matchman":
-        case "mm":
-          completions.addAll(Arrays.asList("start", "end"));
-          break;
-
+        case "mm": completions.addAll(Arrays.asList("start", "end")); break;
         case "commanddisabler":
-        case "cd":
-          completions.addAll(Arrays.asList("add", "remove", "list"));
-          break;
-
+        case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
         case "setbutton":
-        case "sb":
-          completions.addAll(Arrays.asList("spawn", "clearcube"));
-          break;
+        case "sb": completions.addAll(Arrays.asList("spawn", "clearcube")); break;
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) {

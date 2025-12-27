@@ -2,12 +2,9 @@ package io.github.divinerealms.footcube.tasks;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 
@@ -17,6 +14,7 @@ import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
  */
 public class PlayerUpdateTask extends BaseTask {
   private final PhysicsData data;
+  private final Set<UUID> playersToRemove = new HashSet<>();
 
   public PlayerUpdateTask(FCManager fcManager) {
     super(fcManager, "PlayerUpdate", EXP_UPDATE_INTERVAL_TICKS, false);
@@ -24,15 +22,20 @@ public class PlayerUpdateTask extends BaseTask {
   }
 
   @Override
-  protected void execute() {
-    if (data.getCharges().isEmpty()) return;
+  protected void kaboom() {
+    Map<UUID, Double> charges = data.getCharges();
+    if (charges.isEmpty()) return;
 
-    Iterator<Map.Entry<UUID, Double>> chargesIterator = data.getCharges().entrySet().iterator();
-    while (chargesIterator.hasNext()) {
-      Map.Entry<UUID, Double> entry = chargesIterator.next();
+    playersToRemove.clear();
+    Set<Player> onlinePlayers = fcManager.getCachedPlayers();
+
+    Map<UUID, Player> onlinePlayerMap = new HashMap<>(onlinePlayers.size());
+    for (Player player : onlinePlayers) if (player != null) onlinePlayerMap.put(player.getUniqueId(), player);
+
+    for (Map.Entry<UUID, Double> entry : charges.entrySet()) {
       UUID uuid = entry.getKey();
-      Player player = Bukkit.getPlayer(uuid);
-      if (player == null) { chargesIterator.remove(); continue; }
+      Player player = onlinePlayerMap.get(uuid);
+      if (player == null) { playersToRemove.add(uuid); continue; }
 
       double currentCharge = entry.getValue();
       double recoveredCharge = CHARGE_BASE_VALUE -
@@ -41,5 +44,7 @@ public class PlayerUpdateTask extends BaseTask {
 
       player.setExp((float) recoveredCharge);
     }
+
+    if (!playersToRemove.isEmpty()) for (UUID uuid : playersToRemove) charges.remove(uuid);
   }
 }

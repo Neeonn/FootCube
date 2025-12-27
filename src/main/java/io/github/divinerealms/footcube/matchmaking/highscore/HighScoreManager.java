@@ -6,9 +6,9 @@ import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.Logger;
+import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -21,10 +21,8 @@ public class HighScoreManager {
   private final Logger logger;
   private final Utilities utilities;
   private final PlayerDataManager playerDataManager;
-  private final BukkitScheduler scheduler;
 
-  private int taskID;
-  private long lastUpdate;
+  @Getter private long lastUpdate;
 
   public double[] bestRatings;
   public int[] mostGoals;
@@ -40,45 +38,52 @@ public class HighScoreManager {
   public String[] topWinsNames;
   public String[] topStreakNames;
 
-  private int lastUpdatedParticipant;
-  private String[] participants;
-  private final ArrayList<Player> waitingPlayers = new ArrayList<>();
-  public boolean isUpdating;
+  @Getter private int lastUpdatedParticipant;
+  @Getter private String[] participants;
+  @Getter private boolean isUpdating, hasInitialData = false;
+  private boolean finishCalled = false;
 
   public HighScoreManager(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
     this.utilities = fcManager.getUtilities();
     this.playerDataManager = fcManager.getDataManager();
-    this.scheduler = plugin.getServer().getScheduler();
+    initializeArrays();
   }
 
-  public boolean needsUpdate() {
-    return lastUpdate + 600_000L < System.currentTimeMillis(); // 10 minutes
-  }
+  private void initializeArrays() {
+    bestRatings = new double[3];
+    mostGoals = new int[3];
+    mostAssists = new int[3];
+    mostOwnGoals = new int[3];
+    mostWins = new int[3];
+    longestStreak = new int[3];
 
-  public void addWaitingPlayer(Player player) {
-    if (!waitingPlayers.contains(player)) waitingPlayers.add(player);
-    if (isUpdating) {
-      int remaining = (participants != null ? participants.length - lastUpdatedParticipant : 0);
-      logger.send(player, Lang.BEST_UPDATING.replace(new String[]{String.valueOf(remaining)}));
-    } else {
-      showHighScores(player);
-    }
+    String nobody = Lang.NOBODY.replace(null);
+    topSkillNames = new String[]{nobody, nobody, nobody};
+    topGoalsNames = new String[]{nobody, nobody, nobody};
+    topAssistsNames = new String[]{nobody, nobody, nobody};
+    topOwnGoalsNames = new String[]{nobody, nobody, nobody};
+    topWinsNames = new String[]{nobody, nobody, nobody};
+    topStreakNames = new String[]{nobody, nobody, nobody};
   }
 
   public void showHighScores(Player player) {
     logger.send(player, Lang.BEST_HEADER.replace(null));
-
     showTopCategory(player, topSkillNames, bestRatings);
+
     logger.send(player, Lang.BEST_GOALS.replace(null));
     showTopCategory(player, topGoalsNames, mostGoals);
+
     logger.send(player, Lang.BEST_ASSISTS.replace(null));
     showTopCategory(player, topAssistsNames, mostAssists);
+
     logger.send(player, Lang.BEST_OWN_GOALS.replace(null));
     showTopCategory(player, topOwnGoalsNames, mostOwnGoals);
+
     logger.send(player, Lang.BEST_WINS.replace(null));
     showTopCategory(player, topWinsNames, mostWins);
+
     logger.send(player, Lang.BEST_WINSTREAK.replace(null));
     showTopCategory(player, topStreakNames, longestStreak);
   }
@@ -103,49 +108,25 @@ public class HighScoreManager {
     }
   }
 
-  public void update() {
-    bestRatings = new double[3];
-    mostGoals = new int[3];
-    mostAssists = new int[3];
-    mostOwnGoals = new int[3];
-    mostWins = new int[3];
-    longestStreak = new int[3];
-
-    topSkillNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-    topGoalsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-    topAssistsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-    topOwnGoalsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-    topWinsNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-    topStreakNames = new String[]{Lang.NOBODY.replace(null), Lang.NOBODY.replace(null), Lang.NOBODY.replace(null)};
-
+  public void startUpdate() {
     File playerFolder = new File(plugin.getDataFolder(), "players");
     File[] files = playerFolder.listFiles((dir, name) -> name.endsWith(".yml"));
     participants = new String[files != null ? files.length : 0];
-    for (int i = 0; i < participants.length; i++) {
-      participants[i] = files[i].getName().replace(".yml", "");
-    }
+    for (int i = 0; i < participants.length; i++) participants[i] = files[i].getName().replace(".yml", "");
 
     lastUpdatedParticipant = 0;
-    taskID = scheduler.runTaskTimer(plugin, this::continueUpdate, 1L, 1L).getTaskId();
-  }
-
-  public void playerUpdate(Player requester) {
-    if (!isUpdating) waitingPlayers.clear();
-    waitingPlayers.add(requester);
-    lastUpdate = System.currentTimeMillis();
+    finishCalled = false;
     isUpdating = true;
-
-    update();
   }
 
-  private void continueUpdate() {
-    int processed = 0;
+  public List<CompletableFuture<Void>> processBatch(int batchSize) {
     List<CompletableFuture<Void>> nameFutures = new ArrayList<>();
+    int processed = 0;
 
-    while (lastUpdatedParticipant < participants.length && processed < 25) {
+    while (lastUpdatedParticipant < participants.length && processed < batchSize) {
       String playerName = participants[lastUpdatedParticipant++];
       PlayerData data = playerDataManager.get(playerName);
-      if (data == null) continue;
+      if (data == null) { processed++; continue; }
 
       int matches = (int) data.get("matches");
       int wins = (int) data.get("wins");
@@ -155,21 +136,17 @@ public class HighScoreManager {
       int ownGoals = (int) data.get("owngoals");
       int bestWinStreak = (int) data.get("bestwinstreak");
 
-      double multiplier = 1.0 - Math.pow(0.9, matches);
+      double multiplier = 1 - Math.pow(0.9, matches);
       double goalBonus = matches > 0
-          ? (goals == matches ? 1.0 : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
+          ? (goals == matches ? 1 : Math.min(1, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
           : 0.5;
       double addition = (matches > 0 && wins + ties > 0)
-          ? 8.0 * (1.0 / ((100.0 * matches) / (wins + 0.5 * ties) / 100.0)) - 4.0
-          : (matches > 0 ? -4.0 : 0.0);
-
-      double skillLevel = Math.min(5.0 + goalBonus + addition * multiplier, 10.0);
+          ? 8 * (1 / ((100 * matches) / (wins + 0.5 * ties) / 100)) - 4
+          : (matches > 0 ? -4 : 0);
+      double skillLevel = Math.min(5 + goalBonus + addition * multiplier, 10);
 
       UUID uuid = playerDataManager.getUUID(playerName);
-      if (uuid == null) {
-        logger.info("&cUUID not found for player &b" + playerName);
-        continue;
-      }
+      if (uuid == null) { logger.info("&cUUID not found for player &b" + playerName); processed++; continue; }
 
       nameFutures.add(insertTop3(bestRatings, topSkillNames, skillLevel, uuid, playerName));
       nameFutures.add(insertTop3(mostGoals, topGoalsNames, goals, uuid, playerName));
@@ -182,41 +159,37 @@ public class HighScoreManager {
     }
 
     lastUpdate = System.currentTimeMillis();
-
-    if (!nameFutures.isEmpty()) {
-      CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0]))
-          .thenRun(this::checkFinishUpdate);
-    } else {
-      checkFinishUpdate();
-    }
+    return nameFutures;
   }
 
-  private void checkFinishUpdate() {
-    if (lastUpdatedParticipant >= participants.length) finishUpdate();
+  public boolean isUpdateComplete() {
+    return lastUpdatedParticipant >= participants.length;
   }
 
-  private void finishUpdate() {
-    scheduler.cancelTask(taskID);
-    plugin.getServer().getScheduler().runTask(plugin, () -> {
-      isUpdating = false;
-      for (Player player : waitingPlayers) showHighScores(player);
-      waitingPlayers.clear();
-    });
+  public void finishUpdate() {
+    if (finishCalled) return;
+    finishCalled = true;
+    isUpdating = false;
+    hasInitialData = true;
   }
 
   private CompletableFuture<Void> insertTop3(double[] array, String[] names, double value, UUID uuid, String playerName) {
-    value = Math.round(value * 100.0) / 100.0;
+    value = (double) Math.round(value * 100) / 100;
     double finalValue = value;
+
     return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName -> {
-      for (int i = 0; i < 3; i++) {
-        if (finalValue >= array[i]) {
-          for (int j = 2; j > i; j--) {
-            array[j] = array[j - 1];
-            names[j] = names[j - 1];
+      synchronized (array) {
+        for (int i = 0; i < 3; i++) {
+          if (finalValue > array[i]) {
+            for (int j = 2; j > i; j--) {
+              array[j] = array[j - 1];
+              names[j] = names[j - 1];
+            }
+
+            array[i] = finalValue;
+            names[i] = prefixedName;
+            break;
           }
-          array[i] = finalValue;
-          names[i] = prefixedName;
-          break;
         }
       }
     });
@@ -224,15 +197,18 @@ public class HighScoreManager {
 
   private CompletableFuture<Void> insertTop3(int[] array, String[] names, int value, UUID uuid, String playerName) {
     return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName -> {
-      for (int i = 0; i < 3; i++) {
-        if (value >= array[i]) {
-          for (int j = 2; j > i; j--) {
-            array[j] = array[j - 1];
-            names[j] = names[j - 1];
+      synchronized (array) {
+        for (int i = 0; i < 3; i++) {
+          if (value > array[i]) {
+            for (int j = 2; j > i; j--) {
+              array[j] = array[j - 1];
+              names[j] = names[j - 1];
+            }
+
+            array[i] = value;
+            names[i] = prefixedName;
+            break;
           }
-          array[i] = value;
-          names[i] = prefixedName;
-          break;
         }
       }
     });

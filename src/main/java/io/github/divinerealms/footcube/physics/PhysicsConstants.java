@@ -39,17 +39,17 @@ public class PhysicsConstants {
 
   // --- Velocity & Motion Modifiers ---
   public static final double MIN_SPEED_FOR_DAMPENING = 0.5;
-  public static final double VELOCITY_DAMPENING_FACTOR = 0.5;
+  public static final double DRIBBLE_SPEED_LIMIT = 0.5;
   public static final double LOW_VELOCITY_THRESHOLD = 0.2;
   public static final double LOW_VELOCITY_PUSH_MULTIPLIER = 1.2;
-  public static final double MIN_BOUNCE_VELOCITY_Y = 0.05;
+  public static final double MIN_BOUNCE_VELOCITY_Y = 0.15;
   public static final double WALL_BOUNCE_FACTOR = 0.8;
   public static final double AIR_DRAG_FACTOR = 0.98;
   public static final double CUBE_JUMP_RIGHT_CLICK = 0.7;
   public static final double KICK_VERTICAL_BOOST = 0.3;
+  public static final double RAISE_COOLDOWN_MS = 200;
 
   // --- Distance & Collision Thresholds ---
-  public static final double PLAYER_CLOSE = 1.5;
   public static final double HIT_RADIUS = 1.2;
   public static final double MIN_RADIUS = 0.8;
   public static final double BOUNCE_THRESHOLD = 0.3;

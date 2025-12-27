@@ -10,6 +10,7 @@ import io.github.divinerealms.footcube.managers.TaskManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
+import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
 import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
@@ -102,52 +103,41 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             return true;
         }
 
-      case "stats":
-        if (!sender.hasPermission(PERM_ADMIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_ADMIN, label + " " + sub})); return true; }
-        TaskStats stats = fcManager.getTaskManager().getStats();
-
-        logger.send(sender, Lang.PERFORMANCE_REPORT.replace(new String[]{
-            String.format("%.3f", stats.getCubeProcessAvgMs()), String.format("%.3f", stats.getTouchCleanupAvgMs()),
-            String.format("%.3f", stats.getPlayerUpdateAvgMs()), String.format("%.3f", stats.getParticleTrailAvgMs()),
-            String.format("%.3f", stats.getCubeCleanerAvgMs()), String.format("%.3f", stats.getMatchmakingAvgMs()),
-            String.format("%.3f", stats.getAveragePerTask())
-        }));
-        break;
-
       case "tasks":
         if (!sender.hasPermission(PERM_ADMIN)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_ADMIN, label + " " + sub})); return true; }
         TaskManager taskManager = fcManager.getTaskManager();
 
-        if (args.length == 1) {
-          logger.send(sender, Lang.TASKS_REPORT_HEADER.replace(new String[]{
-              String.valueOf(taskManager.getRunningTaskCount()), String.valueOf(taskManager.getTaskCount())
-          }));
-
-          for (BaseTask task : taskManager.getTasks()) {
-            String status = task.isRunning() ? "&a✔" : "&c✘";
-            logger.send(sender, Lang.TASKS_REPORT_ENTRY.replace(new String[]{
-                status, task.getTaskName(), String.valueOf(task.getTotalExecutions())
-            }));
-          }
-
-          logger.send(sender, Lang.TASKS_REPORT_FOOTER.replace(null));
-        } else {
-          switch (args[1].toLowerCase()) {
-            case "restart":
-              taskManager.restart();
-              logger.send(sender, Lang.TASKS_RESTART.replace(null));
-              return true;
-
-            case "resetstats":
-              taskManager.resetAllStats();
-              logger.send(sender, Lang.TASKS_RESET_STATS.replace(null));
-              return true;
-
-            default:
-              logger.send(sender, Lang.USAGE.replace(new String[]{label + " " + sub + " [restart|resetstats]"}));
-              return true;
+        if (args.length > 1) {
+          if (args[1].equalsIgnoreCase("restart")) {
+            taskManager.restart();
+            logger.send(sender, Lang.TASKS_RESTART.replace(null));
+            return true;
+          } else if (args[1].equalsIgnoreCase("reset")) {
+            taskManager.resetAllStats();
+            logger.send(sender, Lang.TASKS_RESET_STATS.replace(null));
+            return true;
           }
         }
+
+        logger.send(sender, Lang.TASKS_REPORT_HEADER.replace(new String[]{
+            String.valueOf(taskManager.getRunningTaskCount()), String.valueOf(taskManager.getTaskCount())
+        }));
+
+        for (BaseTask task : taskManager.getTasks()) {
+          double average = task.getAverageExecutionTime();
+          String status = task.isRunning() ? "&a✔" : "&c✘";
+          String timeColor = getColorForTime(average);
+
+          logger.send(sender, Lang.TASKS_REPORT_ENTRY.replace(new String[]{
+              status, task.getTaskName(),
+              timeColor + String.format("%.3f", average),
+              String.valueOf(task.getTotalExecutions())
+          }));
+        }
+
+        TaskStats stats = taskManager.getStats();
+        double totalAverage = stats.getAveragePerTask();
+        logger.send(sender, Lang.TASKS_REPORT_FOOTER.replace(new String[]{getColorForTime(totalAverage) + String.format("%.3f", totalAverage)}));
         break;
 
       case "toggle":
@@ -286,7 +276,6 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           arenaManager.getSetupWizards().remove(player);
           logger.send(player, Lang.SETUP_ARENA_SUCCESS.replace(null));
         }
-
         break;
 
       case "undo":
@@ -298,12 +287,27 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         else logger.send(player, Lang.PREFIX_ADMIN.replace(null) + "You are not setting up an arena.");
         break;
 
-      case "cleararenas":
-        if (!sender.hasPermission(PERM_CLEAR_ARENAS)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_ARENAS, label + " " + sub})); return true; }
+      case "clear":
+        if (!sender.hasPermission(PERM_CLEAR)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(sender, Lang.USAGE.replace(new String[]{label + sub + " <arenas|stats>"})); return true; }
 
-        arenaManager.clearArenas();
-        logger.send(sender, Lang.CLEAR_ARENAS_SUCCESS.replace(null));
-        break;
+        switch (args[1].toLowerCase()) {
+          case "arenas":
+            if (!sender.hasPermission(PERM_CLEAR_ARENAS)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_ARENAS, label + " " + sub})); return true; }
+            arenaManager.clearArenas();
+            logger.send(sender, Lang.CLEAR_ARENAS_SUCCESS.replace(null));
+            return true;
+
+          case "stats":
+            if (!sender.hasPermission(PERM_CLEAR_STATS)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_CLEAR_STATS, label + " " + sub})); return true; }
+            dataManager.clearAllStats();
+            logger.send(sender, Lang.CLEAR_STATS_SUCCESS.replace(null));
+            return true;
+
+          default:
+            logger.send(sender, Lang.USAGE.replace(new String[]{label + sub + " <arenas|stats>"}));
+            return true;
+        }
 
       case "setlobby":
         if (!(sender instanceof Player)) return inGameOnly(sender);
@@ -381,10 +385,13 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
             break;
 
           case "end":
-            Optional<Match> match = matchManager.getMatch(player);
-            if (match.isPresent()) {
-              matchManager.endMatch(match.get());
-              logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{match.get().getArena().getType() + "v" + match.get().getArena().getType()}));
+            Optional<Match> matchOptional = matchManager.getMatch(player);
+            if (matchOptional.isPresent()) {
+              Match match = matchOptional.get();
+              if (match.getPhase() == MatchPhase.LOBBY || match.getPhase() == MatchPhase.STARTING) {
+                matchManager.endMatch(match);
+              } else match.setPhase(MatchPhase.ENDED);
+              logger.send(sender, Lang.MATCHMAN_FORCE_END.replace(new String[]{match.getArena().getType() + "v" + match.getArena().getType()}));
             } else logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
             break;
 
@@ -466,6 +473,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     return true;
   }
 
+  private String getColorForTime(double ms) {
+    if (ms < 0.05) return "&a";
+    if (ms < 0.15) return "&e";
+    return "&c";
+  }
+
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
     if (!sender.hasPermission(PERM_ADMIN)) return Collections.emptyList();
@@ -473,14 +486,14 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     List<String> completions = new ArrayList<>();
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
-          "reload", "stats", "tasks", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "cleararenas",
+          "reload", "tasks", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "clear",
           "setlobby", "setpracticearea", "spa", "matchman", "mm", "hitdebug", "hits", "commanddisabler", "cd",
           "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
       ));
     } else if (args.length == 2) {
       switch (args[0].toLowerCase()) {
         case "reload": completions.addAll(Arrays.asList("configs", "all", "arenas")); break;
-        case "tasks": completions.addAll(Arrays.asList("restart", "resetstats")); break;
+        case "tasks": completions.addAll(Arrays.asList("restart", "reset")); break;
         case "statset":
         case "forceleave":
         case "fl":
@@ -494,6 +507,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         case "cd": completions.addAll(Arrays.asList("add", "remove", "list")); break;
         case "setbutton":
         case "sb": completions.addAll(Arrays.asList("spawn", "clearcube")); break;
+        case "clear": completions.addAll(Arrays.asList("arenas", "stats")); break;
       }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("ban")) {

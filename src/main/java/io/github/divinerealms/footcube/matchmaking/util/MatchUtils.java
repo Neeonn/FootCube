@@ -6,6 +6,8 @@ import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
+import io.github.divinerealms.footcube.utils.Logger;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -13,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,5 +126,93 @@ public class MatchUtils {
       if (s != null) joiner.add(s);
     }
     return joiner.toString();
+  }
+
+  public static void displayGoalMessage(Player player, String style, boolean ownGoal, boolean isHatTrick,
+                                        boolean isViewerScorer, String scorerName, String assistText, String teamColorText,
+                                        double distance, Match match, Logger logger, Plugin plugin) {
+    String distanceString = String.format("%.0f", distance);
+    String redTeam = Lang.RED.replace(null);
+    String blueTeam = Lang.BLUE.replace(null);
+
+    switch (style) {
+      case "epic":
+        displayEpicGoal(player, ownGoal, isHatTrick, isViewerScorer, scorerName, assistText,
+            teamColorText, distanceString, redTeam, blueTeam, match, logger, plugin);
+        break;
+
+      case "simple":
+        displaySimpleGoal(player, ownGoal, scorerName, distanceString, logger);
+        break;
+
+      case "minimal":
+        displayMinimalGoal(player, ownGoal, scorerName, redTeam, blueTeam, match, logger);
+        break;
+
+      default:
+        displayDefaultGoal(player, ownGoal, isHatTrick, isViewerScorer, scorerName, assistText,
+            teamColorText, distanceString, redTeam, blueTeam, match, logger);
+        break;
+    }
+  }
+
+  public static boolean isValidGoalMessage(String style) {
+    return style != null && (style.equals("default") || style.equals("epic")
+        || style.equals("simple") || style.equals("minimal") || style.equals("custom"));
+  }
+
+  private static void displayEpicGoal(Player player, boolean ownGoal, boolean isHatTrick, boolean isViewerScorer,
+                                      String scorerName, String assistText, String teamColorText, String distance,
+                                      String redTeam, String blueTeam, Match match, Logger logger, Plugin plugin) {
+    String initialTitle = ownGoal ? Lang.GM_EPIC_TITLE_1.replace(null)
+        : (isHatTrick ? Lang.GM_EPIC_TITLE_1_HATTY.replace(null) : Lang.GM_EPIC_TITLE_1_GOAL.replace(null));
+    String initialSubtitle = ownGoal ? Lang.GM_EPIC_SUBTITLE_1.replace(null)
+        : (isViewerScorer ? Lang.GM_EPIC_SUBTITLE_1_SCORER.replace(null) : Lang.GM_EPIC_SUBTITLE_1_OTHER.replace(null));
+
+    logger.title(player, initialTitle, initialSubtitle, 5, 35, 10);
+
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+      String secondTitle = ownGoal ? Lang.GM_EPIC_TITLE_2.replace(new String[]{teamColorText}) : Lang.GM_EPIC_TITLE_2_GOAL.replace(new String[]{teamColorText});
+      String secondSubtitle = Lang.GM_EPIC_SUBTITLE_2.replace(new String[]{scorerName, assistText.isEmpty() ? "" : assistText});
+      logger.title(player, secondTitle, secondSubtitle, 0, 35, 10);
+    }, 40L);
+
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+      String thirdTitle = Lang.GM_EPIC_TITLE_3.replace(new String[]{distance});
+      String thirdSubtitle = Lang.GM_EPIC_SUBTITLE_3.replace(new String[]{redTeam, String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()), blueTeam});
+      logger.title(player, thirdTitle, thirdSubtitle, 0, 30, 10);
+    }, 80L);
+  }
+
+  private static void displaySimpleGoal(Player player, boolean ownGoal, String scorerName, String distance, Logger logger) {
+    String title = ownGoal ? Lang.GM_SIMPLE_TITLE.replace(null) : Lang.GM_SIMPLE_TITLE_GOAL.replace(null);
+    String subtitle = Lang.GM_SIMPLE_SUBTITLE.replace(new String[]{scorerName, distance});
+    logger.title(player, title, subtitle, 5, 40, 10);
+  }
+
+  private static void displayMinimalGoal(Player player, boolean ownGoal, String scorerName,
+                                         String redTeam, String blueTeam, Match match, Logger logger) {
+    String message = ownGoal
+        ? Lang.GM_MINIMAL_OWN.replace(new String[]{scorerName, redTeam, String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()), blueTeam})
+        : Lang.GM_MINIMAL_GOAL.replace(new String[]{scorerName, redTeam, String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()), blueTeam});
+
+    logger.sendActionBar(player, message);
+  }
+
+  private static void displayDefaultGoal(Player player, boolean ownGoal, boolean isHatTrick, boolean isViewerScorer,
+                                         String scorerName, String assistText, String teamColorText, String distance,
+                                         String redTeam, String blueTeam, Match match, Logger logger) {
+    String title = ownGoal ? Lang.GM_DEFAULT_TITLE_OWN.replace(null)
+        : (isHatTrick ? Lang.GM_DEFAULT_TITLE_HATTY.replace(null)
+        : (isViewerScorer ? Lang.GM_DEFAULT_TITLE_SCORER.replace(null) : Lang.GM_DEFAULT_TITLE_GOAL.replace(null)));
+
+    String subtitle = ownGoal
+        ? Lang.GM_DEFAULT_SUBTITLE_OWN.replace(new String[]{scorerName, teamColorText})
+        : Lang.GM_DEFAULT_SUBTITLE_GOAL.replace(new String[]{scorerName, distance, assistText.isEmpty() ? "" : assistText});
+
+    logger.title(player, title, subtitle, 10, 50, 10);
+
+    String scoreMessage = Lang.GM_DEFAULT_ACTIONBAR.replace(new String[]{redTeam, String.valueOf(match.getScoreRed()), String.valueOf(match.getScoreBlue()), blueTeam});
+    logger.sendActionBar(player, scoreMessage);
   }
 }

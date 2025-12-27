@@ -159,7 +159,7 @@ public class FCPlaceholders extends PlaceholderExpansion {
       int matches = (int) data.get("matches");
       int wins = (int) data.get("wins");
       int ties = (int) data.get("ties");
-      int losses = matches - wins - ties;
+      int losses = (int) data.get("losses");
       int goals = (int) data.get("goals");
       int ownGoals = (int) data.get("owngoals");
       int assists = (int) data.get("assists");

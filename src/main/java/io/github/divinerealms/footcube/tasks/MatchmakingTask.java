@@ -18,7 +18,7 @@ public class MatchmakingTask extends BaseTask {
   }
 
   @Override
-  protected void execute() {
+  protected void kaboom() {
     matchManager.update();
   }
 }

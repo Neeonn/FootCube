@@ -57,7 +57,7 @@ public class PlayerEvents implements Listener {
     if (event.getMessage().equalsIgnoreCase("/tab reload")) fcManager.reloadTabAPI();
 
     if (player.hasPermission(PERM_BYPASS_DISABLED_COMMANDS)) return;
-    if (!matchManager.getMatch(player).isPresent()) return;
+    if (matchManager.getMatch(player).isEmpty()) return;
 
     String raw = event.getMessage().toLowerCase().trim();
     if (raw.startsWith("/")) raw = raw.substring(1);
@@ -77,7 +77,6 @@ public class PlayerEvents implements Listener {
 
     player.setExp(0);
     player.setLevel(0);
-    fcManager.getCachedPlayers().add(player);
     system.recordPlayerAction(player);
 
     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -87,12 +86,15 @@ public class PlayerEvents implements Listener {
       PlayerData playerData = dataManager.get(asyncPlayer);
       dataManager.addDefaults(playerData);
       fcManager.preloadSettings(asyncPlayer, playerData);
+      fcManager.getCachedPlayers().add(asyncPlayer);
     });
   }
 
   @EventHandler
   public void onQuit(PlayerQuitEvent event) {
     Player player = event.getPlayer();
+    if (player == null) return;
+
     dataManager.unload(player);
     system.removePlayer(player);
     fcManager.getCachedPlayers().remove(player);

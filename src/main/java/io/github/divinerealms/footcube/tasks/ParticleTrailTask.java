@@ -45,7 +45,7 @@ public class ParticleTrailTask extends BaseTask {
   }
 
   @Override
-  protected void execute() {
+  protected void kaboom() {
     Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
     if (onlinePlayers.isEmpty() || data.getCubes().isEmpty()) return;
 

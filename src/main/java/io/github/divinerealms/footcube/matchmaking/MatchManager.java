@@ -93,7 +93,9 @@ public class MatchManager {
       scoreboardManager.updateScoreboard(existingLobby);
     } else {
       Queue<Player> queue = data.getPlayerQueues().computeIfAbsent(matchType, k -> new ConcurrentLinkedQueue<>());
-      for (Player p : playersToQueue) { if (p != null && p.isOnline()) queue.add(p); }
+      for (Player p : playersToQueue) {
+        if (p != null && p.isOnline()) queue.add(p);
+      }
     }
 
     system.processQueues();
@@ -101,10 +103,7 @@ public class MatchManager {
 
   public synchronized void leaveQueue(Player player, int matchType) {
     Queue<Player> queue = data.getPlayerQueues().get(matchType);
-    if (queue != null) {
-      queue.remove(player);
-      player.setLevel(0);
-    }
+    if (queue != null) { queue.remove(player); player.setLevel(0); }
     leaveMatch(player);
   }
 
@@ -133,7 +132,7 @@ public class MatchManager {
       targetMatch.getPlayers().addAll(Arrays.asList(p1, p2));
 
       targetMatch.setPhase(MatchPhase.STARTING);
-      targetMatch.setCountdown(12);
+      targetMatch.setCountdown(15);
 
       logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{"1v1"}));
       scoreboardManager.updateScoreboard(targetMatch);
@@ -177,7 +176,7 @@ public class MatchManager {
     }
 
     targetMatch.setPhase(MatchPhase.STARTING);
-    targetMatch.setCountdown(12);
+    targetMatch.setCountdown(15);
 
     logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{targetMatch.getArena().getType() + "v" + targetMatch.getArena().getType()}));
     scoreboardManager.updateScoreboard(targetMatch);
@@ -306,6 +305,7 @@ public class MatchManager {
     if (match.getScoreRed() > match.getScoreBlue()) winner = TeamColor.RED;
     else if (match.getScoreBlue() > match.getScoreRed()) winner = TeamColor.BLUE;
     String winningTeam = winner == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
+    boolean shouldCount = match.getArena().getType() != MatchConstants.TWO_V_TWO;
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
       if (matchPlayer == null) continue;
@@ -315,18 +315,20 @@ public class MatchManager {
       if (match.getPhase() == MatchPhase.ENDED) {
         PlayerData data = fcManager.getDataManager().get(player);
         if (winner == null) {
-          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+          if (shouldCount) {
             data.add("ties");
             data.set("winstreak", 0);
+            data.add("matches");
           }
 
           fcManager.getEconomy().depositPlayer(player, 5);
           logger.send(player, Lang.MATCH_TIED.replace(null));
           logger.send(player, Lang.MATCH_TIED_CREDITS.replace(null));
         } else if (matchPlayer.getTeamColor() == winner) {
-          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+          if (shouldCount) {
             data.add("wins");
             data.add("winstreak");
+            data.add("matches");
 
             if ((int) data.get("winstreak") > (int) data.get("bestwinstreak"))
               data.set("bestwinstreak", data.get("winstreak"));
@@ -341,19 +343,26 @@ public class MatchManager {
           logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
           logger.send(player, Lang.MATCH_WIN_CREDITS.replace(null));
         } else {
-          if (match.getArena().getType() != MatchConstants.TWO_V_TWO) {
+          if (shouldCount) {
             data.set("winstreak", 0);
             data.add("losses");
+            data.add("matches");
           }
           logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
         }
+
+        if (shouldCount) {
+          data.set("goals", (int) data.get("goals") + matchPlayer.getGoals());
+          data.set("assists", (int) data.get("assists") + matchPlayer.getAssists());
+          data.set("owngoals", (int) data.get("owngoals") + matchPlayer.getOwnGoals());
+        }
+
+        fcManager.getDataManager().savePlayerData(player.getName());
       }
 
-      if (match.getPhase() != MatchPhase.LOBBY) {
-        Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml").get("lobby");
-        if (lobby != null) player.teleport(lobby);
-        MatchUtils.clearPlayer(player);
-      }
+      Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml").get("lobby");
+      if (lobby != null) player.teleport(lobby);
+      MatchUtils.clearPlayer(player);
 
       scoreboardManager.removeScoreboard(player);
       scoreboardManager.unregisterScoreboard(match.getMatchScoreboard());

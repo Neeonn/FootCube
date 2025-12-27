@@ -238,7 +238,7 @@ public class SignManipulation implements Listener {
           break;
 
         case "highscores":
-          fcManager.getHighscoreManager().playerUpdate(player);
+          fcManager.getHighscoreManager().showHighScores(player);
           break;
 
         case "matches":

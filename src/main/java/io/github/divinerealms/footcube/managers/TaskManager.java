@@ -19,7 +19,7 @@ public class TaskManager {
   private final List<BaseTask> tasks;
 
   // Physics Tasks
-  private final CubeProcessTask cubeProcessTask;
+  private final PhysicsTask physicsTask;
   private final TouchCleanupTask touchCleanupTask;
   private final PlayerUpdateTask playerUpdateTask;
   private final ParticleTrailTask particleTrailTask;
@@ -27,12 +27,16 @@ public class TaskManager {
   // General Tasks
   private final CubeCleanerTask cubeCleanerTask;
   private final MatchmakingTask matchmakingTask;
+  private final CacheCleanupTask cacheCleanupTask;
+  private final QueueStatusTask queueStatusTask;
+  private final HighScoresTask highScoresTask;
 
   public TaskManager(FCManager fcManager) {
     this.logger = fcManager.getLogger();
+    this.tasks = new ArrayList<>();
 
     // Initialize physics tasks.
-    this.cubeProcessTask = new CubeProcessTask(fcManager);
+    this.physicsTask = new PhysicsTask(fcManager);
     this.touchCleanupTask = new TouchCleanupTask(fcManager);
     this.playerUpdateTask = new PlayerUpdateTask(fcManager);
     this.particleTrailTask = new ParticleTrailTask(fcManager);
@@ -40,24 +44,48 @@ public class TaskManager {
     // Initialize general tasks.
     this.cubeCleanerTask = new CubeCleanerTask(fcManager, fcManager.getCubeCleaner().getRemoveInterval());
     this.matchmakingTask = new MatchmakingTask(fcManager);
+    this.cacheCleanupTask = new CacheCleanupTask(fcManager);
+    this.queueStatusTask = new QueueStatusTask(fcManager);
+    this.highScoresTask = new HighScoresTask(fcManager);
 
-    this.tasks = new ArrayList<>();
-    tasks.add(cubeProcessTask);
+    tasks.add(physicsTask);
     tasks.add(touchCleanupTask);
     tasks.add(playerUpdateTask);
     tasks.add(particleTrailTask);
     tasks.add(cubeCleanerTask);
     tasks.add(matchmakingTask);
+    tasks.add(cacheCleanupTask);
+    tasks.add(queueStatusTask);
+    tasks.add(highScoresTask);
   }
 
   public void startAll() {
-    for (BaseTask task : tasks) task.start();
-    logger.info("&a✔ &2Started all plugin tasks.");
+    int started = 0;
+    for (BaseTask task : tasks) {
+      try {
+        task.start();
+        started++;
+      } catch (Exception exception) {
+        logger.info("&c✘ &4Failed to start " + task.getTaskName() + " task: " + exception.getMessage());
+      }
+    }
+    logger.info("&a✔ &2Started &e" + started + "/" + tasks.size() + " &2plugin tasks successfully!");
   }
 
   public void stopAll() {
-    for (BaseTask task : tasks) task.stop();
-    logger.info("&c✘ &4Stopped all plugin tasks.");
+    int stopped = 0;
+    for (int i = tasks.size() - 1; i >= 0; i--) {
+      BaseTask task = tasks.get(i);
+      if (task.isRunning()) {
+        try {
+          task.stop();
+          stopped++;
+        } catch (Exception exception) {
+          logger.info("&c✘ &4Error stopping " + task.getTaskName() + " task: " + exception.getMessage());
+        }
+      }
+    }
+    if (stopped > 0) logger.info("&c✘ &4Stopped &c" + stopped + " &4plugin tasks.");
   }
 
   public void restart() {
@@ -67,12 +95,15 @@ public class TaskManager {
 
   public TaskStats getStats() {
     return new TaskStats(
-        cubeProcessTask.getAverageExecutionTime(),
+        physicsTask.getAverageExecutionTime(),
         touchCleanupTask.getAverageExecutionTime(),
         playerUpdateTask.getAverageExecutionTime(),
         particleTrailTask.getAverageExecutionTime(),
         cubeCleanerTask.getAverageExecutionTime(),
-        matchmakingTask.getAverageExecutionTime()
+        matchmakingTask.getAverageExecutionTime(),
+        cacheCleanupTask.getAverageExecutionTime(),
+        queueStatusTask.getAverageExecutionTime(),
+        highScoresTask.getAverageExecutionTime()
     );
   }
 
@@ -89,5 +120,10 @@ public class TaskManager {
     int count = 0;
     for (BaseTask task : tasks) if (task.isRunning()) count++;
     return count;
+  }
+
+  public BaseTask getTask(String taskName) {
+    for (BaseTask task : tasks) if (task.getTaskName().equalsIgnoreCase(taskName)) return task;
+    return null;
   }
 }

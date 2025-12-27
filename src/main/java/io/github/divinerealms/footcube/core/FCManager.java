@@ -7,10 +7,7 @@ import io.github.divinerealms.footcube.commands.FCCommand;
 import io.github.divinerealms.footcube.commands.MatchesCommand;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.managers.ConfigManager;
-import io.github.divinerealms.footcube.managers.ListenerManager;
-import io.github.divinerealms.footcube.managers.PlayerDataManager;
-import io.github.divinerealms.footcube.managers.Utilities;
+import io.github.divinerealms.footcube.managers.*;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
@@ -20,7 +17,6 @@ import io.github.divinerealms.footcube.matchmaking.logic.MatchSystem;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
-import io.github.divinerealms.footcube.managers.TaskManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.*;
@@ -41,7 +37,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
 
 @Getter
@@ -64,7 +60,6 @@ public class FCManager {
   private final HighScoreManager highscoreManager;
   private final MatchManager matchManager;
 
-  private final CubeCleaner cubeCleaner;
   private final DisableCommands disableCommands;
   private final BukkitScheduler scheduler;
 
@@ -72,6 +67,7 @@ public class FCManager {
   private final PhysicsSystem physicsSystem;
   private final PhysicsFormulae physicsFormulae;
 
+  private final CubeCleaner cubeCleaner;
   private final ListenerManager listenerManager;
   private final TaskManager taskManager;
 
@@ -140,10 +136,6 @@ public class FCManager {
     listenerManager.registerAll();
 
     taskManager.restart();
-    scheduler.runTaskLaterAsynchronously(plugin, () -> {
-      logger.info("&a✔ &2Updating &eHighScores&2...");
-      highscoreManager.update();
-    }, 20L);
 
     List<UUID> onlinePlayers = new ArrayList<>(cachedPlayers.size());
     for (Player p : cachedPlayers) {
@@ -182,7 +174,7 @@ public class FCManager {
     plugin.getCommand("build").setExecutor(buildCommand);
     plugin.getCommand("build").setTabCompleter(buildCommand);
 
-    logger.info("&a✔ &2Registered commands via plugin.yml successfully.");
+    logger.info("&a✔ &2Registered commands via &eplugin.yml &2successfully.");
   }
 
   private void setupConfig() {
@@ -272,6 +264,10 @@ public class FCManager {
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
     if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
     if (playerData.has("ban")) matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
+
+    String goalCelebration = "default";
+    if (playerData.has("goalcelebration")) goalCelebration = (String) playerData.get("goalcelebration");
+    settings.setGoalMessage(goalCelebration);
   }
 
   public void saveAll() {

@@ -79,10 +79,31 @@ public class PlayerDataManager {
   public void addDefaults(PlayerData playerData) {
     if (!playerData.has("wins")) playerData.set("wins", 0);
     if (!playerData.has("matches")) playerData.set("matches", 0);
+    if (!playerData.has("losses")) playerData.set("losses", 0);
     if (!playerData.has("ties")) playerData.set("ties", 0);
     if (!playerData.has("goals")) playerData.set("goals", 0);
+    if (!playerData.has("assists")) playerData.set("assists", 0);
+    if (!playerData.has("owngoals")) playerData.set("owngoals", 0);
     if (!playerData.has("winstreak")) playerData.set("winstreak", 0);
     if (!playerData.has("bestwinstreak")) playerData.set("bestwinstreak", 0);
+  }
+
+  public void clearAllStats() {
+    for (String playerName : uuidCache.keySet()) {
+      PlayerData data = get(playerName);
+      if (data == null) continue;
+
+      data.set("wins", 0);
+      data.set("matches", 0);
+      data.set("losses", 0);
+      data.set("ties", 0);
+      data.set("goals", 0);
+      data.set("assists", 0);
+      data.set("owngoals", 0);
+      data.set("winstreak", 0);
+      data.set("bestwinstreak", 0);
+    }
+    saveAll();
   }
 
   public void saveQueue() {

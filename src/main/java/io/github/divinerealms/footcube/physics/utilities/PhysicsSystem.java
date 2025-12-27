@@ -6,7 +6,7 @@ import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.actions.CubeSoundAction;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
-import io.github.divinerealms.footcube.tasks.CubeProcessTask;
+import io.github.divinerealms.footcube.tasks.PhysicsTask;
 import io.github.divinerealms.footcube.utils.Logger;
 import net.minecraft.server.v1_8_R3.EntitySlime;
 import net.minecraft.server.v1_8_R3.PathfinderGoalSelector;
@@ -47,14 +47,14 @@ public class PhysicsSystem {
 
   /**
    * Checks if the cube was recently lifted by a player.
-   * This check prevents {@link CubeProcessTask} from overwriting cube's Y level.
+   * This check prevents {@link PhysicsTask} from overwriting cube's Y level.
    *
    * @param cubeId UUID of the cube being checked.
    * @return {@code true} if cube was raised in the last 500ms, {@code false} otherwise.
    */
   public boolean wasRecentlyRaised(UUID cubeId) {
     long lastRaise = data.getRaised().getOrDefault(cubeId, 0L);
-    return System.currentTimeMillis() - lastRaise < 500;
+    return System.currentTimeMillis() - lastRaise < RAISE_COOLDOWN_MS;
   }
 
   /**

@@ -115,6 +115,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
           matchManager.leaveMatch(player);
           logger.send(player, Lang.LEFT.replace(null));
+          logger.sendActionBar(player, Lang.LEAVE_QUEUE_ACTIONBAR.replace(new String[]{match.getArena().getType() + "v" + match.getArena().getType()}));
 
           teamManager.forceDisbandTeam(player);
         } else {
@@ -273,8 +274,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       case "highscores":
       case "best":
         if (!(sender instanceof Player)) return inGameOnly(sender);
-        if (fcManager.getHighscoreManager().needsUpdate()) fcManager.getHighscoreManager().playerUpdate((Player) sender);
-        else fcManager.getHighscoreManager().addWaitingPlayer((Player) sender);
+        fcManager.getHighscoreManager().showHighScores((Player) sender);
         break;
 
       case "cube":
@@ -494,6 +494,36 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         logger.send(player, Lang.SET_PARTICLE.replace(new String[]{particle.name()}));
         break;
 
+      case "setgoalcelebration":
+      case "sgc":
+        if (!(sender instanceof Player)) return inGameOnly(sender);
+        player = (Player) sender;
+        if (!player.hasPermission(PERM_SET_GOAL_CELEBRATION)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_SET_GOAL_CELEBRATION, label + " " + sub})); return true; }
+        if (args.length < 2) { logger.send(player, Lang.USAGE.replace(new String[]{label + " " + sub + " <default|simple|epic|minimal|list>"})); return true; }
+
+        playerData = dataManager.get(player);
+        if (playerData == null) return true;
+        settings = fcManager.getPlayerSettings(player);
+        String celebrationType = args[1].toLowerCase();
+        String[] validTypes = new String[]{"default", "simple", "epic", "minimal"};
+
+        if (celebrationType.equalsIgnoreCase("list")) {
+          logger.send(sender, Lang.AVAILABLE_TYPE.replace(new String[]{"goal celebrations", String.join(", ", validTypes)}));
+          return true;
+        }
+
+        if (!celebrationType.equalsIgnoreCase("default") && !celebrationType.equalsIgnoreCase("simple") &&
+            !celebrationType.equalsIgnoreCase("epic") && !celebrationType.equalsIgnoreCase("minimal")) {
+          logger.send(player, Lang.INVALID_TYPE.replace(new String[]{"goal celebrations"}));
+          logger.send(sender, Lang.AVAILABLE_TYPE.replace(new String[]{"goal celebrations", String.join(", ", validTypes)}));
+          return true;
+        }
+
+        settings.setGoalMessage(celebrationType);
+        playerData.set("goalcelebration", celebrationType);
+        logger.send(player, Lang.SET_GOAL_CELEBRATION.replace(new String[]{celebrationType}));
+        break;
+
       case "help":
       case "h":
         sendHelp(sender);
@@ -534,9 +564,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
-          "join", "leave", "takeplace", "tkp", "team", "t",
-          "stats", "best", "highscores", "toggles", "ts", "cube", "clearcube",
-          "clearcubes", "help", "h", "setsound", "setparticle"
+          "join", "leave", "takeplace", "tkp", "team", "t", "stats", "best",
+          "highscores", "toggles", "ts", "cube", "clearcube", "clearcubes",
+          "help", "h", "setsound", "setparticle", "setgoalcelebration", "sgc"
       ));
     } else if (args.length == 2) {
       String sub = args[0].toLowerCase();
@@ -562,6 +592,11 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
         case "setsound":
           completions.addAll(Arrays.asList("kick", "goal"));
+          break;
+
+        case "setgoalcelebration":
+        case "sgc":
+          completions.addAll(Arrays.asList("default", "simple", "epic", "minimal", "list"));
           break;
       }
     } else if (args.length == 3) {

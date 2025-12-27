@@ -27,7 +27,7 @@ public class CubeCleanerTask extends BaseTask {
   }
 
   @Override
-  protected void execute() {
+  protected void kaboom() {
     cubeCleaner.clearCubes();
     if (!cubeCleaner.isEmpty()) {
       logger.broadcast(Lang.CLEARED_CUBES.replace(

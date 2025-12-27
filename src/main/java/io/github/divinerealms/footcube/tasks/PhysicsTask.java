@@ -7,13 +7,12 @@ import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,24 +20,30 @@ import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 /**
- * The main physics loop, running every game tick (20 times per second).
+ * Task responsible for processing the physics of cubes (slimes) in the game.
  * <p>
- * This method handles charge regeneration, player-cube interaction detection, cube velocity updates,
- * collision responses (wall, air, and floor), and sound scheduling. Each cube is processed individually
- * with vector math to ensure smooth and realistic behavior.
+ * This task runs at a fixed interval, updating cube velocities based on player interactions,
+ * handling collisions with walls and the ground, applying air drag, and preventing clipping through players.
+ * It also manages sound effects for impacts and ensures cubes do not exceed maximum allowed speeds.
  * </p>
  *
- * <p><b>Performance Note:</b> The entire routine measures its runtime in milliseconds and logs a warning
- * if the update cycle exceeds 1 ms, which helps identify physics bottlenecks on large servers.</p>
+ * <p><b>Key Features:</b></p>
+ * <ul>
+ *   <li>Processes all active cubes each tick, adjusting their velocities based on player proximity and actions.</li>
+ *   <li>Handles realistic collision responses with walls and the ground, including bounce effects.</li>
+ *   <li>Implements anti-clipping logic to prevent cubes from passing through players at high speeds.</li>
+ *   <li>Queues sound effects for significant impacts to enhance gameplay feedback.</li>
+ *   <li>Caches player physics data per tick to optimize performance during cube processing.</li>
+ * </ul>
  */
-public class CubeProcessTask extends BaseTask {
+public class PhysicsTask extends BaseTask {
   private final PhysicsData data;
   private final PhysicsSystem system;
   private final PhysicsFormulae formulae;
   private final MatchManager matchManager;
 
-  public CubeProcessTask(FCManager fcManager) {
-    super(fcManager, "CubeProcess", PHYSICS_TASK_INTERVAL_TICKS, false);
+  public PhysicsTask(FCManager fcManager) {
+    super(fcManager, "Physics", PHYSICS_TASK_INTERVAL_TICKS, false);
     this.data = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
     this.formulae = fcManager.getPhysicsFormulae();
@@ -46,7 +51,7 @@ public class CubeProcessTask extends BaseTask {
   }
 
   @Override
-  protected void execute() {
+  protected void kaboom() {
     // Skip processing if there are no active players or cubes.
     if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) return;
 
@@ -57,30 +62,29 @@ public class CubeProcessTask extends BaseTask {
 
     // Main cube processing loop.
     for (Slime cube : data.getCubes()) {
+      // --- Cube validity check ---
       if (cube.isDead()) { data.getCubesToRemove().add(cube); continue; }
 
+      // --- Initialization and state retrieval ---
       UUID cubeId = cube.getUniqueId();
       Location cubeLocation = cube.getLocation();
       if (cubeLocation == null) continue;
 
+      // Retrieve or initialize previous velocity for collision calculations.
       Vector previousVelocity = data.getVelocities().get(cubeId);
+      // Initialize if this is the first tick tracking this cube.
       if (previousVelocity == null) {
         previousVelocity = cube.getVelocity().clone();
         data.getVelocities().put(cubeId, previousVelocity);
       }
 
+      // --- Player interaction and velocity adjustment ---
       Vector newVelocity = cube.getVelocity();
       boolean wasMoved = false, playSound = false;
 
-      // Process all nearby entities within hit range.
-      List<Entity> nearbyEntities = cube.getNearbyEntities(PLAYER_CLOSE, PLAYER_CLOSE, PLAYER_CLOSE);
-
       // Store player interaction data to avoid recalculation in anti-clipping.
       Map<UUID, PlayerInteraction> playerInteractions = new HashMap<>();
-
-      for (Entity entity : nearbyEntities) {
-        if (!(entity instanceof Player)) continue;
-        Player player = (Player) entity;
+      for (Player player : fcManager.getCachedPlayers()) {
         UUID playerId = player.getUniqueId();
 
         PlayerPhysicsCache cache = playerCache.get(playerId);
@@ -89,21 +93,26 @@ public class CubeProcessTask extends BaseTask {
         // --- Player proximity and touch detection ---
         // Determines if the player is close enough to directly affect the cube.
         double distance = formulae.getDistance(cubeLocation, cache.location);
+
+        // Skip players beyond 3x hit radius for performance,
+        // as they cannot meaningfully interact with the cube.
+        if (distance > HIT_RADIUS * 3) continue;
+
+        // Cache the interaction data for later use.
         playerInteractions.put(playerId, new PlayerInteraction(player, cache, distance));
 
+        // Skip if player cannot interact or is out of touch range.
         if (distance < HIT_RADIUS) {
-          double cubeSpeed = newVelocity.length();
+          double cubeSpeed = newVelocity.length(); // Current speed of the cube.
 
-          // Dampen ball speed if inside proximity and moving too fast to prevent overshoot.
+          // Apply speed dampening if cube is very close to player for dribbling effect.
           if (distance < MIN_RADIUS && cubeSpeed > MIN_SPEED_FOR_DAMPENING)
-            newVelocity.multiply(VELOCITY_DAMPENING_FACTOR);
+            newVelocity.multiply(DRIBBLE_SPEED_LIMIT / cubeSpeed); // Apply speed cap for dribbling effect.
 
           // Compute the resulting power from player movement and cube velocity.
-          double impactPower = cache.speed / PLAYER_SPEED_TOUCH_DIVISOR
-              + Math.max(previousVelocity.length(), VECTOR_CHANGE_THRESHOLD) / CUBE_SPEED_TOUCH_DIVISOR;
-
-          // Apply a horizontal directional force in the direction the player is facing.
-          Vector push = cache.direction.clone().multiply(impactPower);
+          double previousSpeed = Math.max(previousVelocity.length(), VECTOR_CHANGE_THRESHOLD);
+          double impactPower = cache.speed / PLAYER_SPEED_TOUCH_DIVISOR + previousSpeed / CUBE_SPEED_TOUCH_DIVISOR;
+          Vector push = cache.direction.clone().multiply(impactPower); // Directional push vector from player to cube.
           newVelocity.add(cubeSpeed < LOW_VELOCITY_THRESHOLD ? push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER) : push);
 
           // Register the touch interaction with the organization system.
@@ -120,53 +129,87 @@ public class CubeProcessTask extends BaseTask {
       // X-axis collision and drag adjustment.
       // If the cube stops moving horizontally (X=0), bounce it back with reduced energy.
       if (newVelocity.getX() == 0) {
-        newVelocity.setX(-previousVelocity.getX() * WALL_BOUNCE_FACTOR);
+        newVelocity.setX(-previousVelocity.getX() * WALL_BOUNCE_FACTOR); // Reverse and reduce X velocity on collision.
         if (Math.abs(previousVelocity.getX()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
 
         // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
       } else if (!wasMoved && !cube.isOnGround() && Math.abs(previousVelocity.getX() - newVelocity.getX()) < VECTOR_CHANGE_THRESHOLD)
-        newVelocity.setX(previousVelocity.getX() * AIR_DRAG_FACTOR);
+        newVelocity.setX(previousVelocity.getX() * AIR_DRAG_FACTOR); // Apply air drag.
 
       // Z-axis collision and drag adjustment (mirrors X-axis logic).
       if (newVelocity.getZ() == 0) {
-        newVelocity.setZ(-previousVelocity.getZ() * WALL_BOUNCE_FACTOR);
-        if (Math.abs(previousVelocity.getZ()) > BOUNCE_THRESHOLD) playSound = true;
+        newVelocity.setZ(-previousVelocity.getZ() * WALL_BOUNCE_FACTOR); // Reverse and reduce Z velocity on collision.
+        if (Math.abs(previousVelocity.getZ()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
 
         // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
       } else if (!wasMoved && !cube.isOnGround() && Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < VECTOR_CHANGE_THRESHOLD)
-        newVelocity.setZ(previousVelocity.getZ() * AIR_DRAG_FACTOR);
+        newVelocity.setZ(previousVelocity.getZ() * AIR_DRAG_FACTOR); // Apply air drag.
 
       // Y-axis bounce (vertical collision against floor or ceiling).
       // This ensures realistic vertical rebound, preventing velocity loss bugs on impact.
       if (newVelocity.getY() < 0 && previousVelocity.getY() < 0 && previousVelocity.getY() < newVelocity.getY() - VERTICAL_BOUNCE_THRESHOLD) {
-        newVelocity.setY(-previousVelocity.getY() * WALL_BOUNCE_FACTOR);
-        if (Math.abs(previousVelocity.getY()) > BOUNCE_THRESHOLD) playSound = true;
+        newVelocity.setY(-previousVelocity.getY() * WALL_BOUNCE_FACTOR); // Reverse and reduce Y velocity on downward collision.
+        if (Math.abs(previousVelocity.getY()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
+      }
 
-        // If cube is on the ground, add a small bounce so it doesn't stay glued to the ground.
-      } else if (!system.wasRecentlyRaised(cubeId) && cube.isOnGround()) {
-        double bounceY = -previousVelocity.getY() * WALL_BOUNCE_FACTOR;
-        newVelocity.setY(Math.max(MIN_BOUNCE_VELOCITY_Y, Math.abs(bounceY)));
+      // --- Anticipatory Hover Effect ---
+      // Applies a gentle upward force when players are nearby to prevent the cube from sticking to the ground.
+      // This effect is only applied if the cube is on the ground and wasn't recently manually raised.
+      double cubeY = cubeLocation.getY();
+      int blockBelowY = (int) Math.floor(cubeY - 0.3);
+
+      Location blockBelowLocation = cubeLocation.clone();
+      blockBelowLocation.setY(blockBelowY);
+      boolean isSolidBlockBelow = blockBelowLocation.getBlock().getType().isSolid();
+      double distanceToGround = cubeY - (blockBelowY + 1);
+
+      boolean isActuallyGrounded = isSolidBlockBelow && distanceToGround < 0.15 && distanceToGround > -0.05;
+      boolean isSettledOnGround = Math.abs(newVelocity.getY()) < 0.08;
+
+      if (isActuallyGrounded && isSettledOnGround && !system.wasRecentlyRaised(cubeId)) {
+        boolean hasClosePlayer = false;
+        double closestPlayerDistance = Double.MAX_VALUE;
+
+        // Find the closest player and determine if anyone is in hover range.
+        for (PlayerInteraction interaction : playerInteractions.values()) {
+          if (interaction.distance < closestPlayerDistance) closestPlayerDistance = interaction.distance; // Update closest distance.
+          if (interaction.distance < HIT_RADIUS * 2) hasClosePlayer = true; // Define hover range as twice the hit radius (about 2.4 blocks).
+        }
+
+        // If players are nearby, apply a gentle upward force.
+        if (hasClosePlayer) {
+          double hoverRange = HIT_RADIUS * 2; // Define hover range.
+          double proximityFactor = 1 - (closestPlayerDistance / hoverRange); // Calculate proximity factor (0 to 1).
+          double anticipatoryLift = MIN_BOUNCE_VELOCITY_Y * 0.5 * proximityFactor; // Scale lift based on proximity.
+
+          // Only apply the lift if the cube isn't already moving upward significantly.
+          // This prevents the hover from interfering with natural bounces or kicks.
+          if (newVelocity.getY() < anticipatoryLift) newVelocity.setY(anticipatoryLift);
+        }
       }
 
       // Queue impact sound effect if any significant collision occurred.
       if (playSound) system.queueSound(cubeLocation);
 
-      double cubeSpeed = newVelocity.length();
-
       // --- Anti-clipping / Proximity Logic ---
       // Prevents the cube from passing through players at high speeds.
+      double cubeSpeed = newVelocity.length();
       if (cubeSpeed > VECTOR_CHANGE_THRESHOLD) {
-        Vector cubePos = cubeLocation.toVector();
+        Vector cubePos = cubeLocation.toVector(); // Precompute cube position vector for efficiency.
+        double minScaleFactor = 1; // Track minimum scale factor needed to prevent clipping.
 
+        // Evaluate each player interaction for potential clipping.
         for (PlayerInteraction interaction : playerInteractions.values()) {
           if (interaction == null || interaction.cache == null) continue;
 
+          // Retrieve cached player data and distance.
           PlayerPhysicsCache cache = interaction.cache;
           double distance = interaction.distance;
 
           // Skip if player is too far away for clipping to be possible.
           if (distance >= cubeSpeed * PROXIMITY_THRESHOLD_MULTIPLIER) continue;
 
+          // Check vertical alignment with player height.
           double playerLocationY = cache.location.getY();
           Vector projectedNextPos = cubePos.clone().add(newVelocity);
 
@@ -178,21 +221,30 @@ public class CubeProcessTask extends BaseTask {
 
           // If vertically aligned, check if the cube's path intersects player's collision radius.
           if (withinY && formulae.getPerpendicularDistance(newVelocity, cubePos, interaction.player) < MIN_RADIUS) {
-            Vector toPlayer = cache.location.toVector().subtract(cubePos).setY(0).normalize();
-            Vector ballDirection = new Vector(newVelocity.getX(), 0, newVelocity.getZ()).normalize();
-            double dot = toPlayer.dot(ballDirection);
+            Vector toPlayer = cache.location.toVector().subtract(cubePos).setY(0).normalize(); // Horizontal vector to player.
+            Vector ballDirection = new Vector(newVelocity.getX(), 0, newVelocity.getZ()).normalize(); // Horizontal movement direction.
+            double dot = toPlayer.dot(ballDirection); // Cosine of angle between cube movement and direction to player.
 
             // Scale back velocity if moving toward player to prevent clipping.
-            if (dot > ANTI_CLIP_DOT_THRESHOLD) newVelocity.multiply(distance / cubeSpeed);
+            if (dot > ANTI_CLIP_DOT_THRESHOLD) {
+              double scaleFactor = distance / cubeSpeed; // Scale factor based on distance and speed.
+              if (scaleFactor < minScaleFactor) minScaleFactor = scaleFactor; // Track minimum scale factor needed.
+            }
           }
+        }
+
+        // Apply the most restrictive scale factor to the cube's velocity.
+        if (minScaleFactor < 1) {
+          newVelocity.multiply(minScaleFactor);
+          system.queueSound(cubeLocation, Sound.SLIME_WALK2, SOUND_VOLUME, SOUND_PITCH);
         }
       }
 
       // --- Velocity Capping ---
       // If the ball exceeds MAX_KP, we scale the vector back to prevent "unreal" speeds.
-      double finalSpeed = newVelocity.length();
+      double finalSpeed = newVelocity.length(); // Calculate final speed after all adjustments.
       if (finalSpeed > MAX_KP) {
-        newVelocity.multiply(MAX_KP / finalSpeed);
+        newVelocity.multiply(MAX_KP / finalSpeed); // Scale back to MAX_KP.
         // Log violation to players with debugging permissions.
         logger.send(PERM_HIT_DEBUG, Lang.HITDEBUG_VELOCITY_CAP.replace(new String[]{String.format("%.2f", finalSpeed), String.valueOf(MAX_KP)}));
       }
@@ -207,10 +259,19 @@ public class CubeProcessTask extends BaseTask {
     system.scheduleCubeRemoval(); // Safely remove dead or invalid cube entities.
   }
 
+  /**
+   * Builds a cache of player physics data for the current tick.
+   * This cache is reused for all cube-player interactions during this tick,
+   * reducing redundant calculations and improving performance.
+   *
+   * @return a map of player UUIDs to their corresponding physics cache
+   */
   private Map<UUID, PlayerPhysicsCache> buildPlayerCache() {
     Map<UUID, PlayerPhysicsCache> cache = new HashMap<>();
-    for (Player player : fcManager.getCachedPlayers())
+    for (Player player : fcManager.getCachedPlayers()) {
+      if (player == null || !player.isOnline()) continue;
       cache.put(player.getUniqueId(), new PlayerPhysicsCache(player, system, data));
+    }
     return cache;
   }
 
@@ -250,13 +311,6 @@ public class CubeProcessTask extends BaseTask {
     final boolean isIneligible;
     final UUID playerId;
 
-    /**
-     * Constructs a physics cache snapshot for the given player.
-     *
-     * @param player the player to cache data for
-     * @param system physics system for eligibility checks
-     * @param data physics data store containing player speeds
-     */
     PlayerPhysicsCache(Player player, PhysicsSystem system, PhysicsData data) {
       this.playerId = player.getUniqueId();
       this.location = player.getLocation();
@@ -272,14 +326,6 @@ public class CubeProcessTask extends BaseTask {
      */
     public boolean canInteract() {
       return !isIneligible;
-    }
-
-    @Override
-    public String toString() {
-      return String.format(
-          "PlayerPhysicsCache[player=%s, speed=%.2f, eligible=%b]",
-          playerId, speed, !isIneligible
-      );
     }
   }
 }

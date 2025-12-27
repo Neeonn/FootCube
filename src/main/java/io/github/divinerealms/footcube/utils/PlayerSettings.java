@@ -22,6 +22,8 @@ public class PlayerSettings {
 
   private Color redstoneColor = Color.WHITE;
 
+  private String goalMessage = "default"; // "default", "simple", "epic", "minimal"
+
   private static final Map<String, Color> COLOR_MAP;
   static {
     COLOR_MAP = Map.of(

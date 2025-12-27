@@ -31,6 +31,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.SCOREBOARD_UPDATE_INTERVAL;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TAKEPLACE_ANNOUNCEMENT_INTERVAL_TICKS;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.displayGoalMessage;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.isValidGoalMessage;
 
 public class MatchSystem {
   private final FCManager fcManager;
@@ -165,25 +167,44 @@ public class MatchSystem {
     boolean ownGoal;
 
     Location goalLoc = (scoringTeam == TeamColor.RED) ? match.getArena().getBlueSpawn() : match.getArena().getRedSpawn();
+    boolean shouldCount = match.getArena().getType() != MatchConstants.TWO_V_TWO;
 
     if (scorer != null) {
       MatchPlayer second = match.getSecondLastTouch();
 
-      if (scorer.getTeamColor() == scoringTeam) {
-        ownGoal = false;
-        scorer.incrementGoals();
-        if (second != null && second.getTeamColor() == scoringTeam && !scorer.equals(second)) {
-          assister = second;
-          assister.incrementAssists();
-        }
-      } else {
+      if (scorer.getTeamColor() != scoringTeam) {
         if (second != null && second.getTeamColor() == scoringTeam) {
-          ownGoal = false;
           scorer = second;
-          scorer.incrementGoals();
+          ownGoal = false;
         } else {
           ownGoal = true;
-          scorer.incrementOwnGoals();
+          if (shouldCount) scorer.incrementOwnGoals();
+        }
+      } else ownGoal = false;
+
+      if (!ownGoal) {
+        if (shouldCount) scorer.incrementGoals();
+        Player scoringPlayer = scorer.getPlayer();
+
+        if (scoringPlayer != null && scoringPlayer.isOnline()) {
+          logger.send(scoringPlayer, Lang.MATCH_SCORE_CREDITS.replace(null));
+          fcManager.getEconomy().depositPlayer(scoringPlayer, 10);
+
+          if (scorer.getGoals() > 0 && scorer.getGoals() % 3 == 0) {
+            logger.send(scoringPlayer, Lang.MATCH_SCORE_HATTRICK.replace(null));
+            fcManager.getEconomy().depositPlayer(scoringPlayer, 100);
+          }
+        }
+
+        if (second != null && second.getTeamColor() == scoringTeam && !scorer.equals(second)) {
+          assister = second;
+          if (shouldCount) assister.incrementAssists();
+          Player assistingPlayer = assister.getPlayer();
+
+          if (assistingPlayer != null && assistingPlayer.isOnline()) {
+            logger.send(assistingPlayer, Lang.MATCH_ASSIST_CREDITS.replace(null));
+            fcManager.getEconomy().depositPlayer(assistingPlayer, 5);
+          }
         }
       }
     } else ownGoal = false;
@@ -215,35 +236,46 @@ public class MatchSystem {
         : CompletableFuture.completedFuture(null);
 
     MatchPlayer finalScorer = scorer;
+    PlayerSettings scorerSettings = (finalScorer != null && finalScorer.getPlayer() != null)
+        ? fcManager.getPlayerSettings(finalScorer.getPlayer())
+        : null;
+    String goalMessageStyle = (scorerSettings != null && isValidGoalMessage(scorerSettings.getGoalMessage()))
+        ? scorerSettings.getGoalMessage()
+        : "default";
+
     scorerPrefixFuture.thenCombine(assisterPrefixFuture, (scorerName, assisterName) -> new String[]{scorerName, assisterName})
         .thenAccept(names -> {
           String scorerName = names[0], assisterName = names[1];
+          boolean isHatTrick = !ownGoal && finalScorer != null && finalScorer.getGoals() > 0 && finalScorer.getGoals() % 3 == 0;
 
           Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> {
+            double distance = 0;
+            if (finalScorer != null && finalScorer.getPlayer() != null) distance = finalScorer.getPlayer().getLocation().distance(goalLoc);
+
+            final double finalDistance = distance;
+            String teamColorText = scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
+            String assistText = assisterName != null ? Lang.GM_ASSISTS_TEXT.replace(new String[]{assisterName}) : "";
+
             for (MatchPlayer matchPlayer : match.getPlayers()) {
               if (matchPlayer == null || matchPlayer.getPlayer() == null || !matchPlayer.getPlayer().isOnline()) continue;
               Player player = matchPlayer.getPlayer();
 
+              boolean isViewerScorer = (matchPlayer.equals(finalScorer));
+
+              displayGoalMessage(player, goalMessageStyle, ownGoal, isHatTrick, isViewerScorer, scorerName,
+                  assistText, teamColorText, distance, match, logger, fcManager.getPlugin());
+
               String goalMessage = ownGoal
-                  ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{
-                      scorerName,
-                      scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null)
-                    })
+                  ? Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(new String[]{scorerName, teamColorText})
                   : Lang.MATCH_GOAL.replace(new String[]{
-                      scorerName,
-                      scoringTeam == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null),
-                      String.format("%.0f", finalScorer != null ? finalScorer.getPlayer().getLocation().distance(goalLoc) : 0),
-                      (assisterName != null ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{assisterName}) : "")
-                    });
+                  (isHatTrick ? Lang.MATCH_HATTRICK.replace(null) : Lang.MATCH_GOALLL.replace(null)),
+                  scorerName,
+                  teamColorText,
+                  String.format("%.0f", finalDistance),
+                  (assisterName != null ? Lang.MATCH_GOAL_ASSIST.replace(new String[]{assisterName}) : "")
+              });
 
               logger.send(player, goalMessage);
-              logger.title(
-                  player,
-                  (ownGoal ? Lang.MATCH_OWN_GOAL_TITLE.replace(null) : Lang.MATCH_GOAL_TITLE.replace(null)),
-                  Lang.MATCH_GOAL_SUBTITLE.replace(new String[]{scorerName}),
-                  10, 30, 10
-              );
-
               logger.send(player, Lang.MATCH_SCORE_STATS.replace(new String[]{
                   String.valueOf(match.getScoreRed()),
                   String.valueOf(match.getScoreBlue())
@@ -332,18 +364,43 @@ public class MatchSystem {
         if (shouldUpdateScoreboard(match)) {
           match.setCountdown(match.getCountdown() - 1);
           scoreboardManager.updateScoreboard(match);
+          String matchType = match.getArena().getType() + "v" + match.getArena().getType();
+          String matchId = String.valueOf(match.getArena().getId());
+          String matchTitle = match.getCountdown() == 0
+              ? Lang.MATCHES_LIST_MATCH.replace(new String[]{matchType, matchId})
+              : Lang.MATCHES_LIST_LOBBY.replace(new String[]{matchType, matchId});
 
           for (MatchPlayer mp : players) {
             if (mp == null || mp.getPlayer() == null) continue;
             Player player = mp.getPlayer();
-            player.setLevel(match.getCountdown());
             player.playSound(player.getLocation(), Sound.NOTE_STICKS, 1, 1);
-            if (player.getGameMode() != GameMode.SURVIVAL) player.setGameMode(GameMode.SURVIVAL);
-            if (player.isFlying()) { player.setFlying(false); player.setAllowFlight(false); }
+            if (match.getCountdown() != 0) {
+              logger.sendActionBar(player, Lang.MATCH_STARTING_ACTIONBAR.replace(new String[]{
+                  matchTitle,
+                  Lang.MATCHES_LIST_STARTING.replace(new String[]{
+                      String.valueOf(match.getCountdown())
+                  })
+              }));
+            } else {
+              logger.sendActionBar(player, Lang.MATCH_STARTING_ACTIONBAR.replace(new String[]{
+                  matchTitle,
+                  Lang.MATCH_STARTED_ACTIONBAR.replace(null)
+              }));
+            }
+
             if (match.getCountdown() == 10) {
               if (mp.getTeamColor() == TeamColor.RED) player.teleport(match.getArena().getRedSpawn());
               else player.teleport(match.getArena().getBlueSpawn());
               MatchUtils.giveArmor(player, mp.getTeamColor());
+              if (player.getGameMode() != GameMode.SURVIVAL) player.setGameMode(GameMode.SURVIVAL);
+              if (player.isFlying()) { player.setFlying(false); player.setAllowFlight(false); }
+              logger.title(player, matchTitle, Lang.MATCH_PREPARING.replace(null), 10, 50, 10);
+            } else if (match.getCountdown() == 5) {
+              logger.title(player, Lang.MATCH_PREPARATION_TITLE.replace(null),
+                  Lang.MATCH_PREPARATION_SUBTITLE.replace(null), 10, 50, 10);
+            } else if (match.getCountdown() <= 0) {
+              logger.title(player, Lang.MATCH_STARTING_TITLE.replace(null),
+                  Lang.MATCH_STARTING_SUBTITLE.replace(null), 5, 30, 5);
             }
           }
 
@@ -389,13 +446,13 @@ public class MatchSystem {
         break;
 
       case ENDED:
+        if (currentPlayers >= requiredPlayers) {
+          match.setTakePlaceNeeded(false);
+          match.setLastTakePlaceAnnounceTick(0);
+        }
+
         fcManager.getMatchManager().endMatch(match);
         break;
-    }
-
-    if (match.getPhase() == MatchPhase.ENDED || currentPlayers >= requiredPlayers) {
-      match.setTakePlaceNeeded(false);
-      match.setLastTakePlaceAnnounceTick(0);
     }
   }
 
@@ -420,10 +477,7 @@ public class MatchSystem {
   private void processSingleQueue(int matchType, Queue<Player> queue) {
     while (true) {
       Player head = queue.peek();
-      while (head != null && !head.isOnline()) {
-        queue.poll();
-        head = queue.peek();
-      }
+      while (head != null && !head.isOnline()) { queue.poll(); head = queue.peek(); }
       if (head == null) break;
 
       if (fcManager.getMatchManager().getMatch(head).isPresent()) { queue.poll(); continue; }
@@ -434,16 +488,12 @@ public class MatchSystem {
       if (team != null) {
         Set<Player> snapshot = new HashSet<>(queue);
         List<Player> members = new ArrayList<>();
-        for (Player member : team.getMembers()) {
-          if (member != null && member.isOnline()) members.add(member);
-        }
+        for (Player member : team.getMembers()) if (member != null && member.isOnline()) members.add(member);
 
         if (!snapshot.containsAll(members)) return;
 
         playerGroup = new ArrayList<>();
-        for (Player qp : queue) {
-          if (members.contains(qp)) playerGroup.add(qp);
-        }
+        for (Player qp : queue) if (members.contains(qp)) playerGroup.add(qp);
         if (playerGroup.isEmpty()) return;
       } else playerGroup = Collections.singletonList(head);
 
@@ -474,16 +524,13 @@ public class MatchSystem {
 
   public void checkStats(String playerName, CommandSender asker) {
     PlayerData data = fcManager.getDataManager().get(playerName);
-    if (data == null || !data.has("matches")) {
-      logger.send(asker, Lang.STATS_NONE.replace(new String[]{playerName}));
-      return;
-    }
+    if (data == null || !data.has("matches")) { logger.send(asker, Lang.STATS_NONE.replace(new String[]{playerName})); return; }
 
     int matches = (int) data.get("matches");
     int wins = (int) data.get("wins");
     int ties = (int) data.get("ties");
     int bestWinStreak = (int) data.get("bestwinstreak");
-    int losses = matches - wins - ties;
+    int losses = (int) data.get("losses");
 
     double winsPerMatch = (matches > 0) ? (double) wins / matches : 0;
 
@@ -497,11 +544,8 @@ public class MatchSystem {
         : 0.5;
 
     double addition = 0.0;
-    if (matches > 0 && wins + ties > 0) {
-      addition = 8.0 * (1.0 / ((100.0 * matches) / (wins + 0.5 * ties) / 100.0)) - 4.0;
-    } else if (matches > 0) {
-      addition = -4.0;
-    }
+    if (matches > 0 && wins + ties > 0) addition = 8.0 * (1.0 / ((100.0 * matches) / (wins + 0.5 * ties) / 100.0)) - 4.0;
+    else if (matches > 0)addition = -4.0;
 
     double skillLevel = Math.min(5.0 + goalBonus + addition * multiplier, 10.0);
     int rank = (int) (skillLevel * 2.0 - 0.5);

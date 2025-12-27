@@ -76,16 +76,13 @@ public class PhysicsFormulae {
   }
 
   /**
-   * Calculates the squared perpendicular distance from a player's position to the
+   * Calculates the perpendicular distance from a player's position to the
    * path of the cube's movement vector. Used for proximity and collision prediction.
-   *
-   * <p>Squared form avoids costly {@link Math#sqrt(double)} calls when only relative
-   * distance comparisons are required.</p>
    *
    * @param newVelocity The velocity vector of the cube.
    * @param cubePos The cube's current position.
    * @param player The player whose position is used for distance checking.
-   * @return The squared perpendicular distance between the player and the cube's velocity vector.
+   * @return The perpendicular distance between the player and the cube's velocity vector.
    */
   public double getPerpendicularDistance(Vector newVelocity, Vector cubePos, Player player) {
     long start = System.nanoTime();

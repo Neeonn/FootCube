@@ -52,10 +52,14 @@ public class SignManipulation implements Listener {
   public void onSignChange(SignChangeEvent event) {
     Player player = event.getPlayer();
 
-    if (event.getLine(0) != null && event.getLine(0).equalsIgnoreCase("[FootCube]")
-        && !player.hasPermission("footcube.admin")) return;
+    if (event.getLine(0) != null
+        && event.getLine(0).equalsIgnoreCase("[FootCube]")
+        && !player.hasPermission("footcube.admin")) {
+      return;
+    }
 
-    if (event.getLine(0) != null && event.getLine(0).equalsIgnoreCase("[fc]")) {
+    if (event.getLine(0) != null
+        && event.getLine(0).equalsIgnoreCase("[fc]")) {
       switch (event.getLine(1).toLowerCase()) {
         case "join":
           String arena = event.getLine(2).toLowerCase();
@@ -124,28 +128,42 @@ public class SignManipulation implements Listener {
     Player player = event.getPlayer();
     Action action = event.getAction();
 
-    if (action != Action.RIGHT_CLICK_BLOCK) return;
+    if (action != Action.RIGHT_CLICK_BLOCK) {
+      return;
+    }
 
     Block block = event.getClickedBlock();
-    if (block == null) return;
+    if (block == null) {
+      return;
+    }
 
     if (block.getType() == Material.STONE_BUTTON) {
       Block below = block.getRelative(BlockFace.DOWN);
-      if (below == null || below.getType() != Material.WOOL) return;
+      if (below == null || below.getType() != Material.WOOL) {
+        return;
+      }
 
       MaterialData materialData = below.getState().getData();
-      if (!(materialData instanceof Wool)) return;
+      if (!(materialData instanceof Wool)) {
+        return;
+      }
 
       DyeColor color = ((Wool) materialData).getColor();
       Location playerLocation = player.getLocation();
       switch (color) {
         case LIME:
-          if (system.cantSpawnYet(player)) return;
-          Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100, 100);
+          if (system.cantSpawnYet(player)) {
+            return;
+          }
+
+          Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100,
+              100);
           int slimeCount = 0;
           if (nearbyEntities != null) {
             for (Entity entity : nearbyEntities) {
-              if (entity instanceof Slime) slimeCount++;
+              if (entity instanceof Slime) {
+                slimeCount++;
+              }
             }
           }
 
@@ -153,14 +171,18 @@ public class SignManipulation implements Listener {
             system.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
             logger.send(player, CUBE_SPAWN);
-          } else logger.send(player, ALREADY_ENOUGH_CUBES);
+          } else {
+            logger.send(player, ALREADY_ENOUGH_CUBES);
+          }
           break;
 
         case RED:
           double closestDistance = 30;
           int removed = 0;
           for (Slime cube : new HashSet<>(data.getCubes())) {
-            if (cube == null || cube.isDead()) continue;
+            if (cube == null || cube.isDead()) {
+              continue;
+            }
 
             if (cube.getLocation().distance(playerLocation) <= closestDistance) {
               cube.setHealth(0);
@@ -168,34 +190,69 @@ public class SignManipulation implements Listener {
             }
           }
 
-          if (removed > 0) logger.send(player, CLEARED_CUBES, String.valueOf(removed));
-          else logger.send(player, CUBE_NO_CUBES);
+          if (removed > 0) {
+            logger.send(player, CLEARED_CUBES, String.valueOf(removed));
+          } else {
+            logger.send(player, CUBE_NO_CUBES);
+          }
           break;
 
-        default: break;
+        default:
+          break;
       }
     }
 
-    if (block.getType() == Material.SIGN_POST || block.getType() == Material.WALL_SIGN) {
+    if (block.getType() == Material.SIGN_POST
+        || block.getType() == Material.WALL_SIGN) {
       Sign sign = (Sign) block.getState();
-      if (sign.getLine(0) == null || !sign.getLine(0).equalsIgnoreCase("[FootCube]")) return;
+      if (sign.getLine(0) == null
+          || !sign.getLine(0).equalsIgnoreCase("[FootCube]")) {
+        return;
+      }
 
       String line1 = ChatColor.stripColor(sign.getLine(1));
       switch (line1.toLowerCase()) {
         case "join":
-          if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, "fc join"); return; }
-          if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, FC_DISABLED); return; }
-          if (matchManager.getBanManager().isBanned(player)) return;
-          if (matchManager.getBanManager().isBanned(player)) return;
-          if (matchManager.getMatch(player).isPresent()) { logger.send(player, JOIN_ALREADYINGAME); return; }
+          if (!player.hasPermission(PERM_PLAY)) {
+            logger.send(player, NO_PERM, PERM_PLAY, "fc join");
+            return;
+          }
+
+          if (!matchManager.getData().isMatchesEnabled()) {
+            logger.send(player, FC_DISABLED);
+            return;
+          }
+
+          if (matchManager.getBanManager().isBanned(player)) {
+            return;
+          }
+
+          if (matchManager.getBanManager().isBanned(player)) {
+            return;
+          }
+
+          if (matchManager.getMatch(player).isPresent()) {
+            logger.send(player, JOIN_ALREADYINGAME);
+            return;
+          }
 
           String arenaType = ChatColor.stripColor(sign.getLine(2)).toLowerCase();
           int type;
           switch (arenaType) {
-            case "2v2": type = TWO_V_TWO; break;
-            case "3v3": type = THREE_V_THREE; break;
-            case "4v4": type = FOUR_V_FOUR; break;
-            default: return;
+            case "2v2":
+              type = TWO_V_TWO;
+              break;
+
+            case "3v3":
+              type = THREE_V_THREE;
+              break;
+
+            case "4v4":
+              type = FOUR_V_FOUR;
+              break;
+
+            default:
+              return;
           }
 
           matchManager.joinQueue(player, type);
@@ -206,13 +263,19 @@ public class SignManipulation implements Listener {
           break;
 
         case "cube":
-          if (system.cantSpawnYet(player)) return;
+          if (system.cantSpawnYet(player)) {
+            return;
+          }
+
           Location location = player.getLocation();
           Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
           int slimeCount = 0;
+
           if (nearbyEntities != null) {
             for (Entity entity : nearbyEntities) {
-              if (entity instanceof Slime) slimeCount++;
+              if (entity instanceof Slime) {
+                slimeCount++;
+              }
             }
           }
 
@@ -220,7 +283,9 @@ public class SignManipulation implements Listener {
             system.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
             logger.send(player, CUBE_SPAWN);
-          } else logger.send(player, ALREADY_ENOUGH_CUBES);
+          } else {
+            logger.send(player, ALREADY_ENOUGH_CUBES);
+          }
           break;
 
         case "balance":
@@ -237,7 +302,9 @@ public class SignManipulation implements Listener {
             logger.send(player, MATCHES_LIST_HEADER);
             matches.forEach(msg -> logger.send(player, msg));
             logger.send(player, MATCHES_LIST_FOOTER);
-          } else logger.send(player, MATCHES_LIST_NO_MATCHES);
+          } else {
+            logger.send(player, MATCHES_LIST_NO_MATCHES);
+          }
           break;
       }
     }

@@ -2,7 +2,9 @@ package io.github.divinerealms.footcube.managers;
 
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.listeners.*;
+import io.github.divinerealms.footcube.listeners.ChunkCheckers;
+import io.github.divinerealms.footcube.listeners.PlayerEvents;
+import io.github.divinerealms.footcube.listeners.SignManipulation;
 import io.github.divinerealms.footcube.physics.listeners.*;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;

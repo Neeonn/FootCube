@@ -80,7 +80,8 @@ public class PhysicsConstants {
 
   // --- Particle Defaults ---
   public static final double DISTANCE_PARTICLE_THRESHOLD = 32;
-  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED = DISTANCE_PARTICLE_THRESHOLD * DISTANCE_PARTICLE_THRESHOLD;
+  public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED =
+      DISTANCE_PARTICLE_THRESHOLD * DISTANCE_PARTICLE_THRESHOLD;
   public static final double MAX_PARTICLE_DISTANCE = 160;
   public static final double MAX_PARTICLE_DISTANCE_SQUARED = MAX_PARTICLE_DISTANCE * MAX_PARTICLE_DISTANCE;
   public static final double PARTICLE_Y_OFFSET = 0.25;

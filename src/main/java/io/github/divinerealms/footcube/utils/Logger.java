@@ -15,6 +15,9 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
+import static io.github.divinerealms.footcube.configs.Lang.PREFIX;
+import static io.github.divinerealms.footcube.configs.Lang.PREFIX_ADMIN;
+
 /**
  * The Logger class provides a utility for managing formatted logging and messaging functionalities
  * in a Minecraft server environment. It handles message customization, replacement of placeholders,
@@ -24,27 +27,15 @@ public class Logger {
   private final FCManager fcManager;
   private final Server server;
   private final ConsoleCommandSender consoleSender;
-  @Getter private final String consolePrefix;
+  @Getter
+  private final String consolePrefix;
 
   public Logger(FCManager fcManager) {
     this.fcManager = fcManager;
     this.server = fcManager.getPlugin().getServer();
     this.consoleSender = this.server.getConsoleSender();
-    this.consolePrefix = ChatColor.GREEN + "[" + fcManager.getPlugin().getDescription().getName() + "] " + ChatColor.DARK_GREEN;
-  }
-
-  /**
-   * Converts a message object (either Lang entry or raw String) into a formatted string.
-   * If the message is a Lang entry, it processes placeholders using the provided args.
-   * If the message is a raw String, it returns the colored string as-is.
-   *
-   * @param messageObj the message object (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
-   * @return the formatted and colored message string
-   */
-  private String formatMessage(Object messageObj, String... args) {
-    if (messageObj instanceof Lang) return ((Lang) messageObj).replace(args);
-    else return color(messageObj.toString());
+    this.consolePrefix =
+        ChatColor.GREEN + "[" + fcManager.getPlugin().getDescription().getName() + "] " + ChatColor.DARK_GREEN;
   }
 
   /**
@@ -54,12 +45,11 @@ public class Logger {
    * a clean console log while keeping the actual text formatted.
    *
    * @param messageObj the message to be logged (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void info(Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
-    String clean = message.replace("{prefix}", "").replace("{prefix-admin}", "");
-    consoleSender.sendMessage(consolePrefix + clean);
+    consoleSender.sendMessage(consolePrefix + clearPrefixes(message));
   }
 
   /**
@@ -68,9 +58,9 @@ public class Logger {
    * If the sender is a player, the message includes full prefixes. If the sender is the
    * console, prefixes are stripped for better readability.
    *
-   * @param sender the recipient of the message (player or console)
+   * @param sender     the recipient of the message (player or console)
    * @param messageObj the message to send (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void send(CommandSender sender, Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
@@ -78,10 +68,7 @@ public class Logger {
     if (sender instanceof Player) {
       sender.sendMessage(message);
     } else {
-      String clean = message
-          .replace("{prefix}", "")
-          .replace("{prefix-admin}", "");
-      consoleSender.sendMessage(consolePrefix + clean);
+      consoleSender.sendMessage(consolePrefix + clearPrefixes(message));
     }
   }
 
@@ -92,14 +79,13 @@ public class Logger {
    *
    * @param permission the permission required for players to receive the message
    * @param messageObj the message to send (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void send(String permission, Object messageObj, String... args) {
-    String formattedMc = formatMessage(messageObj, args);
-    String formattedConsole = formattedMc.replace("{prefix}", "").replace("{prefix-admin}", "");
+    String formatted = formatMessage(messageObj, args);
 
-    server.broadcast(formattedMc, permission);
-    consoleSender.sendMessage(consolePrefix + formattedConsole);
+    server.broadcast(formatted, permission);
+    consoleSender.sendMessage(consolePrefix + clearPrefixes(formatted));
   }
 
   /**
@@ -108,29 +94,34 @@ public class Logger {
    * Accepts either a {@link Lang} entry or a raw string.
    *
    * @param permission the permission required for players to receive the message
-   * @param center the center location to define the area
-   * @param radius the radius around the center
+   * @param center     the center location to define the area
+   * @param radius     the radius around the center
    * @param messageObj the message to send (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void send(String permission, Location center, double radius, Object messageObj, String... args) {
-    if (center == null || radius <= 0) return;
+    if (center == null || radius <= 0) {
+      return;
+    }
 
     String formatted = formatMessage(messageObj, args);
     double radiusSquared = radius * radius;
 
     for (Player player : fcManager.getCachedPlayers()) {
-      if (player.getWorld() != center.getWorld()) continue;
-      if (!player.hasPermission(permission)) continue;
-      if (player.getLocation().distanceSquared(center) > radiusSquared) continue;
+      if (player.getWorld() != center.getWorld()) {
+        continue;
+      }
+      if (!player.hasPermission(permission)) {
+        continue;
+      }
+      if (player.getLocation().distanceSquared(center) > radiusSquared) {
+        continue;
+      }
 
       player.sendMessage(formatted);
     }
 
-    String clean = formatted
-        .replace("{prefix}", "")
-        .replace("{prefix-admin}", "");
-    consoleSender.sendMessage(consolePrefix + clean);
+    consoleSender.sendMessage(consolePrefix + clearPrefixes(formatted));
   }
 
   /**
@@ -142,9 +133,9 @@ public class Logger {
    */
   public void send(CommandSender sender, String message) {
     if (sender instanceof Player) {
-      sender.sendMessage(color(message));
+      sender.sendMessage(color(replacePrefixes(message)));
     } else {
-      consoleSender.sendMessage(consolePrefix + color(message));
+      consoleSender.sendMessage(consolePrefix + color(clearPrefixes(message)));
     }
   }
 
@@ -153,7 +144,7 @@ public class Logger {
    * Accepts either a {@link Lang} entry or a raw string.
    *
    * @param messageObj the message to be broadcasted (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void broadcast(Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
@@ -164,9 +155,9 @@ public class Logger {
    * Sends an action bar message to the specified player.
    * Accepts either a {@link Lang} entry or a raw string.
    *
-   * @param player the player to whom the action bar message will be sent
+   * @param player     the player to whom the action bar message will be sent
    * @param messageObj the message to send (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   public void sendActionBar(Player player, Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
@@ -180,12 +171,12 @@ public class Logger {
    * Accepts either a {@link Lang} entry or a raw string.
    *
    * @param messageObj the message to be broadcasted in the action bar (Lang or String)
-   * @param args optional arguments for placeholder replacement (only used with Lang entries)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
   @SuppressWarnings("unused")
   public void broadcastBar(Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
-    IChatBaseComponent iChatBaseComponent = ChatSerializer.a("{\"text\": \"" + message + "\"}");
+    IChatBaseComponent iChatBaseComponent = ChatSerializer.a("{\"text\":\"" + message + "\"}");
     PacketPlayOutChat packet = new PacketPlayOutChat(iChatBaseComponent, (byte) 2);
 
     for (Player player : fcManager.getCachedPlayers()) {
@@ -197,12 +188,12 @@ public class Logger {
    * Sends a title and subtitle to a specified player with customized durations.
    * Accepts both {@link Lang} objects and raw strings for title and subtitle.
    *
-   * @param player the player to whom the title and subtitle will be sent
-   * @param titleObj the main title text (Lang or String)
+   * @param player      the player to whom the title and subtitle will be sent
+   * @param titleObj    the main title text (Lang or String)
    * @param subtitleObj the subtitle text (Lang or String)
-   * @param fadeIn the time in ticks for fade in
-   * @param stay the time in ticks to remain on screen
-   * @param fadeOut the time in ticks for fade out
+   * @param fadeIn      the time in ticks for fade in
+   * @param stay        the time in ticks to remain on screen
+   * @param fadeOut     the time in ticks for fade out
    */
   public void title(Player player, Object titleObj, Object subtitleObj, int fadeIn, int stay, int fadeOut) {
     String title = formatMessage(titleObj);
@@ -212,9 +203,59 @@ public class Logger {
     IChatBaseComponent titleJSON = ChatSerializer.a("{\"text\":\"" + title + "\"}");
     IChatBaseComponent subtitleJSON = ChatSerializer.a("{\"text\":\"" + subtitle + "\"}");
 
-    craftPlayer.getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.TITLE, titleJSON));
-    craftPlayer.getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, subtitleJSON));
+    craftPlayer.getHandle().playerConnection.sendPacket(
+        new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.TITLE, titleJSON));
+    craftPlayer.getHandle().playerConnection.sendPacket(
+        new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, subtitleJSON));
     craftPlayer.getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(fadeIn, stay, fadeOut));
+  }
+
+  /**
+   * Converts a message object (either Lang entry or raw String) into a formatted string.
+   * If the message is a Lang entry, it processes placeholders using the provided args.
+   * If the message is a raw String, it returns the colored string as-is.
+   *
+   * @param messageObj the message object (Lang or String)
+   * @param args       optional arguments for placeholder replacement (only used with Lang entries)
+   * @return the formatted and colored message string
+   */
+  private String formatMessage(Object messageObj, String... args) {
+    if (messageObj instanceof Lang) {
+      return ((Lang) messageObj).replace(args);
+    } else {
+      return color(replacePrefixes(messageObj.toString()));
+    }
+  }
+
+  /**
+   * Replaces prefix placeholders in a message with their actual formatted values.
+   * This method is used when sending messages to players or formatting raw strings,
+   * where the prefixes should be visible and properly colored. For example, it converts
+   * "{prefix}" into the actual colored prefix like "[FootCube]" that players see in chat.
+   *
+   * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
+   * @return the message with placeholders replaced by their formatted prefix values
+   */
+  private String replacePrefixes(String message) {
+    return message
+        .replace("{prefix}", PREFIX.toString())
+        .replace("{prefix-admin}", PREFIX_ADMIN.toString());
+  }
+
+  /**
+   * Removes prefix placeholders from a message entirely, returning clean text.
+   * This method is used when logging to the console, where the prefixes would be
+   * redundant since the console already shows "[FootCube]" at the start of each line.
+   * Removing them prevents duplicate prefixes like "[FootCube] [FootCube] message" and
+   * keeps console output clean and readable.
+   *
+   * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
+   * @return the message with all prefix placeholders removed (replaced with empty strings)
+   */
+  private String clearPrefixes(String message) {
+    return message
+        .replace("{prefix}", "")
+        .replace("{prefix-admin}", "");
   }
 
   /**

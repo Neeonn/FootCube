@@ -39,12 +39,15 @@ public class ScoreManager {
   }
 
   public void createLobbyScoreboard(Match match) {
-    if (tabAPI == null || match == null) return;
+    if (tabAPI == null || match == null) {
+      return;
+    }
 
     if (match.getLobbyScoreboard() != null) {
-      try { 
-        manager.removeScoreboard(match.getLobbyScoreboard()); 
-      } catch (IllegalArgumentException ignored) {}
+      try {
+        manager.removeScoreboard(match.getLobbyScoreboard());
+      } catch (IllegalArgumentException ignored) {
+      }
     }
 
     String type = match.getArena().getType() + "v" + match.getArena().getType();
@@ -56,19 +59,23 @@ public class ScoreManager {
   }
 
   public void createMatchScoreboard(Match match) {
-    if (tabAPI == null || match == null) return;
+    if (tabAPI == null || match == null) {
+      return;
+    }
 
     if (match.getLobbyScoreboard() != null) {
       try {
         manager.removeScoreboard(match.getLobbyScoreboard());
-      } catch (IllegalArgumentException ignored) {}
+      } catch (IllegalArgumentException ignored) {
+      }
       match.setLobbyScoreboard(null);
     }
 
     if (match.getMatchScoreboard() != null) {
       try {
         manager.removeScoreboard(match.getMatchScoreboard());
-      } catch (IllegalArgumentException ignored) {}
+      } catch (IllegalArgumentException ignored) {
+      }
     }
 
     String type = match.getArena().getType() + "v" + match.getArena().getType();
@@ -80,50 +87,79 @@ public class ScoreManager {
   }
 
   public void updateScoreboard(Match match) {
-    if (tabAPI == null) return;
+    if (tabAPI == null) {
+      return;
+    }
     Scoreboard scoreboard;
     List<String> lines;
 
     if (match.getPhase() == MatchPhase.LOBBY || match.getPhase() == MatchPhase.STARTING) {
-      if (match.getLobbyScoreboard() == null) createLobbyScoreboard(match);
+      if (match.getLobbyScoreboard() == null) {
+        createLobbyScoreboard(match);
+      }
       scoreboard = match.getLobbyScoreboard();
       lines = Arrays.asList(buildLobbyScoreboard(match).split(System.lineSeparator()));
     } else {
-      if (match.getMatchScoreboard() == null) createMatchScoreboard(match);
+      if (match.getMatchScoreboard() == null) {
+        createMatchScoreboard(match);
+      }
       scoreboard = match.getMatchScoreboard();
       lines = Arrays.asList(buildMatchScoreboard(match).split(System.lineSeparator()));
     }
 
-    if (scoreboard == null) return;
+    if (scoreboard == null) {
+      return;
+    }
 
     for (int i = 0; i < lines.size(); i++) {
-      if (i < scoreboard.getLines().size()) scoreboard.getLines().get(i).setText(lines.get(i));
-      else scoreboard.addLine(lines.get(i));
+      if (i < scoreboard.getLines().size()) {
+        scoreboard.getLines().get(i).setText(lines.get(i));
+      } else {
+        scoreboard.addLine(lines.get(i));
+      }
     }
 
     if (lines.size() < scoreboard.getLines().size()) {
-      for (int i = scoreboard.getLines().size() - 1; i >= lines.size(); i--) scoreboard.removeLine(i);
+      for (int i = scoreboard.getLines().size() - 1; i >= lines.size(); i--) {
+        scoreboard.removeLine(i);
+      }
     }
   }
 
   public void showLobbyScoreboard(Match match, Player player) {
-    if (tabAPI == null || match == null || player == null || !player.isOnline()) return;
-    if (match.getLobbyScoreboard() == null) createLobbyScoreboard(match);
+    if (tabAPI == null || match == null || player == null || !player.isOnline()) {
+      return;
+    }
+    if (match.getLobbyScoreboard() == null) {
+      createLobbyScoreboard(match);
+    }
     TabPlayer tabPlayer = tabAPI.getPlayer(player.getUniqueId());
-    if (tabPlayer != null) manager.showScoreboard(tabPlayer, match.getLobbyScoreboard());
+    if (tabPlayer != null) {
+      manager.showScoreboard(tabPlayer, match.getLobbyScoreboard());
+    }
   }
 
   public void showMatchScoreboard(Match match, Player player) {
-    if (tabAPI == null || match == null || player == null || !player.isOnline()) return;
-    if (match.getMatchScoreboard() == null) createMatchScoreboard(match);
+    if (tabAPI == null || match == null || player == null || !player.isOnline()) {
+      return;
+    }
+    if (match.getMatchScoreboard() == null) {
+      createMatchScoreboard(match);
+    }
     TabPlayer tabPlayer = tabAPI.getPlayer(player.getUniqueId());
-    if (tabPlayer != null) manager.showScoreboard(tabPlayer, match.getMatchScoreboard());
+    if (tabPlayer != null) {
+      manager.showScoreboard(tabPlayer, match.getMatchScoreboard());
+    }
   }
 
   public void removeScoreboard(Player player) {
-    if (tabAPI == null) return;
+    if (tabAPI == null) {
+      return;
+    }
     TabPlayer tabPlayer = tabAPI.getPlayer(player.getUniqueId());
-    if (tabPlayer == null) return;
+    if (tabPlayer == null) {
+      return;
+    }
     manager.resetScoreboard(tabPlayer);
   }
 
@@ -136,9 +172,17 @@ public class ScoreManager {
     if (matchPlayers != null) {
       for (MatchPlayer mp : matchPlayers) {
         if (mp != null && mp.getPlayer() != null) {
-          if (mp.getTeamColor() == TeamColor.RED) redPlayers.add(mp.getPlayer());
-          else if (mp.getTeamColor() == TeamColor.BLUE) bluePlayers.add(mp.getPlayer());
-          else if (mp.getTeamColor() == null) waitingPlayers.add(mp.getPlayer());
+          if (mp.getTeamColor() == TeamColor.RED) {
+            redPlayers.add(mp.getPlayer());
+          } else {
+            if (mp.getTeamColor() == TeamColor.BLUE) {
+              bluePlayers.add(mp.getPlayer());
+            } else {
+              if (mp.getTeamColor() == null) {
+                waitingPlayers.add(mp.getPlayer());
+              }
+            }
+          }
         }
       }
     }
@@ -146,21 +190,27 @@ public class ScoreManager {
     StringBuilder playersListBuilder = new StringBuilder();
     if (match.getPhase() == MatchPhase.STARTING) {
       for (int i = 0; i < redPlayers.size(); i++) {
-        if (playersListBuilder.length() > 0) playersListBuilder.append(System.lineSeparator());
+        if (playersListBuilder.length() > 0) {
+          playersListBuilder.append(System.lineSeparator());
+        }
         playersListBuilder.append(SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
             String.valueOf(i + 1), redPlayers.get(i).getName())
         );
       }
 
-      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) playersListBuilder
-          .append(System.lineSeparator())
-          .append(ChatColor.RESET)
-          .append(System.lineSeparator());
+      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) {
+        playersListBuilder
+            .append(System.lineSeparator())
+            .append(ChatColor.RESET)
+            .append(System.lineSeparator());
+      }
 
       for (int i = 0; i < bluePlayers.size(); i++) {
         if (i > 0 || (!redPlayers.isEmpty() && playersListBuilder.length() > 0
-            && !playersListBuilder.toString().endsWith(System.lineSeparator()))) {
-          if (i > 0) playersListBuilder.append(System.lineSeparator());
+                      && !playersListBuilder.toString().endsWith(System.lineSeparator()))) {
+          if (i > 0) {
+            playersListBuilder.append(System.lineSeparator());
+          }
         }
         playersListBuilder.append(SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
             String.valueOf(i + 1), bluePlayers.get(i).getName())
@@ -168,7 +218,9 @@ public class ScoreManager {
       }
     } else {
       for (int i = 0; i < waitingPlayers.size(); i++) {
-        if (i > 0) playersListBuilder.append(System.lineSeparator());
+        if (i > 0) {
+          playersListBuilder.append(System.lineSeparator());
+        }
         playersListBuilder.append(SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY.replace(
             String.valueOf(i + 1), waitingPlayers.get(i).getName())
         );
@@ -176,12 +228,12 @@ public class ScoreManager {
     }
 
     String playersList = playersListBuilder.length() == 0
-        ? NOBODY.toString()
-        : playersListBuilder.toString();
+                         ? NOBODY.toString()
+                         : playersListBuilder.toString();
 
     String status = match.getPhase() == MatchPhase.LOBBY
-        ? MATCHES_LIST_WAITING.toString()
-        : MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
+                    ? MATCHES_LIST_WAITING.toString()
+                    : MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
 
     return SCOREBOARD_LINES_LOBBY.replace(playersList, status) + System.lineSeparator() + SCOREBOARD_FOOTER;
   }
@@ -191,7 +243,9 @@ public class ScoreManager {
     if (match.getPhase() == MatchPhase.CONTINUING) {
       timeDisplay = MATCHES_LIST_CONTINUING.replace(String.valueOf(match.getCountdown()));
     } else {
-      long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO ? 120 : 300;
+      long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO
+                           ? 120
+                           : 300;
       long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
       long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
@@ -204,6 +258,8 @@ public class ScoreManager {
   }
 
   public void unregisterScoreboard(Scoreboard scoreboard) {
-    if (tabAPI != null && manager != null && scoreboard != null) manager.removeScoreboard(scoreboard);
+    if (tabAPI != null && manager != null && scoreboard != null) {
+      manager.removeScoreboard(scoreboard);
+    }
   }
 }

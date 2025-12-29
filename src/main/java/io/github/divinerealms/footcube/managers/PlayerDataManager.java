@@ -21,10 +21,9 @@ public class PlayerDataManager {
 
   private final FileConfiguration uuidConfig;
   private final Map<String, String> uuidCache = new ConcurrentHashMap<>();
-  private volatile boolean uuidsChanged = false;
-
   private final Queue<String> dataQueue = new ConcurrentLinkedQueue<>();
   private final Set<String> dataQueueSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+  private volatile boolean uuidsChanged = false;
   private volatile boolean saveScheduled = false;
 
   public PlayerDataManager(FCManager fcManager) {
@@ -54,13 +53,19 @@ public class PlayerDataManager {
 
   public PlayerData get(String playerName) {
     String uuid = uuidCache.get(playerName);
-    if (uuid == null) return null;
+    if (uuid == null) {
+      return null;
+    }
+
     return playerCache.computeIfAbsent(playerName, name -> new PlayerData(name, configManager, this));
   }
 
   public UUID getUUID(String playerName) {
     String uuidString = uuidCache.get(playerName);
-    if (uuidString == null) return null;
+    if (uuidString == null) {
+      return null;
+    }
+
     return UUID.fromString(uuidString);
   }
 
@@ -77,21 +82,49 @@ public class PlayerDataManager {
   }
 
   public void addDefaults(PlayerData playerData) {
-    if (!playerData.has("wins")) playerData.set("wins", 0);
-    if (!playerData.has("matches")) playerData.set("matches", 0);
-    if (!playerData.has("losses")) playerData.set("losses", 0);
-    if (!playerData.has("ties")) playerData.set("ties", 0);
-    if (!playerData.has("goals")) playerData.set("goals", 0);
-    if (!playerData.has("assists")) playerData.set("assists", 0);
-    if (!playerData.has("owngoals")) playerData.set("owngoals", 0);
-    if (!playerData.has("winstreak")) playerData.set("winstreak", 0);
-    if (!playerData.has("bestwinstreak")) playerData.set("bestwinstreak", 0);
+    if (!playerData.has("wins")) {
+      playerData.set("wins", 0);
+    }
+
+    if (!playerData.has("matches")) {
+      playerData.set("matches", 0);
+    }
+
+    if (!playerData.has("losses")) {
+      playerData.set("losses", 0);
+    }
+
+    if (!playerData.has("ties")) {
+      playerData.set("ties", 0);
+    }
+
+    if (!playerData.has("goals")) {
+      playerData.set("goals", 0);
+    }
+
+    if (!playerData.has("assists")) {
+      playerData.set("assists", 0);
+    }
+
+    if (!playerData.has("owngoals")) {
+      playerData.set("owngoals", 0);
+    }
+
+    if (!playerData.has("winstreak")) {
+      playerData.set("winstreak", 0);
+    }
+
+    if (!playerData.has("bestwinstreak")) {
+      playerData.set("bestwinstreak", 0);
+    }
   }
 
   public void clearAllStats() {
     for (String playerName : uuidCache.keySet()) {
       PlayerData data = get(playerName);
-      if (data == null) continue;
+      if (data == null) {
+        continue;
+      }
 
       data.set("wins", 0);
       data.set("matches", 0);
@@ -107,7 +140,9 @@ public class PlayerDataManager {
   }
 
   public void saveQueue() {
-    if (dataQueue.isEmpty() && !uuidsChanged) return;
+    if (dataQueue.isEmpty() && !uuidsChanged) {
+      return;
+    }
 
     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
       int chunkSize = 20;
@@ -116,7 +151,9 @@ public class PlayerDataManager {
 
       while (processed < chunkSize) {
         String playerName = dataQueue.poll();
-        if (playerName == null) break;
+        if (playerName == null) {
+          break;
+        }
 
         try {
           savePlayerData(playerName);
@@ -165,13 +202,20 @@ public class PlayerDataManager {
 
   public void savePlayerData(String playerName) {
     PlayerData data = playerCache.get(playerName);
-    if (data != null) data.save();
+    if (data != null) {
+      data.save();
+    }
+
     dataQueueSet.remove(playerName);
   }
 
   private void scheduleSave() {
-    if (fcManager.isDisabling()) return;
-    if (saveScheduled) return;
+    if (fcManager.isDisabling()) {
+      return;
+    }
+    if (saveScheduled) {
+      return;
+    }
     saveScheduled = true;
 
     plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin, () -> {

@@ -19,9 +19,12 @@ public class CubeCleaner {
 
   private final List<PracticeArea> practiceAreas;
 
-  @Getter public boolean empty;
-  @Getter public int amount = 0;
-  @Getter public int removeInterval;
+  @Getter
+  public boolean empty;
+  @Getter
+  public int amount = 0;
+  @Getter
+  public int removeInterval;
 
   public CubeCleaner(FCManager fcManager) {
     ConfigManager configManager = fcManager.getConfigManager();
@@ -34,19 +37,28 @@ public class CubeCleaner {
     int minutes = config.getInt("clear-cube-interval", 5);
     this.removeInterval = minutes * 60 * 20;
 
-    if (noPracticeAreasSet()) { logger.info(PRACTICE_AREAS_EMPTY); return; }
+    if (noPracticeAreasSet()) {
+      logger.info(PRACTICE_AREAS_EMPTY);
+      return;
+    }
     loadPracticeAreas();
   }
 
   private void loadPracticeAreas() {
     practiceAreas.clear();
 
-    if (!practice.contains("practice-areas")) return;
-    if (practice.getConfigurationSection("practice-areas") == null) return;
+    if (!practice.contains("practice-areas")) {
+      return;
+    }
+    if (practice.getConfigurationSection("practice-areas") == null) {
+      return;
+    }
 
     for (String locationName : practice.getConfigurationSection("practice-areas").getKeys(false)) {
       Location location = (Location) practice.get("practice-areas." + locationName);
-      if (location == null) continue;
+      if (location == null) {
+        continue;
+      }
       practiceAreas.add(new PracticeArea(location, 100));
     }
   }
@@ -55,17 +67,31 @@ public class CubeCleaner {
     this.empty = true;
     this.amount = 0;
 
-    if (practiceAreas.isEmpty()) return;
-    if (physicsData == null) return;
-    if (physicsData.getCubes() == null) return;
-    if (physicsData.getCubes().isEmpty()) return;
+    if (practiceAreas.isEmpty()) {
+      return;
+    }
+    if (physicsData == null) {
+      return;
+    }
+    if (physicsData.getCubes() == null) {
+      return;
+    }
+    if (physicsData.getCubes().isEmpty()) {
+      return;
+    }
 
     for (Slime cube : physicsData.getCubes()) {
-      if (cube == null) continue;
-      if (cube.isDead()) continue;
+      if (cube == null) {
+        continue;
+      }
+      if (cube.isDead()) {
+        continue;
+      }
 
       Location cubeLocation = cube.getLocation();
-      if (cubeLocation == null) continue;
+      if (cubeLocation == null) {
+        continue;
+      }
 
       for (PracticeArea area : practiceAreas) {
         if (area.contains(cubeLocation)) {
@@ -92,13 +118,23 @@ public class CubeCleaner {
     }
 
     boolean contains(Location location) {
-      if (location.getWorld() == null || center.getWorld() == null) return false;
-      if (!location.getWorld().equals(center.getWorld())) return false;
+      if (location.getWorld() == null || center.getWorld() == null) {
+        return false;
+      }
+      if (!location.getWorld().equals(center.getWorld())) {
+        return false;
+      }
 
       double radius = Math.sqrt(radiusSquared);
-      if (Math.abs(location.getX() - center.getX()) > radius) return false;
-      if (Math.abs(location.getY() - center.getY()) > radius) return false;
-      if (Math.abs(location.getZ() - center.getZ()) > radius) return false;
+      if (Math.abs(location.getX() - center.getX()) > radius) {
+        return false;
+      }
+      if (Math.abs(location.getY() - center.getY()) > radius) {
+        return false;
+      }
+      if (Math.abs(location.getZ() - center.getZ()) > radius) {
+        return false;
+      }
 
       double distanceSquared = location.distanceSquared(center);
       return distanceSquared <= radiusSquared;

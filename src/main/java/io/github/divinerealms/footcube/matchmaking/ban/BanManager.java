@@ -8,10 +8,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BanManager {
-  @Getter private final Map<UUID, Long> bannedPlayers = new ConcurrentHashMap<>();
+  @Getter
+  private final Map<UUID, Long> bannedPlayers = new ConcurrentHashMap<>();
 
   public boolean isBanned(Player player) {
-    if (!bannedPlayers.containsKey(player.getUniqueId())) { return false; }
+    if (!bannedPlayers.containsKey(player.getUniqueId())) {
+      return false;
+    }
     long banTime = bannedPlayers.get(player.getUniqueId());
     if (System.currentTimeMillis() < banTime) {
       // TODO: Add a message to the player informing them about the remaining ban time.

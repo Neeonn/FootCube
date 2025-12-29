@@ -8,10 +8,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class HighScoresTask extends BaseTask {
-  private final HighScoreManager highScoreManager;
-
   private static final int BATCH_SIZE = 50;
   private static final long UPDATE_INTERVAL = 12000L; // 10 minutes
+  private final HighScoreManager highScoreManager;
 
   public HighScoresTask(FCManager fcManager) {
     super(fcManager, "HighScores", UPDATE_INTERVAL, true);
@@ -21,8 +20,12 @@ public class HighScoresTask extends BaseTask {
   @Override
   protected void kaboom() {
     if (highScoreManager.isUpdating()) {
-      int batchesToProcess = highScoreManager.isHasInitialData() ? 20 : 50;
-      for (int i = 0; i < batchesToProcess && !highScoreManager.isUpdateComplete(); i++) processBatch();
+      int batchesToProcess = highScoreManager.isHasInitialData()
+                             ? 20
+                             : 50;
+      for (int i = 0; i < batchesToProcess && !highScoreManager.isUpdateComplete(); i++) {
+        processBatch();
+      }
       return;
     }
 
@@ -35,12 +38,17 @@ public class HighScoresTask extends BaseTask {
     Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
       startUpdateCycle();
 
-      while (highScoreManager.isUpdating() && !highScoreManager.isUpdateComplete()) processBatch();
+      while (highScoreManager.isUpdating() && !highScoreManager.isUpdateComplete()) {
+        processBatch();
+      }
     }, 20 * 2);
   }
 
   public void startUpdateCycle() {
-    if (highScoreManager.isUpdating()) { logger.info("&e! &d" + getTaskName() + " &6update already in progress."); return; }
+    if (highScoreManager.isUpdating()) {
+      logger.info("&e! &d" + getTaskName() + " &6update already in progress.");
+      return;
+    }
 
     highScoreManager.startUpdate();
     int totalPlayers = highScoreManager.getParticipants().length;
@@ -52,7 +60,9 @@ public class HighScoresTask extends BaseTask {
 
     if (!nameFutures.isEmpty()) {
       CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0])).thenRun(this::checkCompletion);
-    } else checkCompletion();
+    } else {
+      checkCompletion();
+    }
   }
 
   private void checkCompletion() {

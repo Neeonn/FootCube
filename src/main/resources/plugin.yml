@@ -5,23 +5,23 @@ authors:
   - SmileyCraft
   - neonsh
 description: Soccer/Football in MineCraft
-depend: [Vault, LuckPerms, TAB]
-softdepend: [PlaceholderAPI]
+depend: [ Vault, LuckPerms, TAB ]
+softdepend: [ PlaceholderAPI ]
 
 commands:
   footcube:
     description: Main FootCube command
     usage: /<command> <subcommand>
-    aliases: [fc]
+    aliases: [ fc ]
 
   fcadmin:
     description: Admin command
-    aliases: [fca]
+    aliases: [ fca ]
     permission: footcube.admin
 
   matches:
     description: Matches command
-    aliases: [q]
+    aliases: [ q ]
     default: true
     permission: footcube.matches
 

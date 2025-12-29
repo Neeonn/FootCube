@@ -85,7 +85,9 @@ public class TaskManager {
         }
       }
     }
-    if (stopped > 0) logger.info("&c✘ &4Stopped &c" + stopped + " &4plugin tasks.");
+    if (stopped > 0) {
+      logger.info("&c✘ &4Stopped &c" + stopped + " &4plugin tasks.");
+    }
   }
 
   public void restart() {
@@ -108,7 +110,9 @@ public class TaskManager {
   }
 
   public void resetAllStats() {
-    for (BaseTask task : tasks) task.resetStats();
+    for (BaseTask task : tasks) {
+      task.resetStats();
+    }
     logger.info("&a✔ &2Reset statistics for all tasks.");
   }
 
@@ -118,7 +122,13 @@ public class TaskManager {
 
   public int getRunningTaskCount() {
     int count = 0;
-    for (BaseTask task : tasks) if (task.isRunning()) count++;
+
+    for (BaseTask task : tasks) {
+      if (task.isRunning()) {
+        count++;
+      }
+    }
+
     return count;
   }
 }

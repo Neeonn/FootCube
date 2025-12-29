@@ -55,15 +55,27 @@ public class PlayerEvents implements Listener {
   @EventHandler(priority = EventPriority.HIGHEST)
   public void onDisabledCommand(PlayerCommandPreprocessEvent event) {
     Player player = event.getPlayer();
-    if (event.getMessage().equalsIgnoreCase("/tab reload")) fcManager.reloadTabAPI();
+    if (event.getMessage().equalsIgnoreCase("/tab reload")) {
+      fcManager.reloadTabAPI();
+    }
 
-    if (player.hasPermission(PERM_BYPASS_DISABLED_COMMANDS)) return;
-    if (matchManager.getMatch(player).isEmpty()) return;
+    if (player.hasPermission(PERM_BYPASS_DISABLED_COMMANDS)) {
+      return;
+    }
+
+    if (matchManager.getMatch(player).isEmpty()) {
+      return;
+    }
 
     String raw = event.getMessage().toLowerCase().trim();
-    if (raw.startsWith("/")) raw = raw.substring(1);
+    if (raw.startsWith("/")) {
+      raw = raw.substring(1);
+    }
+
     String cmd = raw.split(" ")[0];
-    if (cmd.contains(":")) cmd = cmd.split(":")[1];
+    if (cmd.contains(":")) {
+      cmd = cmd.split(":")[1];
+    }
 
     if (disableCommands.getCommands().contains(cmd)) {
       logger.send(player, COMMAND_DISABLER_CANT_USE);
@@ -82,7 +94,9 @@ public class PlayerEvents implements Listener {
 
     plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
       Player asyncPlayer = plugin.getServer().getPlayer(playerUuid);
-      if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
+      if (asyncPlayer == null || !asyncPlayer.isOnline()) {
+        return;
+      }
 
       PlayerData playerData = dataManager.get(asyncPlayer);
       dataManager.addDefaults(playerData);
@@ -94,7 +108,9 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onQuit(PlayerQuitEvent event) {
     Player player = event.getPlayer();
-    if (player == null) return;
+    if (player == null) {
+      return;
+    }
 
     dataManager.unload(player);
     system.removePlayer(player);
@@ -102,14 +118,22 @@ public class PlayerEvents implements Listener {
     fcManager.getPlayerSettings().remove(player.getUniqueId());
 
     Collection<Queue<Player>> playerQueues = fcManager.getMatchData().getPlayerQueues().values();
-    for (Queue<Player> queue : playerQueues) if (queue != null) queue.remove(player);
+    for (Queue<Player> queue : playerQueues) {
+      if (queue != null) {
+        queue.remove(player);
+      }
+    }
 
     List<Match> matches = fcManager.getMatchData().getMatches();
     if (matches != null) {
       for (Match match : matches) {
         if (match != null && match.getPhase() == MatchPhase.LOBBY) {
           List<MatchPlayer> players = match.getPlayers();
-          if (players != null) players.removeIf(mp -> mp == null || mp.getPlayer() == null || mp.getPlayer().equals(player));
+          if (players != null) {
+            players.removeIf(mp -> mp == null
+                                   || mp.getPlayer() == null
+                                   || mp.getPlayer().equals(player));
+          }
         }
         fcManager.getScoreboardManager().updateScoreboard(match);
       }
@@ -118,7 +142,11 @@ public class PlayerEvents implements Listener {
     if (teamManager.isInTeam(player)) {
       Team team = teamManager.getTeam(player);
       if (team != null && team.getMembers() != null) {
-        for (Player p : team.getMembers()) if (p != null && p.isOnline() && !p.equals(player)) logger.send(p, TEAM_DISBANDED, player.getName());
+        for (Player p : team.getMembers()) {
+          if (p != null && p.isOnline() && !p.equals(player)) {
+            logger.send(p, TEAM_DISBANDED, player.getName());
+          }
+        }
         teamManager.disbandTeam(team);
       }
     }
@@ -130,13 +158,21 @@ public class PlayerEvents implements Listener {
       List<MatchPlayer> players = match.getPlayers();
       if (players != null) {
         for (MatchPlayer mp : players) {
-          if (mp != null && mp.getPlayer() != null && mp.getPlayer().equals(player)) { matchPlayer = mp; break; }
+          if (mp != null && mp.getPlayer() != null
+              && mp.getPlayer().equals(player)) {
+            matchPlayer = mp;
+            break;
+          }
         }
       }
 
       if (matchPlayer != null) {
-        int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
-        int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
+        int playerScore = matchPlayer.getTeamColor() == TeamColor.RED
+                          ? match.getScoreRed()
+                          : match.getScoreBlue();
+        int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED
+                            ? match.getScoreBlue()
+                            : match.getScoreRed();
 
         if (match.getPhase() == MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
           fcManager.getEconomy().withdrawPlayer(player, 200);
@@ -150,21 +186,30 @@ public class PlayerEvents implements Listener {
   @EventHandler
   public void onItemDrop(PlayerDropItemEvent event) {
     Player player = event.getPlayer();
-    if (matchManager.getMatch(player).isPresent()) event.setCancelled(true);
+    if (matchManager.getMatch(player).isPresent()) {
+      event.setCancelled(true);
+    }
   }
 
   @EventHandler
   public void onItemPickup(PlayerPickupItemEvent event) {
     Player player = event.getPlayer();
-    if (matchManager.getMatch(player).isPresent()) event.setCancelled(true);
+    if (matchManager.getMatch(player).isPresent()) {
+      event.setCancelled(true);
+    }
   }
 
   @EventHandler
   public void onInventoryInteract(InventoryClickEvent event) {
-    if (!(event.getWhoClicked() instanceof Player)) return;
+    if (!(event.getWhoClicked() instanceof Player)) {
+      return;
+    }
+
     Player player = (Player) event.getWhoClicked();
 
-    if (matchManager.getMatch(player).isPresent()) event.setCancelled(true);
+    if (matchManager.getMatch(player).isPresent()) {
+      event.setCancelled(true);
+    }
   }
 
   @EventHandler
@@ -181,7 +226,9 @@ public class PlayerEvents implements Listener {
     }
 
     PlayerSettings settings = fcManager.getPlayerSettings(player);
-    if (settings != null && !settings.isBuildEnabled()) event.setCancelled(true);
+    if (settings != null && !settings.isBuildEnabled()) {
+      event.setCancelled(true);
+    }
   }
 
   @EventHandler
@@ -193,6 +240,8 @@ public class PlayerEvents implements Listener {
     }
 
     PlayerSettings settings = fcManager.getPlayerSettings(player);
-    if (settings != null && !settings.isBuildEnabled()) event.setCancelled(true);
+    if (settings != null && !settings.isBuildEnabled()) {
+      event.setCancelled(true);
+    }
   }
 }

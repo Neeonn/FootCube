@@ -20,8 +20,12 @@ public class QueueStatusTask extends BaseTask {
   @Override
   protected void kaboom() {
     for (Match match : fcManager.getMatchData().getMatches()) {
-      if (match == null || match.getPhase() != MatchPhase.LOBBY) continue;
-      if (match.getArena() == null || match.getPlayers() == null) continue;
+      if (match == null || match.getPhase() != MatchPhase.LOBBY) {
+        continue;
+      }
+      if (match.getArena() == null || match.getPlayers() == null) {
+        continue;
+      }
 
       int matchType = match.getArena().getType();
       int requiredPlayers = matchType * 2;
@@ -34,12 +38,18 @@ public class QueueStatusTask extends BaseTask {
         }
       }
 
-      String colorCode = (currentPlayers == requiredPlayers) ? "&a" : "&e";
+      String colorCode = (currentPlayers == requiredPlayers)
+                         ? "&a"
+                         : "&e";
 
       for (MatchPlayer mp : match.getPlayers()) {
-        if (mp == null) continue;
+        if (mp == null) {
+          continue;
+        }
         Player player = mp.getPlayer();
-        if (player == null || !player.isOnline()) continue;
+        if (player == null || !player.isOnline()) {
+          continue;
+        }
         logger.sendActionBar(player, QUEUE_ACTIONBAR,
             MATCHES_LIST_LOBBY.replace(
                 matchTypeString, String.valueOf(match.getArena().getId())

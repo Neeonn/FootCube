@@ -42,15 +42,16 @@ import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
 
 @Getter
 public class FCManager {
-  @Getter private static FCManager instance;
-
+  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
+  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
+  private static final String CONFIG_PARTICLES_BASE = "particles.";
+  @Getter
+  private static FCManager instance;
   private final FootCube plugin;
-
   private final Logger logger;
   private final Utilities utilities;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
-
   private final ArenaManager arenaManager;
   private final ScoreManager scoreboardManager;
   private final MatchData matchData;
@@ -59,31 +60,21 @@ public class FCManager {
   private final BanManager banManager;
   private final HighScoreManager highscoreManager;
   private final MatchManager matchManager;
-
   private final DisableCommands disableCommands;
   private final BukkitScheduler scheduler;
-
   private final PhysicsData physicsData;
   private final PhysicsSystem physicsSystem;
   private final PhysicsFormulae physicsFormulae;
-
   private final CubeCleaner cubeCleaner;
   private final ListenerManager listenerManager;
   private final TaskManager taskManager;
-
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
-
+  private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
   private Economy economy;
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
-
-  private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
-  private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
-  private static final String CONFIG_PARTICLES_BASE = "particles.";
-
-  private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
-
-  @Setter private boolean enabling = false, disabling = false;
+  @Setter
+  private boolean enabling = false, disabling = false;
 
   public FCManager(FootCube plugin) throws IllegalStateException {
     instance = this;
@@ -128,7 +119,10 @@ public class FCManager {
 
   public void reload() {
     initializeCachedPlayers();
-    if (!enabling) configManager.reloadAllConfigs();
+    if (!enabling) {
+      configManager.reloadAllConfigs();
+    }
+
     arenaManager.reloadArenas();
     setupConfig();
     setupMessages();
@@ -139,16 +133,23 @@ public class FCManager {
 
     List<UUID> onlinePlayers = new ArrayList<>(cachedPlayers.size());
     for (Player p : cachedPlayers) {
-      if (p == null) continue;
+      if (p == null) {
+        continue;
+      }
+
       onlinePlayers.add(p.getUniqueId());
     }
 
     scheduler.runTaskAsynchronously(plugin, () -> onlinePlayers.forEach(uuid -> {
       Player asyncPlayer = plugin.getServer().getPlayer(uuid);
-      if (asyncPlayer == null || !asyncPlayer.isOnline()) return;
+      if (asyncPlayer == null || !asyncPlayer.isOnline()) {
+        return;
+      }
 
       PlayerData playerData = dataManager.get(asyncPlayer);
-      if (playerData != null) preloadSettings(asyncPlayer, playerData);
+      if (playerData != null) {
+        preloadSettings(asyncPlayer, playerData);
+      }
     }));
   }
 
@@ -194,13 +195,23 @@ public class FCManager {
   }
 
   private void setupDependencies() throws IllegalStateException {
-    RegisteredServiceProvider<LuckPerms> luckPermsRsp = plugin.getServer().getServicesManager().getRegistration(LuckPerms.class);
-    this.luckPerms = luckPermsRsp == null ? null : luckPermsRsp.getProvider();
-    if (luckPerms == null) throw new IllegalStateException("LuckPerms not found!");
+    RegisteredServiceProvider<LuckPerms> luckPermsRsp = plugin.getServer().getServicesManager().getRegistration(
+        LuckPerms.class);
+    this.luckPerms = luckPermsRsp == null
+                     ? null
+                     : luckPermsRsp.getProvider();
+    if (luckPerms == null) {
+      throw new IllegalStateException("LuckPerms not found!");
+    }
 
-    RegisteredServiceProvider<Economy> economyRsp = plugin.getServer().getServicesManager().getRegistration(Economy.class);
-    this.economy = economyRsp == null ? null : economyRsp.getProvider();
-    if (economy == null) throw new IllegalStateException("Vault not found!");
+    RegisteredServiceProvider<Economy> economyRsp = plugin.getServer().getServicesManager().getRegistration(
+        Economy.class);
+    this.economy = economyRsp == null
+                   ? null
+                   : economyRsp.getProvider();
+    if (economy == null) {
+      throw new IllegalStateException("Vault not found!");
+    }
 
     if (plugin.getServer().getPluginManager().isPluginEnabled("TAB")) {
       this.tabAPI = TabAPI.getInstance();
@@ -217,8 +228,13 @@ public class FCManager {
       plugin.getServer().getScheduler().runTask(plugin, () -> {
         this.tabAPI = TabAPI.getInstance();
         logger.info("&a✔ &2Re-hooked into &dTAB &2successfully!");
-        if (scoreboardManager != null) scoreboardManager.refreshTabAPI();
-        if (matchManager != null) matchManager.recreateScoreboards();
+        if (scoreboardManager != null) {
+          scoreboardManager.refreshTabAPI();
+        }
+
+        if (matchManager != null) {
+          matchManager.recreateScoreboards();
+        }
       });
     } else {
       this.tabAPI = null;
@@ -227,7 +243,9 @@ public class FCManager {
   }
 
   private void setDefaultIfMissing(FileConfiguration file, String path, Object value) {
-    if (!file.isSet(path)) file.set(path, value);
+    if (!file.isSet(path)) {
+      file.set(path, value);
+    }
   }
 
   public PlayerSettings getPlayerSettings(Player player) {
@@ -251,22 +269,38 @@ public class FCManager {
           String colorName = effect.split(":")[1];
           try {
             settings.setCustomRedstoneColor(colorName);
-          } catch (IllegalArgumentException ignored) {}
+          } catch (IllegalArgumentException ignored) {
+          }
         }
       } catch (IllegalArgumentException exception) {
-        plugin.getLogger().log(Level.WARNING, "Invalid particle effect found for player " + player.getName() + ": " + effect);
+        plugin.getLogger().log(Level.WARNING,
+            "Invalid particle effect found for player " + player.getName() + ": " + effect);
       }
     }
 
-    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
-    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
-    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
-    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
-    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
-    if (playerData.has("ban")) matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".enabled")) {
+      settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
+    }
+    if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) {
+      settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
+    }
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) {
+      settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
+    }
+    if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) {
+      settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
+    }
+    if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) {
+      settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
+    }
+    if (playerData.has("ban")) {
+      matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
+    }
 
     String goalCelebration = "default";
-    if (playerData.has("goalcelebration")) goalCelebration = (String) playerData.get("goalcelebration");
+    if (playerData.has("goalcelebration")) {
+      goalCelebration = (String) playerData.get("goalcelebration");
+    }
     settings.setGoalMessage(goalCelebration);
   }
 
@@ -278,26 +312,36 @@ public class FCManager {
   public void sendBanner() {
     StringJoiner joiner = new StringJoiner(", ");
     List<String> authors = plugin.getDescription().getAuthors();
-    for (String author : authors) joiner.add(author);
+    for (String author : authors) {
+      joiner.add(author);
+    }
 
-    String[] banner = new String[]{"&2┏┓┏┓" + "&8 -+-------------------------------------------+-", "&2┣ ┃ " + "&7  Created by &b" + joiner + "&7, version &f" + plugin.getDescription().getVersion(), "&2┻ ┗┛" + "&8 -+-------------------------------------------+-",};
+    String[] banner = new String[]{
+        "&2┏┓┏┓" + "&8 -+-------------------------------------------+-",
+        "&2┣ ┃ " + "&7  Created by &b" + joiner + "&7, version &f" + plugin.getDescription().getVersion(),
+        "&2┻ ┗┛" + "&8 -+-------------------------------------------+-"
+    };
 
     for (String line : banner) {
-      plugin.getServer().getConsoleSender().sendMessage(logger.getConsolePrefix() + logger.color(line));
+      plugin.getServer().getConsoleSender().sendMessage(
+          logger.getConsolePrefix() + logger.color(line)
+      );
     }
   }
 
   public void cleanup() {
     long start = System.nanoTime();
     try {
-      // Reset entity and state tracking structures.
       physicsData.cleanup();
       playerSettings.clear();
     } catch (Exception exception) {
       Bukkit.getLogger().log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_ADMIN, "{prefix-admin}&dCleanup &ftook &e" + ms + "ms &f(threshold: " + DEBUG_ON_MS + "ms)");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_ADMIN,
+            "{prefix-admin}&dCleanup &ftook &e" + ms + "ms &f(threshold: " + DEBUG_ON_MS + "ms)");
+      }
     }
   }
 }

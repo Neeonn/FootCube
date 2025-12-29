@@ -16,10 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_COUNT;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_OFFSET;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_SPEED;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.MAX_PARTICLE_DISTANCE_SQUARED;
 
 /**
  * Renders particle trails that visually follow cubes (Slime entities) for players who are far enough away
@@ -29,7 +25,8 @@ import static io.github.divinerealms.footcube.physics.PhysicsConstants.MAX_PARTI
  * ensuring remote players can still perceive the ball's movement even outside their render distance.
  * </p>
  *
- * <p><b>Performance considerations:</b> Particle effects are sent only to players who are sufficiently far from the cube,
+ * <p><b>Performance considerations:</b> Particle effects are sent only to players who are sufficiently far from the
+ * cube,
  * reducing unnecessary network and client load. The method is optimized through caching of player locations
  * and settings to minimize per-interval lookups.</p>
  *
@@ -47,7 +44,9 @@ public class ParticleTrailTask extends BaseTask {
   @Override
   protected void kaboom() {
     Collection<? extends Player> onlinePlayers = fcManager.getCachedPlayers();
-    if (onlinePlayers.isEmpty() || data.getCubes().isEmpty()) return;
+    if (onlinePlayers.isEmpty() || data.getCubes().isEmpty()) {
+      return;
+    }
 
     // Cache player data
     Map<UUID, Location> playerLocations = new HashMap<>();
@@ -59,10 +58,14 @@ public class ParticleTrailTask extends BaseTask {
     }
 
     for (Slime cube : data.getCubes()) {
-      if (cube == null || cube.isDead()) continue;
+      if (cube == null || cube.isDead()) {
+        continue;
+      }
 
       Location currentLoc = cube.getLocation();
-      if (currentLoc == null) continue;
+      if (currentLoc == null) {
+        continue;
+      }
 
       UUID cubeId = cube.getUniqueId();
 
@@ -103,15 +106,21 @@ public class ParticleTrailTask extends BaseTask {
         Location playerLoc = playerLocations.get(playerId);
         PlayerSettings settings = playerSettings.get(playerId);
 
-        if (playerLoc == null || settings == null || !settings.isParticlesEnabled()) continue;
+        if (playerLoc == null || settings == null || !settings.isParticlesEnabled()) {
+          continue;
+        }
 
         double dx = playerLoc.getX() - x;
         double dy = playerLoc.getY() - y;
         double dz = playerLoc.getZ() - z;
         double distanceSquared = dx * dx + dy * dy + dz * dz;
 
-        if (distanceSquared < DISTANCE_PARTICLE_THRESHOLD_SQUARED) continue;
-        if (distanceSquared > MAX_PARTICLE_DISTANCE_SQUARED) continue;
+        if (distanceSquared < DISTANCE_PARTICLE_THRESHOLD_SQUARED) {
+          continue;
+        }
+        if (distanceSquared > MAX_PARTICLE_DISTANCE_SQUARED) {
+          continue;
+        }
 
         EnumParticle particle = settings.getParticle();
 
@@ -125,11 +134,23 @@ public class ParticleTrailTask extends BaseTask {
   }
 
   private int calculateTrailPoints(double distanceMoved) {
-    if (distanceMoved > 3.0) return 5;
-    else if (distanceMoved > 1.5) return 4;
-    else if (distanceMoved > 0.8) return 3;
-    else if (distanceMoved > 0.3) return 2;
-    else return 1;
+    if (distanceMoved > 3.0) {
+      return 5;
+    } else {
+      if (distanceMoved > 1.5) {
+        return 4;
+      } else {
+        if (distanceMoved > 0.8) {
+          return 3;
+        } else {
+          if (distanceMoved > 0.3) {
+            return 2;
+          } else {
+            return 1;
+          }
+        }
+      }
+    }
   }
 
   private void renderTrail(Player player, EnumParticle particle, PlayerSettings settings,

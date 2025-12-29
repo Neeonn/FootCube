@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.commands;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
@@ -37,43 +36,71 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) {
-      if (!(sender instanceof Player)) { logger.send(sender, INGAME_ONLY); return true; }
-      if (!sender.hasPermission(PERM_BUILD)) { logger.send(sender, NO_PERM, PERM_BUILD, label); return true; }
+      if (!(sender instanceof Player)) {
+        logger.send(sender, INGAME_ONLY);
+        return true;
+      }
+
+      if (!sender.hasPermission(PERM_BUILD)) {
+        logger.send(sender, NO_PERM, PERM_BUILD, label);
+        return true;
+      }
 
       Player player = (Player) sender;
       PlayerSettings settings = fcManager.getPlayerSettings(player);
 
-      if (matchManager.getMatch(player).isPresent()) { logger.send(sender, COMMAND_DISABLER_CANT_USE); return true; }
+      if (matchManager.getMatch(player).isPresent()) {
+        logger.send(sender, COMMAND_DISABLER_CANT_USE);
+        return true;
+      }
 
       settings.toggleBuild();
-      String status = String.valueOf(settings.isBuildEnabled() ? Lang.ON : Lang.OFF);
-      logger.send(player, SET_BUILD_MODE, status);
+      logger.send(player, SET_BUILD_MODE, settings.isBuildEnabled()
+                                          ? ON.toString()
+                                          : OFF.toString());
       return true;
     }
 
-    if (!sender.hasPermission(PERM_BUILD_OTHER)) { logger.send(sender, NO_PERM, PERM_BUILD, label + " <player>"); return true; }
+    if (!sender.hasPermission(PERM_BUILD_OTHER)) {
+      logger.send(sender, NO_PERM, PERM_BUILD, label + " <player>");
+      return true;
+    }
 
     Player target = Bukkit.getPlayerExact(args[0]);
-    if (target == null) { logger.send(sender, PLAYER_NOT_FOUND); return true; }
+    if (target == null) {
+      logger.send(sender, PLAYER_NOT_FOUND);
+      return true;
+    }
 
     PlayerSettings settings = fcManager.getPlayerSettings(target);
-    if (matchManager.getMatch(target).isPresent()) { logger.send(sender, TEAM_ALREADY_IN_GAME, target.getDisplayName()); return true; }
+    if (matchManager.getMatch(target).isPresent()) {
+      logger.send(sender, TEAM_ALREADY_IN_GAME, target.getDisplayName());
+      return true;
+    }
 
     settings.toggleBuild();
-    String status = String.valueOf(settings.isBuildEnabled() ? Lang.ON : Lang.OFF);
+    String status = settings.isBuildEnabled()
+                    ? ON.toString()
+                    : OFF.toString();
     logger.send(target, SET_BUILD_MODE, status);
     logger.send(sender, SET_BUILD_MODE_OTHER, target.getDisplayName(), status);
 
-    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) {
+      system.recordPlayerAction((Player) sender);
+    }
     return true;
   }
 
   @Override
   public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-    if (!sender.hasPermission(PERM_BUILD_OTHER)) return Collections.emptyList();
+    if (!sender.hasPermission(PERM_BUILD_OTHER)) {
+      return Collections.emptyList();
+    }
 
     List<String> completions = new ArrayList<>();
-    if (args.length == 1) fcManager.getCachedPlayers().forEach(player -> completions.add(player.getName()));
+    if (args.length == 1) {
+      fcManager.getCachedPlayers().forEach(player -> completions.add(player.getName()));
+    }
 
     if (!completions.isEmpty()) {
       String lastWord = args[args.length - 1].toLowerCase();
@@ -81,7 +108,9 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
-    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) {
+      system.recordPlayerAction((Player) sender);
+    }
     return completions;
   }
 }

@@ -45,19 +45,27 @@ public class CubeTapListener implements Listener {
   public void rightClick(PlayerInteractEntityEvent event) {
     long start = System.nanoTime();
     try {
-      if (!(event.getRightClicked() instanceof Slime)) return;
-      if (!data.getCubes().contains((Slime) event.getRightClicked())) return;
+      if (!(event.getRightClicked() instanceof Slime)) {
+        return;
+      }
+      if (!data.getCubes().contains((Slime) event.getRightClicked())) {
+        return;
+      }
 
       Slime cube = (Slime) event.getRightClicked();
       Player player = event.getPlayer();
       UUID playerId = player.getUniqueId();
 
       // Prevent AFK or unauthorized players from interacting.
-      if (system.notAllowedToInteract(player)) return;
+      if (system.notAllowedToInteract(player)) {
+        return;
+      }
 
       // Enforce cooldown.
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
-      if (touches != null && touches.containsKey(CubeTouchType.RISE)) return;
+      if (touches != null && touches.containsKey(CubeTouchType.RISE)) {
+        return;
+      }
 
       // Apply vertical boost and play sound.
       Vector previousVelocity = cube.getVelocity().clone();
@@ -76,7 +84,9 @@ public class CubeTapListener implements Listener {
       system.queueSound(cube.getLocation());
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");
+      }
     }
   }
 }

@@ -13,7 +13,8 @@ public class DisableCommands {
   private final ConfigManager configManager;
   private final FileConfiguration config;
 
-  @Getter private final Set<String> commands = new HashSet<>();
+  @Getter
+  private final Set<String> commands = new HashSet<>();
   private final String configPath = "enabledCommands";
 
   public DisableCommands(FCManager fcManager) {
@@ -21,7 +22,9 @@ public class DisableCommands {
     this.config = configManager.getConfig("config.yml");
 
     String cfgCommands = config.getString(configPath, "").toLowerCase().trim();
-    if (!cfgCommands.isEmpty()) Collections.addAll(commands, cfgCommands.split("\\s+"));
+    if (!cfgCommands.isEmpty()) {
+      Collections.addAll(commands, cfgCommands.split("\\s+"));
+    }
   }
 
   public boolean addCommand(String cmd) {

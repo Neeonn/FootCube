@@ -32,11 +32,14 @@ public class CubeDamageListener implements Listener {
     long start = System.nanoTime();
     try {
       // Cancel all damage applied to physics cubes.
-      if (event.getEntity() instanceof Slime && physicsData.getCubes().contains((Slime) event.getEntity()))
+      if (event.getEntity() instanceof Slime && physicsData.getCubes().contains((Slime) event.getEntity())) {
         event.setCancelled(true);
+      }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dCubeDamageListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dCubeDamageListener &ftook &e" + ms + "ms");
+      }
     }
   }
 }

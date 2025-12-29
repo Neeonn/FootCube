@@ -40,10 +40,14 @@ public class PlayerMovementListener implements Listener {
     try {
       Location to = event.getTo(), from = event.getFrom();
       // Skip if no movement occurred.
-      if (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ()) return;
+      if (to.getX() == from.getX() && to.getY() == from.getY() && to.getZ() == from.getZ()) {
+        return;
+      }
 
       Player player = event.getPlayer();
-      if (system.notAllowedToInteract(player) || system.isAFK(player)) return;
+      if (system.notAllowedToInteract(player) || system.isAFK(player)) {
+        return;
+      }
       UUID playerId = player.getUniqueId();
 
       // Compute normalized velocity components.
@@ -58,7 +62,9 @@ public class PlayerMovementListener implements Listener {
       data.getSpeed().put(playerId, speed);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerMovementListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerMovementListener &ftook &e" + ms + "ms");
+      }
     }
   }
 }

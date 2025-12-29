@@ -41,14 +41,19 @@ public class TouchCleanupTask extends BaseTask {
 
   private void cleanupLastTouches(long now) {
     Map<UUID, Map<CubeTouchType, CubeTouchInfo>> lastTouches = data.getLastTouches();
-    if (lastTouches.isEmpty()) return;
+    if (lastTouches.isEmpty()) {
+      return;
+    }
 
     playersToRemove.clear();
 
     for (Map.Entry<UUID, Map<CubeTouchType, CubeTouchInfo>> playerEntry : lastTouches.entrySet()) {
       UUID playerId = playerEntry.getKey();
       Map<CubeTouchType, CubeTouchInfo> playerTouches = playerEntry.getValue();
-      if (playerTouches == null || playerTouches.isEmpty()) { playersToRemove.add(playerId); continue; }
+      if (playerTouches == null || playerTouches.isEmpty()) {
+        playersToRemove.add(playerId);
+        continue;
+      }
 
       touchesToRemove.clear();
 
@@ -60,26 +65,40 @@ public class TouchCleanupTask extends BaseTask {
           long timestamp = info.getTimestamp();
           long cooldown = type.getCooldown();
 
-          if ((now - timestamp) > cooldown) touchesToRemove.add(type);
-        } catch (Exception exception) { touchesToRemove.add(type); }
+          if ((now - timestamp) > cooldown) {
+            touchesToRemove.add(type);
+          }
+        } catch (Exception exception) {
+          touchesToRemove.add(type);
+        }
       }
 
-      for (CubeTouchType type : touchesToRemove) playerTouches.remove(type);
-      if (playerTouches.isEmpty()) playersToRemove.add(playerId);
+      for (CubeTouchType type : touchesToRemove) {
+        playerTouches.remove(type);
+      }
+      if (playerTouches.isEmpty()) {
+        playersToRemove.add(playerId);
+      }
     }
 
-    for (UUID playerId : playersToRemove) lastTouches.remove(playerId);
+    for (UUID playerId : playersToRemove) {
+      lastTouches.remove(playerId);
+    }
   }
 
   private void cleanupRaised(long now) {
     Map<UUID, Long> raised = data.getRaised();
-    if (raised.isEmpty()) return;
+    if (raised.isEmpty()) {
+      return;
+    }
     cubesToRemove.clear();
     for (Map.Entry<UUID, Long> entry : raised.entrySet()) {
       if ((now - entry.getValue()) > RISE_COOLDOWN) {
         cubesToRemove.add(entry.getKey());
       }
     }
-    for (UUID cubeId : cubesToRemove) raised.remove(cubeId);
+    for (UUID cubeId : cubesToRemove) {
+      raised.remove(cubeId);
+    }
   }
 }

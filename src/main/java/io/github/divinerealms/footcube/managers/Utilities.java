@@ -24,34 +24,38 @@ public class Utilities {
     this.luckPerms = fcManager.getLuckPerms();
   }
 
-  public CompletableFuture<String> getPrefixedName(UUID uuid,  String playerName) {
-    return luckPerms.getUserManager().loadUser(uuid).thenApplyAsync(user -> {
-      CachedMetaData meta = user.getCachedData().getMetaData();
-      String prefix = meta.getPrefix();
-      if (prefix == null) prefix = "";
-      return ChatColor.translateAlternateColorCodes('&', prefix + playerName);
-    });
-  }
-
   public static int parseTime(String input) throws NumberFormatException {
     int totalSeconds = 0;
     input = input.toLowerCase().replaceAll("\\s+", ""); // remove spaces
     StringBuilder number = new StringBuilder();
     for (int i = 0; i < input.length(); i++) {
       char c = input.charAt(i);
-      if (Character.isDigit(c)) number.append(c);
-      else if (c == 'm') { // check "min"
-        if (i + 2 < input.length() && input.startsWith("min", i)) {
-          totalSeconds += Integer.parseInt(number.toString()) * 60;
-          number.setLength(0);
-          i += 2;
-        } else throw new NumberFormatException("Invalid time format");
-      } else if (c == 's') {
-        totalSeconds += Integer.parseInt(number.toString());
-        number.setLength(0);
-      } else throw new NumberFormatException("Invalid time format");
+      if (Character.isDigit(c)) {
+        number.append(c);
+      } else {
+        if (c == 'm') { // check "min"
+          if (i + 2 < input.length() && input.startsWith("min", i)) {
+            totalSeconds += Integer.parseInt(number.toString()) * 60;
+            number.setLength(0);
+            i += 2;
+          } else {
+            throw new NumberFormatException("Invalid time format");
+          }
+        } else {
+          if (c == 's') {
+            totalSeconds += Integer.parseInt(number.toString());
+            number.setLength(0);
+          } else {
+            throw new NumberFormatException("Invalid time format");
+          }
+        }
+      }
     }
-    if (number.length() > 0) totalSeconds += Integer.parseInt(number.toString());
+
+    if (number.length() > 0) {
+      totalSeconds += Integer.parseInt(number.toString());
+    }
+
     return totalSeconds;
   }
 
@@ -62,7 +66,9 @@ public class Utilities {
   }
 
   public static String formatTime(long totalSeconds) {
-    if (totalSeconds <= 0) return "0s";
+    if (totalSeconds <= 0) {
+      return "0s";
+    }
 
     final long SECONDS_IN_MINUTE = 60;
     final long SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE;
@@ -87,25 +93,35 @@ public class Utilities {
 
     StringBuilder sb = new StringBuilder();
 
-    if (years > 0) sb.append(years).append("y");
+    if (years > 0) {
+      sb.append(years).append("y");
+    }
 
     if (months > 0) {
-      if (sb.length() > 0) sb.append(" ");
+      if (sb.length() > 0) {
+        sb.append(" ");
+      }
       sb.append(months).append("mo");
     }
 
     if (hours > 0) {
-      if (sb.length() > 0) sb.append(" ");
+      if (sb.length() > 0) {
+        sb.append(" ");
+      }
       sb.append(hours).append("h");
     }
 
     if (minutes > 0) {
-      if (sb.length() > 0) sb.append(" ");
+      if (sb.length() > 0) {
+        sb.append(" ");
+      }
       sb.append(minutes).append("min");
     }
 
     if (seconds > 0 || sb.length() == 0) {
-      if (sb.length() > 0) sb.append(" ");
+      if (sb.length() > 0) {
+        sb.append(" ");
+      }
       sb.append(seconds).append("s");
     }
 
@@ -116,7 +132,9 @@ public class Utilities {
                                   double x, double y, double z,
                                   float offsetX, float offsetY, float offsetZ,
                                   float speed, int count) {
-    if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) return;
+    if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
+      return;
+    }
 
     try {
       PacketPlayOutWorldParticles packet = new PacketPlayOutWorldParticles(particle, true,
@@ -126,5 +144,17 @@ public class Utilities {
     } catch (Exception exception) {
       plugin.getLogger().log(Level.SEVERE, "Error while trying to send particle", exception);
     }
+  }
+
+  public CompletableFuture<String> getPrefixedName(UUID uuid, String playerName) {
+    return luckPerms.getUserManager().loadUser(uuid).thenApplyAsync(user -> {
+      CachedMetaData meta = user.getCachedData().getMetaData();
+      String prefix = meta.getPrefix();
+      if (prefix == null) {
+        prefix = "";
+      }
+
+      return ChatColor.translateAlternateColorCodes('&', prefix + playerName);
+    });
   }
 }

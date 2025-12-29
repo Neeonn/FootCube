@@ -25,7 +25,8 @@ public class ArenaManager {
   private final ConfigManager configManager;
   private final FileConfiguration arenaConfig;
 
-  @Setter private Map<Player, ArenaSetup> setupWizards = new HashMap<>();
+  @Setter
+  private Map<Player, ArenaSetup> setupWizards = new HashMap<>();
 
   public ArenaManager(FCManager fcManager) {
     this.fcManager = fcManager;
@@ -44,10 +45,16 @@ public class ArenaManager {
   }
 
   private void loadArenas() {
-    if (arenaConfig == null) { logger.info("&carenas.yml not found!"); return; }
+    if (arenaConfig == null) {
+      logger.info("&carenas.yml not found!");
+      return;
+    }
 
     World world = server.getWorld(arenaConfig.getString("arenas.world", "world"));
-    if (world == null) { logger.info("&cWorld for arenas not found!"); return; }
+    if (world == null) {
+      logger.info("&cWorld for arenas not found!");
+      return;
+    }
 
     for (String type : new String[]{"2v2", "3v3", "4v4"}) {
       int amount = arenaConfig.getInt("arenas." + type + ".amount", 0);
@@ -63,7 +70,8 @@ public class ArenaManager {
   }
 
   private Location getLocation(FileConfiguration config, World world, String path) {
-    Location location = new Location(world, config.getDouble(path + "x"), config.getDouble(path + "y"), config.getDouble(path + "z"));
+    Location location = new Location(world, config.getDouble(path + "x"), config.getDouble(path + "y"),
+        config.getDouble(path + "z"));
     location.setPitch((float) config.getDouble(path + "pitch"));
     location.setYaw((float) config.getDouble(path + "yaw"));
     return location;
@@ -74,10 +82,24 @@ public class ArenaManager {
     redSpawn = normalizeLocation(redSpawn);
 
     boolean isXAxis = Math.abs(blueSpawn.getX() - redSpawn.getX()) > Math.abs(blueSpawn.getZ() - redSpawn.getZ());
-    boolean blueIsLess = isXAxis ? blueSpawn.getX() < redSpawn.getX() : blueSpawn.getZ() < redSpawn.getZ();
+    boolean blueIsLess = isXAxis
+                         ? blueSpawn.getX() < redSpawn.getX()
+                         : blueSpawn.getZ() < redSpawn.getZ();
 
-    blueSpawn.setYaw(isXAxis ? (blueIsLess ? 90.0F : -90.0F) : (blueIsLess ? 180.0F : 0.0F));
-    redSpawn.setYaw(isXAxis ? (blueIsLess ? -90.0F : 90.0F) : (blueIsLess ? 0.0F : 180.0F));
+    blueSpawn.setYaw(isXAxis
+                     ? (blueIsLess
+                        ? 90.0F
+                        : -90.0F)
+                     : (blueIsLess
+                        ? 180.0F
+                        : 0.0F));
+    redSpawn.setYaw(isXAxis
+                    ? (blueIsLess
+                       ? -90.0F
+                       : 90.0F)
+                    : (blueIsLess
+                       ? 0.0F
+                       : 180.0F));
 
     blueSpawn.setPitch(0.0F);
     redSpawn.setPitch(0.0F);
@@ -107,9 +129,12 @@ public class ArenaManager {
   }
 
   private void addArena(int type, Location blue, Location red) {
-    Location center = new Location(blue.getWorld(), (blue.getX() + red.getX()) / 2.0, (blue.getY() + red.getY()) / 2.0 + 2.0, (blue.getZ() + red.getZ()) / 2.0);
+    Location center = new Location(blue.getWorld(), (blue.getX() + red.getX()) / 2.0,
+        (blue.getY() + red.getY()) / 2.0 + 2.0, (blue.getZ() + red.getZ()) / 2.0);
     boolean isXAxis = Math.abs(blue.getX() - red.getX()) > Math.abs(blue.getZ() - red.getZ());
-    boolean redIsGreater = isXAxis ? red.getX() > blue.getX() : red.getZ() > blue.getZ();
+    boolean redIsGreater = isXAxis
+                           ? red.getX() > blue.getX()
+                           : red.getZ() > blue.getZ();
     int id = arenas.size() + 1;
     arenas.add(new Arena(id, type, blue, red, center, isXAxis, redIsGreater));
   }

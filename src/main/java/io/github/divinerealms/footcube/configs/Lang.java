@@ -42,25 +42,35 @@ public enum Lang {
   HITDEBUG_WHOLE("debug.hits.whole", "{0}"),
   HITDEBUG_CHARGED("debug.hits.charged", "{prefix}&dCharged &8| {0} &8| {1}KP &8| &e{2}PW&7, &d{3}CH"),
   HITDEBUG_REGULAR("debug.hits.regular", "{prefix}&aRegular &8| {0} &8| &a{1}KP"),
-  HITDEBUG_VELOCITY_CAP("debug.hits.velocity-cap", "{prefix}&cVelocity Cap Triggered! &7Speed: &e{0} &7-> &a{1} &7| Hitter: &f{2}"),
+  HITDEBUG_VELOCITY_CAP("debug.hits.velocity-cap",
+      "{prefix}&cVelocity Cap Triggered! &7Speed: &e{0} &7-> &a{1} &7| Hitter: &f{2}"),
 
   OR("or", "&e|&b"),
 
   JOIN_SUCCESS("join.success", "&b[Trener] Ušao si u {0} lobby. Sačekaj da se skupe igrači..."),
-  JOIN_INVALIDTYPE("join.invalid-arena-type", String.join(System.lineSeparator(), "&c{0} is not a valid arena type", "&b/fc setuparena [3v3{1}4v4]")),
+  JOIN_INVALIDTYPE("join.invalid-arena-type",
+      String.join(System.lineSeparator(), "&c{0} is not a valid arena type", "&b/fc setuparena [3v3{1}4v4]")),
   JOIN_ALREADYINGAME("join.already-in-game", "&cYou are already in a game"),
   JOIN_NOARENA("join.no-arena", "&cNo arena found."),
 
-  TEAM_USAGE("team.usage", String.join(System.lineSeparator(), "&b/fc team [3v3{0}4v4] [player]", "&b/fc team accept/decline/cancel")),
+  TEAM_USAGE("team.usage",
+      String.join(System.lineSeparator(), "&b/fc team [3v3{0}4v4] [player]", "&b/fc team accept/decline/cancel")),
   TEAM_NO_REQUEST("team.no-request", "&cThere is no team request to accept"),
-  TEAM_ACCEPT_OTHER("team.accept.other", String.join(System.lineSeparator(), "{prefix}&aYou succesfully teamed with {0}", "&aYou must wait for there to be place for a team, this won't take long")),
-  TEAM_ACCEPT_SELF("team.accept.self", String.join(System.lineSeparator(), "{prefix}&aYou succesfully teamed with {0}", "&aYou must wait for there to be place for a team, this won't take long")),
+  TEAM_ACCEPT_OTHER("team.accept.other",
+      String.join(System.lineSeparator(), "{prefix}&aYou succesfully teamed with {0}",
+          "&aYou must wait for there to be place for a team, this won't take long")),
+  TEAM_ACCEPT_SELF("team.accept.self", String.join(System.lineSeparator(), "{prefix}&aYou succesfully teamed with {0}",
+      "&aYou must wait for there to be place for a team, this won't take long")),
   TEAM_DECLINE_OTHER("team.decline.other", "{prefix}&a{0} declined your team request"),
   TEAM_DECLINE_SELF("team.decline.self", "{prefix}&aYou successfully declined the team request"),
   TEAM_ALREADY_IN_TEAM("team.already-in-team", "&cYou're already in a team"),
   TEAM_ALREADY_IN_TEAM_2("team.already-in-team-2", "&c{0} is already in a team"),
-  TEAM_WANTS_TO_TEAM_OTHER("team.wants-to-team.other", String.join(System.lineSeparator(), "{prefix}&a{0} wants to team with you on a {1}v{1} match", "&b/fc team accept &aor &b/fc team decline &ato answer the team request")),
-  TEAM_WANTS_TO_TEAM_SELF("team.wants-to-team.self", String.join(System.lineSeparator(), "{prefix}&aYou succesfully sent {0} a team request for a {1}v{1} match", "&b/fc team cancel &ato cancel this")),
+  TEAM_WANTS_TO_TEAM_OTHER("team.wants-to-team.other",
+      String.join(System.lineSeparator(), "{prefix}&a{0} wants to team with you on a {1}v{1} match",
+          "&b/fc team accept &aor &b/fc team decline &ato answer the team request")),
+  TEAM_WANTS_TO_TEAM_SELF("team.wants-to-team.self",
+      String.join(System.lineSeparator(), "{prefix}&aYou succesfully sent {0} a team request for a {1}v{1} match",
+          "&b/fc team cancel &ato cancel this")),
   TEAM_ALREADY_IN_GAME("team.already-in-game", "&c{0} is already in a game"),
   TEAM_NOT_ONLINE("team.not-online", "&c{0} is not online"),
   TEAM_DISBANDED("team.disbanded", "&cYour team was disbanded because {0} left."),
@@ -98,10 +108,17 @@ public enum Lang {
   CLEAR_STATS_SUCCESS("clear-stats.success", "{prefix}&aYou succesfully wiped {0}'s store"),
 
   STATSSET_IS_NOT_A_NUMBER("stats-set.is-not-a-number", "&c{0} is not a number"),
-  STATSSET_NOT_A_STAT("stats-set.not-a-stat", String.join(System.lineSeparator(), "&c{0} is not a stat, choose from:", "&7wins, matches, ties, goals, streak, store, all")),
+  STATSSET_NOT_A_STAT("stats-set.not-a-stat", String.join(System.lineSeparator(), "&c{0} is not a stat, choose from:",
+      "&7wins, matches, ties, goals, streak, store, all")),
 
-  SETUP_ARENA_START("setup-arena.start", String.join(System.lineSeparator(), "{prefix}&aYou just started to setup an arena", "&aIf you got here by accident, do &b/fc undo", "&aStep 1: Stand in the middle block behind the line of the blue goal and look at the red goal, then do &b/fc set")),
-  SETUP_ARENA_FIRST_SET("setup-arena.first-set", String.join(System.lineSeparator(), "{prefix}&aFirst location successfully set.", "&aNow do the same for the red goal")),
+  SETUP_ARENA_START("setup-arena.start",
+      String.join(System.lineSeparator(), "{prefix}&aYou just started to setup an arena",
+          "&aIf you got here by accident, do &b/fc undo",
+          "&aStep 1: Stand in the middle block behind the line of the blue goal and look at the red goal, then do " +
+          "&b/fc set")),
+  SETUP_ARENA_FIRST_SET("setup-arena.first-set",
+      String.join(System.lineSeparator(), "{prefix}&aFirst location successfully set.",
+          "&aNow do the same for the red goal")),
   SETUP_ARENA_SUCCESS("setup-arena.success", "{prefix}&aYou successfully setup the arena"),
 
   CLEAR_ARENAS_SUCCESS("clear-arenas.success", "{prefix}&aYou successfully wiped all arenas"),
@@ -109,7 +126,8 @@ public enum Lang {
 
   BALANCE("balance", "{prefix}&aYou currently have #{0}"),
 
-  TAKE_PLACE_ANNOUNCEMENT_LOBBY("match.tkp-announcement.lobby", "{prefix}&6&lIZMENA: &aNeko je izašao iz {0}&a tokom faze diskusije."),
+  TAKE_PLACE_ANNOUNCEMENT_LOBBY("match.tkp-announcement.lobby",
+      "{prefix}&6&lIZMENA: &aNeko je izašao iz {0}&a tokom faze diskusije."),
   TAKE_PLACE_ANNOUNCEMENT_MATCH("match.tkp-announcement.match", String.join(System.lineSeparator(),
       "{prefix}&6&lIZMENA: &aNeko je izašao iz {0}&a!",
       "&aRezultat: {1} &f{2} - {3} {4} &7(preostalo vreme: &e{5}&7)",
@@ -121,13 +139,18 @@ public enum Lang {
   CUBE_NO_CUBES("cube.no-cube", "&cNo cubes near you"),
 
   COMMAND_DISABLER_ALREADY_ADDED("command-disabler.already-added", "&cThis command was already added"),
-  COMMAND_DISABLER_SUCCESS("command-disabler.added-successfully", "&aYou successfully added command /{0} to the list of disabled commands"),
-  COMMAND_DISABLER_SUCCESS_REMOVE("command-disabler.removed-successfully", "&aYou successfully removed command /{0} to the list of disabled commands"),
+  COMMAND_DISABLER_SUCCESS("command-disabler.added-successfully",
+      "&aYou successfully added command /{0} to the list of disabled commands"),
+  COMMAND_DISABLER_SUCCESS_REMOVE("command-disabler.removed-successfully",
+      "&aYou successfully removed command /{0} to the list of disabled commands"),
   COMMAND_DISABLER_WASNT_ADDED("command-disabler.wasnt-added", "&cThis command wasn't even added"),
   COMMAND_DISABLER_LIST("command-disabler.list", "&6List of disabled commands:"),
   COMMAND_DISABLER_CANT_USE("command-disabler.cant-use", "&cYou cannot use this command during a match"),
 
-  STARTING("match.starting", String.join(System.lineSeparator(), "{prefix}&aThere are enough players to start, the match will start in 30 seconds. You now have time to discuss about your strategy.", "&2TIP: &aChoose someone to be goalkeeper.", "&aUse &b/tc [Message] &afor teamchat.")),
+  STARTING("match.starting", String.join(System.lineSeparator(),
+      "{prefix}&aThere are enough players to start, the match will start in 30 seconds. You now have time to discuss " +
+      "about your strategy.",
+      "&2TIP: &aChoose someone to be goalkeeper.", "&aUse &b/tc [Message] &afor teamchat.")),
   TEAMCHAT_RED("match.tc-red", "&cTC {0}&f: "),
   TEAMCHAT_BLUE("match.tc-blue", "&1TC {0}&f: "),
   MATCH_STARTED("match.started", "{prefix}&aThe match has started, good luck"),
@@ -135,7 +158,8 @@ public enum Lang {
   MATCH_PROCEED("match.proceed", "{prefix}&aThe match will now proceed"),
   MATCH_TIMES_UP("match.times-up", "{prefix}&aTime's up! The {0} team has won"),
   MATCH_WIN_CREDITS("match.win-credits", "{prefix}&aYou got 15 credits for winning"),
-  MATCH_WINSTREAK_CREDITS("match.winstreak-credits", "{prefix}&6&lYou get 100 credits bonus for winning {0} times in a row!!!"),
+  MATCH_WINSTREAK_CREDITS("match.winstreak-credits",
+      "{prefix}&6&lYou get 100 credits bonus for winning {0} times in a row!!!"),
   MATCH_TIED("match.tied", "{prefix}&aTime's up! The game is tied"),
   MATCH_TIED_CREDITS("match.tied-credits", "{prefix}&aYou got 5 credits for ending tied"),
   MATCH_SCORE_CREDITS("match.score-credits", "{prefix}&aYou got 10 credits for scoring"),
@@ -143,10 +167,13 @@ public enum Lang {
   MATCH_SCORE_HATTRICK("match.score-hattrick", "{prefix}&6&lYou get 100 credits bonus for making a hat-trick"),
   MATCH_HATTRICK("match.hattrick", "&6&lHAT-TRICK!!!"),
   MATCH_GOALLL("match.goalll", "&6&lGOOOOLL!!!"),
-  MATCH_GOAL("match.goal", String.join(System.lineSeparator(), "{prefix}{0} &a{1} scored a goal for the {2} team from {3} blocks away and got assisted by {4}")),
+  MATCH_GOAL("match.goal", String.join(System.lineSeparator(),
+      "{prefix}{0} &a{1} scored a goal for the {2} team from {3} blocks away and got assisted by {4}")),
   MATCH_GOAL_ASSIST("match.goal-assist", "Asistent: {0}"),
-  MATCH_SCORE_STATS("match.score-stats", String.join(System.lineSeparator(), "&aIt is now {0}-{1} Red-Blue", "&aThe match will continue in 10 seconds")),
-  MATCH_SCORE_OWN_GOAL_ANNOUNCE("match.score-own-goal-announce", "{prefix}&6&lOWN GOAL! &a{0} scored a goal for the opposing team"),
+  MATCH_SCORE_STATS("match.score-stats",
+      String.join(System.lineSeparator(), "&aIt is now {0}-{1} Red-Blue", "&aThe match will continue in 10 seconds")),
+  MATCH_SCORE_OWN_GOAL_ANNOUNCE("match.score-own-goal-announce",
+      "{prefix}&6&lOWN GOAL! &a{0} scored a goal for the opposing team"),
   LEAVE_QUEUE_ACTIONBAR("match.leave-queue-actionbar", "&cIzašli ste iz {0} queue..."),
   PLAYER_PLACEHOLDERS("match.player-placeholders", "%luckperms_prefix%%player_name%"),
 
@@ -160,7 +187,8 @@ public enum Lang {
 
   QUEUE_ACTIONBAR("match.queue-actionbar", "{0} &8┃ {1} &7({2}&7/&a{3}&7)"),
 
-  BEST_HEADER("best.header", String.join(System.lineSeparator(), "{prefix}&6All FootCube highscores:", "&bBest ratings:")),
+  BEST_HEADER("best.header",
+      String.join(System.lineSeparator(), "{prefix}&6All FootCube highscores:", "&bBest ratings:")),
   BEST_ENTRY("best.entry", "&7{0}. {1} - {2}"),
   BEST_GOALS("best.most-goals", "&bMost goals:"),
   BEST_ASSISTS("best.most-assists", "&bMost assists:"),
@@ -170,8 +198,11 @@ public enum Lang {
 
   NOBODY("nobody", "nobody"),
 
-  HELP("help", String.join(System.lineSeparator(), "{prefix}&6List of commands with /fc", "&b/fc join [3v3{0}4v4]", "&b/fc team [3v3{0}4v4] [player]", "&b/fc team accept/decline/cancel", "/fc group", "/fc takeplace", "/fc stats", "/fc best")),
-  HELP_ADMIN("help-admin", String.join(System.lineSeparator(), "{prefix-admin}&b/fc setuparena [3v3{0}4v4]", "{prefix-admin}&b/fc cleararenas")),
+  HELP("help", String.join(System.lineSeparator(), "{prefix}&6List of commands with /fc", "&b/fc join [3v3{0}4v4]",
+      "&b/fc team [3v3{0}4v4] [player]", "&b/fc team accept/decline/cancel", "/fc group", "/fc takeplace", "/fc stats",
+      "/fc best")),
+  HELP_ADMIN("help-admin", String.join(System.lineSeparator(), "{prefix-admin}&b/fc setuparena [3v3{0}4v4]",
+      "{prefix-admin}&b/fc cleararenas")),
 
   SCOREBOARD_LINES_LOBBY("scoreboard.lines.lobby", String.join(System.lineSeparator(),
       "&r &r",
@@ -181,7 +212,7 @@ public enum Lang {
       "&r &r",
       "&f {1}",
       "&r &r"
-      )),
+  )),
   SCOREBOARD_LINES_RED_PLAYERS_ENTRY("scoreboard.lines.red-players-entry", "&r  {0}. &c{1}"),
   SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY("scoreboard.lines.blue-players-entry", "&r  {0}. &9{1}"),
   SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY("scoreboard.lines.waiting-players-entry", "&r  {0}. {1}"),
@@ -254,7 +285,8 @@ public enum Lang {
   GM_DEFAULT_ACTIONBAR("goal-mesasages.default.actionbar", "{0} &f{1} - {2} {3}"),
   GM_ASSISTS_TEXT("goal-messages.assists-text", "&7 (&f{0}&7)"),
 
-  SET_BLOCK_TOO_FAR("set.block.too-far", "{prefix-admin}&cMoraš gledati u blok koji je najviše 5 blokova udaljen od tebe."),
+  SET_BLOCK_TOO_FAR("set.block.too-far",
+      "{prefix-admin}&cMoraš gledati u blok koji je najviše 5 blokova udaljen od tebe."),
   SET_BLOCK_SUCCESS("set.block.success", "{prefix-admin}&aUspešno postavljeno &e{0} &adugme!"),
 
   BLOCK_INTERACT_COOLDOWN("block-interact-cooldown", "{prefix}&cSačekajte &e{0} pre ponovnog korišćenja."),
@@ -285,7 +317,7 @@ public enum Lang {
       "&r &r",
       "&7  Running: &e{0} &8/ &7{1}",
       "&r &r")),
-  TASKS_REPORT_ENTRY("plugin-stats.report.tasks.entry","  {0} &d{1}&f: &a{2}ms &87({3} runs)"),
+  TASKS_REPORT_ENTRY("plugin-stats.report.tasks.entry", "  {0} &d{1}&f: &a{2}ms &87({3} runs)"),
   TASKS_REPORT_FOOTER("plugin-stats.report.tasks.footer", String.join(System.lineSeparator(),
       "&r &r",
       "&7 &lOverall Average Tick Time: &a{0}ms",
@@ -311,12 +343,19 @@ public enum Lang {
   }
 
   public String replace(String... args) {
-    if (LANG == null) return ChatColor.translateAlternateColorCodes('&', def).trim();
+    if (LANG == null) {
+      return ChatColor.translateAlternateColorCodes('&', def).trim();
+    }
 
     String value = LANG.getString(this.path, this.def);
 
-    if (value.contains("{prefix}")) value = value.replace("{prefix}", PREFIX.toString());
-    if (value.contains("{prefix-admin}")) value = value.replace("{prefix-admin}", PREFIX_ADMIN.toString());
+    if (value.contains("{prefix}")) {
+      value = value.replace("{prefix}", PREFIX.toString());
+    }
+
+    if (value.contains("{prefix-admin}")) {
+      value = value.replace("{prefix-admin}", PREFIX_ADMIN.toString());
+    }
 
     if (args != null && args.length > 0) {
       for (int i = 0; i < args.length; i++) {

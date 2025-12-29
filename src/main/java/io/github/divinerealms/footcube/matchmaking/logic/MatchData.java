@@ -24,7 +24,8 @@ public class MatchData {
   private final Set<Integer> lockedQueues = ConcurrentHashMap.newKeySet();
   private final Map<Integer, ReentrantLock> queueLocks = new ConcurrentHashMap<>();
 
-  @Setter private boolean matchesEnabled = true;
+  @Setter
+  private boolean matchesEnabled = true;
 
   public MatchData() {
     // playerQueues.put(ONE_V_ONE, new ConcurrentLinkedQueue<>());

@@ -10,7 +10,6 @@ import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -31,6 +30,7 @@ import org.bukkit.util.Vector;
 import java.util.*;
 
 import static io.github.divinerealms.footcube.configs.Lang.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.*;
 
 public class FCCommand implements CommandExecutor, TabCompleter {
@@ -56,7 +56,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    if (args.length == 0) { sendBanner(sender); return true; }
+    if (args.length == 0) {
+      sendBanner(sender);
+      return true;
+    }
 
     String sub = args[0].toLowerCase();
     Player player;
@@ -65,20 +68,50 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
     switch (sub) {
       case "join":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub); return true; }
-        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, FC_DISABLED); return true; }
-        if (matchManager.getBanManager().isBanned(player)) return true;
-        if (args.length < 2 || args[1] == null) { logger.send(player, USAGE, label + " " + sub + " <2v2|3v3|4v4>"); return true; }
+        if (!player.hasPermission(PERM_PLAY)) {
+          logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub);
+          return true;
+        }
+
+        if (!matchManager.getData().isMatchesEnabled()) {
+          logger.send(player, FC_DISABLED);
+          return true;
+        }
+
+        if (matchManager.getBanManager().isBanned(player)) {
+          return true;
+        }
+
+        if (args.length < 2 || args[1] == null) {
+          logger.send(player, USAGE, label + " " + sub + " <2v2|3v3|4v4>");
+          return true;
+        }
+
         String matchType = args[1].toLowerCase();
-        if (matchManager.getMatch(player).isPresent()) { logger.send(player, JOIN_ALREADYINGAME); return true; }
+        if (matchManager.getMatch(player).isPresent()) {
+          logger.send(player, JOIN_ALREADYINGAME);
+          return true;
+        }
 
         int type;
         switch (matchType) {
-          case "2v2": type = MatchConstants.TWO_V_TWO; break;
-          case "3v3": type = MatchConstants.THREE_V_THREE; break;
-          case "4v4": type = MatchConstants.FOUR_V_FOUR; break;
+          case "2v2":
+            type = TWO_V_TWO;
+            break;
+
+          case "3v3":
+            type = THREE_V_THREE;
+            break;
+
+          case "4v4":
+            type = FOUR_V_FOUR;
+            break;
+
           default:
             logger.send(player, JOIN_INVALIDTYPE, matchType, OR.toString());
             return true;
@@ -88,9 +121,15 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         break;
 
       case "leave":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub); return true; }
+        if (!player.hasPermission(PERM_PLAY)) {
+          logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub);
+          return true;
+        }
 
         Optional<Match> matchOpt = matchManager.getMatch(player);
         if (matchOpt.isPresent()) {
@@ -98,12 +137,19 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           if (match.getPhase() == MatchPhase.IN_PROGRESS) {
             MatchPlayer matchPlayer = null;
             for (MatchPlayer mp : match.getPlayers()) {
-              if (mp != null && mp.getPlayer() != null && mp.getPlayer().equals(player)) { matchPlayer = mp; break; }
+              if (mp != null && mp.getPlayer() != null && mp.getPlayer().equals(player)) {
+                matchPlayer = mp;
+                break;
+              }
             }
 
             if (matchPlayer != null) {
-              int playerScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreRed() : match.getScoreBlue();
-              int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED ? match.getScoreBlue() : match.getScoreRed();
+              int playerScore = matchPlayer.getTeamColor() == TeamColor.RED
+                                ? match.getScoreRed()
+                                : match.getScoreBlue();
+              int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED
+                                  ? match.getScoreBlue()
+                                  : match.getScoreRed();
 
               if (playerScore < opponentScore) {
                 fcManager.getEconomy().withdrawPlayer(player, 200);
@@ -130,20 +176,45 @@ public class FCCommand implements CommandExecutor, TabCompleter {
               teamManager.disbandTeamIfInLobby(player);
             }
           }
-          if (leftQueue) logger.send(player, LEFT);
-          else logger.send(player, LEAVE_NOT_INGAME);
+
+          if (leftQueue) {
+            logger.send(player, LEFT);
+          } else {
+            logger.send(player, LEAVE_NOT_INGAME);
+          }
         }
         break;
 
       case "takeplace":
       case "tkp":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub); return true; }
-        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, FC_DISABLED); return true; }
-        if (matchManager.getBanManager().isBanned(player)) return true;
-        if (matchManager.getMatch(player).isPresent()) { logger.send(player, TAKEPLACE_INGAME); return true; }
-        if (matchManager.getData().getOpenMatches().isEmpty()) { logger.send(player, TAKEPLACE_NOPLACE); return true; }
+        if (!player.hasPermission(PERM_PLAY)) {
+          logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub);
+          return true;
+        }
+
+        if (!matchManager.getData().isMatchesEnabled()) {
+          logger.send(player, FC_DISABLED);
+          return true;
+        }
+
+        if (matchManager.getBanManager().isBanned(player)) {
+          return true;
+        }
+
+        if (matchManager.getMatch(player).isPresent()) {
+          logger.send(player, TAKEPLACE_INGAME);
+          return true;
+        }
+
+        if (matchManager.getData().getOpenMatches().isEmpty()) {
+          logger.send(player, TAKEPLACE_NOPLACE);
+          return true;
+        }
 
         List<Match> openMatches = matchManager.getData().getOpenMatches();
         if (args.length < 2) {
@@ -158,7 +229,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           for (Match openMatch : openMatches) {
             int emptySlots = 0;
             for (MatchPlayer mp : openMatch.getPlayers()) {
-              if (mp == null) emptySlots++;
+              if (mp == null) {
+                emptySlots++;
+              }
             }
 
             logger.send(player, TAKEPLACE_AVAILABLE_ENTRY,
@@ -180,31 +253,63 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
       case "teamchat":
       case "tc":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (args.length < 2) { logger.send(player, USAGE, label + " " + sub + " <message>"); return true; }
+        if (args.length < 2) {
+          logger.send(player, USAGE, label + " " + sub + " <message>");
+          return true;
+        }
 
         matchManager.teamChat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
         break;
 
       case "team":
       case "t":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub); return true; }
-        if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, FC_DISABLED); return true; }
-        if (args.length < 2) { logger.send(player, TEAM_USAGE, OR.toString()); return true; }
+        if (!player.hasPermission(PERM_PLAY)) {
+          logger.send(player, NO_PERM, PERM_PLAY, label + " " + sub);
+          return true;
+        }
+
+        if (!matchManager.getData().isMatchesEnabled()) {
+          logger.send(player, FC_DISABLED);
+          return true;
+        }
+
+        if (args.length < 2) {
+          logger.send(player, TEAM_USAGE, OR.toString());
+          return true;
+        }
 
         String action = args[1].toLowerCase(), targetName;
         Player target;
         switch (action) {
           case "accept":
-            if (teamManager.isInTeam(player)) { logger.send(player, TEAM_ALREADY_IN_TEAM); return true; }
-            if (teamManager.noInvite(player)) { logger.send(player, TEAM_NO_REQUEST); return true; }
+            if (teamManager.isInTeam(player)) {
+              logger.send(player, TEAM_ALREADY_IN_TEAM);
+              return true;
+            }
+
+            if (teamManager.noInvite(player)) {
+              logger.send(player, TEAM_NO_REQUEST);
+              return true;
+            }
 
             target = teamManager.getInviter(player);
-            targetName = target != null && target.isOnline() ? target.getName() : "";
-            if (target == null || !target.isOnline()) { logger.send(player, TEAM_NOT_ONLINE, targetName); return true; }
+            targetName = target != null && target.isOnline()
+                         ? target.getName()
+                         : "";
+            if (target == null || !target.isOnline()) {
+              logger.send(player, TEAM_NOT_ONLINE, targetName);
+              return true;
+            }
 
             if (teamManager.isInTeam(target)) {
               logger.send(player, TEAM_ALREADY_IN_TEAM_2, target.getName());
@@ -222,34 +327,78 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             break;
 
           case "decline":
-            if (teamManager.noInvite(player)) { logger.send(player, TEAM_NO_REQUEST); return true; }
+            if (teamManager.noInvite(player)) {
+              logger.send(player, TEAM_NO_REQUEST);
+              return true;
+            }
 
             target = teamManager.getInviter(player);
-            if (target != null && target.isOnline()) logger.send(target, TEAM_DECLINE_OTHER, player.getName());
+            if (target != null && target.isOnline()) {
+              logger.send(target, TEAM_DECLINE_OTHER, player.getName());
+            }
 
             logger.send(player, TEAM_DECLINE_SELF);
             teamManager.removeInvite(player);
             break;
 
           default:
-            if (args.length < 3) { logger.send(player, TEAM_USAGE, OR.toString()); return true; }
-            if (teamManager.isInTeam(player)) { logger.send(player, TEAM_ALREADY_IN_TEAM); return true; }
+            if (args.length < 3) {
+              logger.send(player, TEAM_USAGE, OR.toString());
+              return true;
+            }
+
+            if (teamManager.isInTeam(player)) {
+              logger.send(player, TEAM_ALREADY_IN_TEAM);
+              return true;
+            }
 
             targetName = args[2];
             target = plugin.getServer().getPlayer(targetName);
-            if (target == null) { logger.send(player, TEAM_NOT_ONLINE, targetName); return true; }
-            if (teamManager.isInTeam(target)) { logger.send(player, TEAM_ALREADY_IN_TEAM_2, target.getName()); return true; }
-            if (fcManager.getMatchSystem().isInAnyQueue(player)) { logger.send(player, JOIN_ALREADYINGAME); return true; }
-            if (fcManager.getMatchSystem().isInAnyQueue(target)) { logger.send(player, TEAM_ALREADY_IN_GAME, targetName); return true; }
-            if (matchManager.getMatch(player).isPresent()) { logger.send(player, JOIN_ALREADYINGAME); return true; }
-            if (matchManager.getMatch(target).isPresent()) { logger.send(player, TEAM_ALREADY_IN_GAME, targetName); return true; }
+            if (target == null) {
+              logger.send(player, TEAM_NOT_ONLINE, targetName);
+              return true;
+            }
+
+            if (teamManager.isInTeam(target)) {
+              logger.send(player, TEAM_ALREADY_IN_TEAM_2, target.getName());
+              return true;
+            }
+
+            if (fcManager.getMatchSystem().isInAnyQueue(player)) {
+              logger.send(player, JOIN_ALREADYINGAME);
+              return true;
+            }
+
+            if (fcManager.getMatchSystem().isInAnyQueue(target)) {
+              logger.send(player, TEAM_ALREADY_IN_GAME, targetName);
+              return true;
+            }
+
+            if (matchManager.getMatch(player).isPresent()) {
+              logger.send(player, JOIN_ALREADYINGAME);
+              return true;
+            }
+
+            if (matchManager.getMatch(target).isPresent()) {
+              logger.send(player, TEAM_ALREADY_IN_GAME, targetName);
+              return true;
+            }
 
             String inviteMatchType = args[1].toLowerCase();
             int inviteType;
             switch (inviteMatchType) {
-              case "2v2": inviteType = MatchConstants.TWO_V_TWO; break;
-              case "3v3": inviteType = MatchConstants.THREE_V_THREE; break;
-              case "4v4": inviteType = MatchConstants.FOUR_V_FOUR; break;
+              case "2v2":
+                inviteType = TWO_V_TWO;
+                break;
+
+              case "3v3":
+                inviteType = THREE_V_THREE;
+                break;
+
+              case "4v4":
+                inviteType = FOUR_V_FOUR;
+                break;
+
               default:
                 logger.send(player, JOIN_INVALIDTYPE, inviteMatchType, OR.toString());
                 return true;
@@ -265,29 +414,51 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       case "stats":
         if (sender instanceof Player) {
           Player p = (Player) sender;
-          fcManager.getMatchSystem().checkStats(args.length > 1 ? args[1] : p.getName(), sender);
+          fcManager.getMatchSystem().checkStats(args.length > 1
+                                                ? args[1]
+                                                : p.getName(), sender);
         } else {
-          if (args.length < 2) logger.send(sender, "&cYou need to specify a player.");
-          else fcManager.getMatchSystem().checkStats(args[1], sender);
+          if (args.length < 2) {
+            logger.send(sender, "&cYou need to specify a player.");
+          } else {
+            fcManager.getMatchSystem().checkStats(args[1], sender);
+          }
         }
         break;
 
       case "highscores":
       case "best":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         fcManager.getHighscoreManager().showHighScores((Player) sender);
         break;
 
       case "cube":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_CUBE)) { logger.send(player, NO_PERM, PERM_CUBE, label + " " + sub); return true; }
+        if (!player.hasPermission(PERM_CUBE)) {
+          logger.send(player, NO_PERM, PERM_CUBE, label + " " + sub);
+          return true;
+        }
+
         if (player.getWorld().getDifficulty() == Difficulty.PEACEFUL) {
           logger.send(player, "{prefix-admin}&cDifficulty ne sme biti na peaceful.");
           return true;
         }
-        if (matchManager.getMatch(player).isPresent()) { logger.send(player, COMMAND_DISABLER_CANT_USE); return true; }
-        if (system.cantSpawnYet(player)) return true;
+
+        if (matchManager.getMatch(player).isPresent()) {
+          logger.send(player, COMMAND_DISABLER_CANT_USE);
+          return true;
+        }
+
+        if (system.cantSpawnYet(player)) {
+          return true;
+        }
 
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
@@ -295,7 +466,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (player.getGameMode() != GameMode.CREATIVE && !player.isFlying()) {
           spawnLoc = loc.add(dir.multiply(2.0));
           spawnLoc.setY(loc.getY() + 2.5);
-        } else spawnLoc = loc;
+        } else {
+          spawnLoc = loc;
+        }
 
         system.spawnCube(spawnLoc);
         system.setButtonCooldown(player);
@@ -303,69 +476,120 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         break;
 
       case "clearcube":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, NO_PERM, PERM_CLEAR_CUBE, label + " " + sub); return true; }
-        if (matchManager.getMatch(player).isPresent()) { logger.send(player, COMMAND_DISABLER_CANT_USE); return true; }
+        if (!player.hasPermission(PERM_CLEAR_CUBE)) {
+          logger.send(sender, NO_PERM, PERM_CLEAR_CUBE, label + " " + sub);
+          return true;
+        }
+
+        if (matchManager.getMatch(player).isPresent()) {
+          logger.send(player, COMMAND_DISABLER_CANT_USE);
+          return true;
+        }
 
         double closestDistance = 200;
         Slime closest = null;
         for (Slime cube : physicsData.getCubes()) {
           double distance = cube.getLocation().distance(player.getLocation());
-          if (distance < closestDistance) { closestDistance = distance; closest = cube; }
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closest = cube;
+          }
         }
 
-        if (closest != null) { closest.setHealth(0); logger.send(player, CUBE_CLEAR);
-        } else logger.send(player, CUBE_NO_CUBES);
+        if (closest != null) {
+          closest.setHealth(0);
+          logger.send(player, CUBE_CLEAR);
+        } else {
+          logger.send(player, CUBE_NO_CUBES);
+        }
         break;
 
       case "clearcubes":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_CLEAR_CUBE)) { logger.send(sender, NO_PERM, PERM_CLEAR_CUBE, label + " " + sub); return true; }
-        if (matchManager.getMatch(player).isPresent()) { logger.send(player, COMMAND_DISABLER_CANT_USE); return true; }
+        if (!player.hasPermission(PERM_CLEAR_CUBE)) {
+          logger.send(sender, NO_PERM, PERM_CLEAR_CUBE, label + " " + sub);
+          return true;
+        }
+
+        if (matchManager.getMatch(player).isPresent()) {
+          logger.send(player, COMMAND_DISABLER_CANT_USE);
+          return true;
+        }
 
         int count = 0;
-        for (Slime cube : physicsData.getCubes()) { cube.setHealth(0); count++; }
+        for (Slime cube : physicsData.getCubes()) {
+          cube.setHealth(0);
+          count++;
+        }
+
         logger.send(player, CUBE_CLEAR_ALL, String.valueOf(count));
         break;
 
       case "toggles":
       case "ts":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (args.length < 2) { logger.send(player, USAGE, label + " " + sub + " <kick|goal|particles|hits> <value|list>"); return true; }
+        if (args.length < 2) {
+          logger.send(player, USAGE, label + " " + sub + " <kick|goal|particles|hits> <value|list>");
+          return true;
+        }
 
         String toggleType = args[1].toLowerCase();
         playerData = dataManager.get(player);
-        if (playerData == null) return true;
+        if (playerData == null) {
+          return true;
+        }
+
         settings = fcManager.getPlayerSettings(player);
         switch (toggleType) {
           case "kick":
             settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
             playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
-            logger.send(player, TOGGLES_KICK, settings.isKickSoundEnabled() ? ON.toString() : OFF.toString());
+            logger.send(player, TOGGLES_KICK, settings.isKickSoundEnabled()
+                                              ? ON.toString()
+                                              : OFF.toString());
             break;
 
           case "goal":
             settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
             playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
-            logger.send(player, TOGGLES_GOAL, settings.isGoalSoundEnabled() ? ON.toString() : OFF.toString());
+            logger.send(player, TOGGLES_GOAL, settings.isGoalSoundEnabled()
+                                              ? ON.toString()
+                                              : OFF.toString());
             break;
 
           case "particles":
             settings.setParticlesEnabled(!settings.isParticlesEnabled());
             playerData.set("particles.enabled", settings.isParticlesEnabled());
-            logger.send(player, TOGGLES_PARTICLES, settings.isParticlesEnabled() ? ON.toString() : OFF.toString());
+            logger.send(player, TOGGLES_PARTICLES, settings.isParticlesEnabled()
+                                                   ? ON.toString()
+                                                   : OFF.toString());
             break;
 
           case "hits":
             boolean wasEnabled = physicsData.getCubeHits().contains(player.getUniqueId());
 
-            if (wasEnabled) physicsData.getCubeHits().remove(player.getUniqueId());
-            else physicsData.getCubeHits().add(player.getUniqueId());
+            if (wasEnabled) {
+              physicsData.getCubeHits().remove(player.getUniqueId());
+            } else {
+              physicsData.getCubeHits().add(player.getUniqueId());
+            }
 
-            logger.send(player, TOGGLES_HIT_DEBUG, !wasEnabled ? ON.toString() : OFF.toString());
+            logger.send(player, TOGGLES_HIT_DEBUG, !wasEnabled
+                                                   ? ON.toString()
+                                                   : OFF.toString());
             break;
 
           default:
@@ -374,18 +598,32 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         break;
 
       case "setsound":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_SET_SOUND)) { logger.send(sender, NO_PERM, PERM_SET_SOUND, label + " " + sub); return true; }
-        if (args.length <= 2) { logger.send(player, USAGE, label + " " + sub + " <kick|goal> <soundName|list>"); return true; }
+        if (!player.hasPermission(PERM_SET_SOUND)) {
+          logger.send(sender, NO_PERM, PERM_SET_SOUND, label + " " + sub);
+          return true;
+        }
+
+        if (args.length <= 2) {
+          logger.send(player, USAGE, label + " " + sub + " <kick|goal> <soundName|list>");
+          return true;
+        }
 
         playerData = dataManager.get(player);
-        if (playerData == null) return true;
+        if (playerData == null) {
+          return true;
+        }
 
         settings = fcManager.getPlayerSettings(player);
         Sound sound = Sound.SUCCESSFUL_HIT;
         try {
-          if (!args[2].equalsIgnoreCase("list")) sound = Sound.valueOf(args[2].toUpperCase());
+          if (!args[2].equalsIgnoreCase("list")) {
+            sound = Sound.valueOf(args[2].toUpperCase());
+          }
         } catch (Exception exception) {
           logger.send(player, INVALID_TYPE, SOUND.toString());
           return true;
@@ -395,7 +633,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           case "kick":
             if (args[2].equalsIgnoreCase("list")) {
               StringJoiner joiner = new StringJoiner(", ");
-              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) joiner.add(s.name());
+              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) {
+                joiner.add(s.name());
+              }
+
               logger.send(player, AVAILABLE_TYPE, SOUND.toString(), joiner.toString());
               return true;
             }
@@ -403,7 +644,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             if (!PlayerSettings.ALLOWED_KICK_SOUNDS.contains(sound)) {
               logger.send(player, INVALID_TYPE, SOUND.toString());
               StringJoiner joiner = new StringJoiner(", ");
-              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) joiner.add(s.name());
+              for (Sound s : PlayerSettings.ALLOWED_KICK_SOUNDS) {
+                joiner.add(s.name());
+              }
+
               logger.send(player, AVAILABLE_TYPE, SOUND.toString(), joiner.toString());
               return true;
             }
@@ -416,7 +660,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           case "goal":
             if (args[2].equalsIgnoreCase("list")) {
               StringJoiner joiner = new StringJoiner(", ");
-              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) joiner.add(s.name());
+              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) {
+                joiner.add(s.name());
+              }
+
               logger.send(player, AVAILABLE_TYPE, SOUND.toString(), joiner.toString());
               return true;
             }
@@ -424,7 +671,10 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             if (!PlayerSettings.ALLOWED_GOAL_SOUNDS.contains(sound)) {
               logger.send(player, INVALID_TYPE, SOUND.toString());
               StringJoiner joiner = new StringJoiner(", ");
-              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) joiner.add(s.name());
+              for (Sound s : PlayerSettings.ALLOWED_GOAL_SOUNDS) {
+                joiner.add(s.name());
+              }
+
               logger.send(player, AVAILABLE_TYPE, SOUND.toString(), joiner.toString());
               return true;
             }
@@ -441,18 +691,31 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         break;
 
       case "setparticle":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_SET_PARTICLE)) { logger.send(sender, NO_PERM, PERM_SET_PARTICLE, label + " " + sub); return true; }
-        if (args.length < 2) { logger.send(player, USAGE, label + " " + sub + " <particleName|list> [color]"); return true; }
+        if (!player.hasPermission(PERM_SET_PARTICLE)) {
+          logger.send(sender, NO_PERM, PERM_SET_PARTICLE, label + " " + sub);
+          return true;
+        }
+
+        if (args.length < 2) {
+          logger.send(player, USAGE, label + " " + sub + " <particleName|list> [color]");
+          return true;
+        }
 
         if (args[1].equalsIgnoreCase("list")) {
-          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(), String.join(", ", PlayerSettings.getAllowedParticles()));
+          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(),
+              String.join(", ", PlayerSettings.getAllowedParticles()));
           return true;
         }
 
         playerData = dataManager.get(player);
-        if (playerData == null) return true;
+        if (playerData == null) {
+          return true;
+        }
 
         settings = fcManager.getPlayerSettings(player);
         EnumParticle particle;
@@ -460,13 +723,15 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           particle = EnumParticle.valueOf(args[1].toUpperCase());
         } catch (Exception exception) {
           logger.send(player, INVALID_TYPE, PARTICLE.toString());
-          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(), String.join(", ", PlayerSettings.getAllowedParticles()));
+          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(),
+              String.join(", ", PlayerSettings.getAllowedParticles()));
           return true;
         }
 
         if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
           logger.send(player, INVALID_TYPE, PARTICLE.toString());
-          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(), String.join(", ", PlayerSettings.getAllowedParticles()));
+          logger.send(player, AVAILABLE_TYPE, PARTICLE.toString(),
+              String.join(", ", PlayerSettings.getAllowedParticles()));
           return true;
         }
 
@@ -480,7 +745,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
               return true;
             } catch (IllegalArgumentException exception) {
               logger.send(player, INVALID_COLOR, args[2].toUpperCase());
-              logger.send(player, AVAILABLE_TYPE, COLOR.toString(), String.join(", ", PlayerSettings.getAllowedColorNames()));
+              logger.send(player, AVAILABLE_TYPE, COLOR.toString(),
+                  String.join(", ", PlayerSettings.getAllowedColorNames()));
               return true;
             }
           } else {
@@ -500,26 +766,43 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
       case "setgoalcelebration":
       case "sgc":
-        if (!(sender instanceof Player)) return inGameOnly(sender);
+        if (!(sender instanceof Player)) {
+          return inGameOnly(sender);
+        }
+
         player = (Player) sender;
-        if (!player.hasPermission(PERM_SET_GOAL_CELEBRATION)) { logger.send(sender, NO_PERM, PERM_SET_GOAL_CELEBRATION, label + " " + sub); return true; }
-        if (args.length < 2) { logger.send(player, USAGE, label + " " + sub + " <default|simple|epic|minimal|list>"); return true; }
+        if (!player.hasPermission(PERM_SET_GOAL_CELEBRATION)) {
+          logger.send(sender, NO_PERM, PERM_SET_GOAL_CELEBRATION, label + " " + sub);
+          return true;
+        }
+
+        if (args.length < 2) {
+          logger.send(player, USAGE, label + " " + sub + " <default|simple|epic|minimal|list>");
+          return true;
+        }
 
         playerData = dataManager.get(player);
-        if (playerData == null) return true;
+        if (playerData == null) {
+          return true;
+        }
+
         settings = fcManager.getPlayerSettings(player);
         String celebrationType = args[1].toLowerCase();
         String[] validTypes = new String[]{"default", "simple", "epic", "minimal"};
 
         if (celebrationType.equalsIgnoreCase("list")) {
-          logger.send(sender, AVAILABLE_TYPE, "goal celebrations", String.join(", ", validTypes));
+          logger.send(sender, AVAILABLE_TYPE, "goal celebrations",
+              String.join(", ", validTypes));
           return true;
         }
 
-        if (!celebrationType.equalsIgnoreCase("default") && !celebrationType.equalsIgnoreCase("simple") &&
-            !celebrationType.equalsIgnoreCase("epic") && !celebrationType.equalsIgnoreCase("minimal")) {
+        if (!celebrationType.equalsIgnoreCase("default")
+            && !celebrationType.equalsIgnoreCase("simple")
+            && !celebrationType.equalsIgnoreCase("epic")
+            && !celebrationType.equalsIgnoreCase("minimal")) {
           logger.send(player, INVALID_TYPE, "goal celebrations");
-          logger.send(sender, AVAILABLE_TYPE, "goal celebrations", String.join(", ", validTypes));
+          logger.send(sender, AVAILABLE_TYPE, "goal celebrations",
+              String.join(", ", validTypes));
           return true;
         }
 
@@ -532,12 +815,15 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       case "h":
         sendHelp(sender);
         break;
+
       default:
         logger.send(sender, UNKNOWN_COMMAND, label);
         break;
     }
 
-    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) {
+      system.recordPlayerAction((Player) sender);
+    }
     return true;
   }
 
@@ -549,8 +835,14 @@ public class FCCommand implements CommandExecutor, TabCompleter {
     if (sender instanceof Player) {
       StringJoiner joiner = new StringJoiner(", ");
       List<String> authors = plugin.getDescription().getAuthors();
-      if (authors != null) for (String author : authors) joiner.add(author);
-      logger.send(sender, BANNER_PLAYER, plugin.getName(), plugin.getDescription().getVersion(), joiner.toString());
+      if (authors != null) {
+        for (String author : authors) {
+          joiner.add(author);
+        }
+      }
+
+      logger.send(sender, BANNER_PLAYER, plugin.getName(),
+          plugin.getDescription().getVersion(), joiner.toString());
     } else {
       fcManager.sendBanner();
       logger.send(sender, "&aKucajte &e/fc help &aza listu dostupnih komandi.");
@@ -572,51 +864,65 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           "highscores", "toggles", "ts", "cube", "clearcube", "clearcubes",
           "help", "h", "setsound", "setparticle", "setgoalcelebration", "sgc"
       ));
-    } else if (args.length == 2) {
-      String sub = args[0].toLowerCase();
-      switch (sub) {
-        case "join":
-          completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
-          break;
+    } else {
+      if (args.length == 2) {
+        String sub = args[0].toLowerCase();
+        switch (sub) {
+          case "join":
+            completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
+            break;
 
-        case "team":
-        case "t":
-          completions.addAll(Arrays.asList("accept", "decline", "cancel", "2v2", "3v3", "4v4"));
-          break;
+          case "team":
+          case "t":
+            completions.addAll(Arrays.asList("accept", "decline", "cancel", "2v2", "3v3", "4v4"));
+            break;
 
-        case "toggles":
-        case "ts":
-          completions.addAll(Arrays.asList("kick", "goal", "particles", "hits"));
-          break;
+          case "toggles":
+          case "ts":
+            completions.addAll(Arrays.asList("kick", "goal", "particles", "hits"));
+            break;
 
-        case "setparticle":
-          completions.add("list");
-          completions.addAll(PlayerSettings.getAllowedParticles());
-          break;
+          case "setparticle":
+            completions.add("list");
+            completions.addAll(PlayerSettings.getAllowedParticles());
+            break;
 
-        case "setsound":
-          completions.addAll(Arrays.asList("kick", "goal"));
-          break;
+          case "setsound":
+            completions.addAll(Arrays.asList("kick", "goal"));
+            break;
 
-        case "setgoalcelebration":
-        case "sgc":
-          completions.addAll(Arrays.asList("default", "simple", "epic", "minimal", "list"));
-          break;
-      }
-    } else if (args.length == 3) {
-      String sub = args[0].toLowerCase();
-      if (sub.equalsIgnoreCase("setsound")) {
-        completions.add("list");
-        List<Sound> sounds = args[1].equalsIgnoreCase("kick") ? PlayerSettings.ALLOWED_KICK_SOUNDS : PlayerSettings.ALLOWED_GOAL_SOUNDS;
-        for (Sound s : sounds) completions.add(s.name());
-      } else if (sub.equalsIgnoreCase("setparticle")) {
-        if (args[1].equalsIgnoreCase("list")) {
-          completions.addAll(PlayerSettings.getAllowedParticles());
-        } else if (args[1].equalsIgnoreCase("redstone")) {
-          completions.addAll(PlayerSettings.getAllowedColorNames());
+          case "setgoalcelebration":
+          case "sgc":
+            completions.addAll(Arrays.asList("default", "simple", "epic", "minimal", "list"));
+            break;
         }
-      } else if (sub.equalsIgnoreCase("team") || sub.equalsIgnoreCase("t")) {
-        fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
+      } else {
+        if (args.length == 3) {
+          String sub = args[0].toLowerCase();
+          if (sub.equalsIgnoreCase("setsound")) {
+            completions.add("list");
+            List<Sound> sounds = args[1].equalsIgnoreCase("kick")
+                                 ? PlayerSettings.ALLOWED_KICK_SOUNDS
+                                 : PlayerSettings.ALLOWED_GOAL_SOUNDS;
+            for (Sound s : sounds) {
+              completions.add(s.name());
+            }
+          } else {
+            if (sub.equalsIgnoreCase("setparticle")) {
+              if (args[1].equalsIgnoreCase("list")) {
+                completions.addAll(PlayerSettings.getAllowedParticles());
+              } else {
+                if (args[1].equalsIgnoreCase("redstone")) {
+                  completions.addAll(PlayerSettings.getAllowedColorNames());
+                }
+              }
+            } else {
+              if (sub.equalsIgnoreCase("team") || sub.equalsIgnoreCase("t")) {
+                fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
+              }
+            }
+          }
+        }
       }
     }
 
@@ -626,7 +932,9 @@ public class FCCommand implements CommandExecutor, TabCompleter {
       completions.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
-    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) {
+      system.recordPlayerAction((Player) sender);
+    }
     return completions;
   }
 }

@@ -29,13 +29,17 @@ public class TeamManager {
 
   public Player getInviter(Player invited) {
     Map<Player, Integer> invite = teamInvites.get(invited);
-    if (invite == null || invite.isEmpty()) return null;
+    if (invite == null || invite.isEmpty()) {
+      return null;
+    }
     return invite.keySet().iterator().next();
   }
 
   public int getInviteMatchType(Player invited) {
     Map<Player, Integer> invite = teamInvites.get(invited);
-    if (invite == null || invite.isEmpty()) return -1;
+    if (invite == null || invite.isEmpty()) {
+      return -1;
+    }
     return invite.values().iterator().next();
   }
 
@@ -67,25 +71,38 @@ public class TeamManager {
 
   public void disbandTeamIfInLobby(Player leaver) {
     Team team = getTeam(leaver);
-    if (team == null) return;
+    if (team == null) {
+      return;
+    }
 
     boolean anyInMatchLobby = false;
     Optional<Match> matchOpt = fcManager.getMatchManager().getMatch(leaver);
     if (matchOpt.isPresent()) {
       Match match = matchOpt.get();
-      if (match.getPhase() == MatchPhase.LOBBY) anyInMatchLobby = true;
+      if (match.getPhase() == MatchPhase.LOBBY) {
+        anyInMatchLobby = true;
+      }
     }
 
     boolean anyInQueue = false;
     Collection<Queue<Player>> playerQueues = fcManager.getMatchManager().getData().getPlayerQueues().values();
-    for (Queue<Player> queue : playerQueues) { if (queue != null && queue.contains(leaver)) { anyInQueue = true; break; }}
+    for (Queue<Player> queue : playerQueues) {
+      if (queue != null && queue.contains(leaver)) {
+        anyInQueue = true;
+        break;
+      }
+    }
 
-    if (!anyInMatchLobby && !anyInQueue) return;
+    if (!anyInMatchLobby && !anyInQueue) {
+      return;
+    }
 
     List<Player> members = team.getMembers();
     if (members != null) {
       for (Player player : members) {
-        if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, TEAM_DISBANDED, leaver.getName());
+        if (player != null && player.isOnline() && !player.equals(leaver)) {
+          logger.send(player, TEAM_DISBANDED, leaver.getName());
+        }
       }
     }
 
@@ -94,10 +111,14 @@ public class TeamManager {
 
   public void forceDisbandTeam(Player leaver) {
     Team team = getTeam(leaver);
-    if (team == null) return;
+    if (team == null) {
+      return;
+    }
 
     for (Player player : team.getMembers()) {
-      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, TEAM_DISBANDED, leaver.getName());
+      if (player != null && player.isOnline() && !player.equals(leaver)) {
+        logger.send(player, TEAM_DISBANDED, leaver.getName());
+      }
     }
 
     disbandTeam(team);

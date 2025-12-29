@@ -39,7 +39,9 @@ public class PlayerChargeListener implements Listener {
     long start = System.nanoTime();
     try {
       Player player = event.getPlayer();
-      if (system.notAllowedToInteract(player)) return;
+      if (system.notAllowedToInteract(player)) {
+        return;
+      }
       UUID playerId = player.getUniqueId();
 
       if (event.isSneaking()) {
@@ -53,7 +55,9 @@ public class PlayerChargeListener implements Listener {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerChargeListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerChargeListener &ftook &e" + ms + "ms");
+      }
     }
   }
 }

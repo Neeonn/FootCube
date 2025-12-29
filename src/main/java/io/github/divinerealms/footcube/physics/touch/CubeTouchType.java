@@ -11,6 +11,7 @@ public enum CubeTouchType {
   RISE(RISE_COOLDOWN);
 
   private final long cooldown;
+
   CubeTouchType(long cooldown) {
     this.cooldown = cooldown;
   }

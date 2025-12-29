@@ -10,7 +10,8 @@ public class PlayerKickResult {
   private final double finalKickPower;
   private final boolean isChargedHit;
 
-  public PlayerKickResult(double power, double charge, double baseKickPower, double finalKickPower, boolean isChargedHit) {
+  public PlayerKickResult(double power, double charge, double baseKickPower, double finalKickPower,
+                          boolean isChargedHit) {
     this.power = power;
     this.charge = charge;
     this.baseKickPower = baseKickPower;

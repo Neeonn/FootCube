@@ -24,27 +24,40 @@ public class PlayerUpdateTask extends BaseTask {
   @Override
   protected void kaboom() {
     Map<UUID, Double> charges = data.getCharges();
-    if (charges.isEmpty()) return;
+    if (charges.isEmpty()) {
+      return;
+    }
 
     playersToRemove.clear();
     Set<Player> onlinePlayers = fcManager.getCachedPlayers();
 
     Map<UUID, Player> onlinePlayerMap = new HashMap<>(onlinePlayers.size());
-    for (Player player : onlinePlayers) if (player != null) onlinePlayerMap.put(player.getUniqueId(), player);
+    for (Player player : onlinePlayers) {
+      if (player != null) {
+        onlinePlayerMap.put(player.getUniqueId(), player);
+      }
+    }
 
     for (Map.Entry<UUID, Double> entry : charges.entrySet()) {
       UUID uuid = entry.getKey();
       Player player = onlinePlayerMap.get(uuid);
-      if (player == null) { playersToRemove.add(uuid); continue; }
+      if (player == null) {
+        playersToRemove.add(uuid);
+        continue;
+      }
 
       double currentCharge = entry.getValue();
       double recoveredCharge = CHARGE_BASE_VALUE -
-          (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
+                               (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
       entry.setValue(recoveredCharge);
 
       player.setExp((float) recoveredCharge);
     }
 
-    if (!playersToRemove.isEmpty()) for (UUID uuid : playersToRemove) charges.remove(uuid);
+    if (!playersToRemove.isEmpty()) {
+      for (UUID uuid : playersToRemove) {
+        charges.remove(uuid);
+      }
+    }
   }
 }

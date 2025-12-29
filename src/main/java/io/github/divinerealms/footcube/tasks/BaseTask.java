@@ -17,17 +17,18 @@ public abstract class BaseTask implements Runnable {
   protected final FCManager fcManager;
   protected final Plugin plugin;
   protected final Logger logger;
-  @Getter private final String taskName;
+  @Getter
+  private final String taskName;
   private final long interval;
   private final boolean async;
-
-  private BukkitTask task;
-  @Getter private boolean running = false;
-
-  @Getter private long totalExecutions = 0;
   private final Queue<Long> recentExecutionTimes = new ArrayDeque<>(20);
-  private long totalExecutionTime = 0;
   private final long debugThreshold;
+  private BukkitTask task;
+  @Getter
+  private boolean running = false;
+  @Getter
+  private long totalExecutions = 0;
+  private long totalExecutionTime = 0;
 
   protected BaseTask(FCManager fcManager, String taskName, long interval, boolean async) {
     this(fcManager, taskName, interval, async, getDefaultThreshold(interval));
@@ -43,17 +44,41 @@ public abstract class BaseTask implements Runnable {
     this.debugThreshold = customThreshold;
   }
 
+  private static long getDefaultThreshold(long interval) {
+    if (interval <= 2) {
+      return 5;
+    }
+    if (interval <= 40) {
+      return 20;
+    }
+    return 50;
+  }
+
   public void start() {
-    if (running) { logger.info("&e! &6" + taskName + " task is already running"); return; }
-    if (async) task = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this, interval, interval);
-    else task = plugin.getServer().getScheduler().runTaskTimer(plugin, this, interval, interval);
+    if (running) {
+      logger.info("&e! &6" + taskName + " task is already running");
+      return;
+    }
+    if (async) {
+      task = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this, interval, interval);
+    } else {
+      task = plugin.getServer().getScheduler().runTaskTimer(plugin, this, interval, interval);
+    }
     running = true;
-    logger.info("&a✔ &2Started &d" + taskName + "&2 task &7&o(type: " + (async ? "&ba" : "&a") + "sync&7&o, frequency: " + interval + " ticks)");
+    logger.info("&a✔ &2Started &d" + taskName + "&2 task &7&o(type: " + (async
+                                                                         ? "&ba"
+                                                                         : "&a") + "sync&7&o, frequency: " + interval +
+                " ticks)");
   }
 
   public void stop() {
-    if (!running) return;
-    if (task != null) { task.cancel(); task = null; }
+    if (!running) {
+      return;
+    }
+    if (task != null) {
+      task.cancel();
+      task = null;
+    }
     running = false;
   }
 
@@ -69,8 +94,11 @@ public abstract class BaseTask implements Runnable {
       recordExecution(durationNanos);
 
       long durationMillis = durationNanos / 1_000_000;
-      if (durationMillis > debugThreshold)
-        logger.send(PERM_ADMIN, "{prefix-admin}&d" + taskName + " &ftook &e" + durationMillis + "ms &f(threshold: " + debugThreshold + "ms)");
+      if (durationMillis > debugThreshold) {
+        logger.send(PERM_ADMIN,
+            "{prefix-admin}&d" + taskName + " &ftook &e" + durationMillis + "ms &f(threshold: " + debugThreshold +
+            "ms)");
+      }
     }
   }
 
@@ -88,7 +116,9 @@ public abstract class BaseTask implements Runnable {
   }
 
   public double getAverageExecutionTime() {
-    if (recentExecutionTimes.isEmpty()) return 0.0;
+    if (recentExecutionTimes.isEmpty()) {
+      return 0.0;
+    }
     return totalExecutionTime / (double) recentExecutionTimes.size() / 1_000_000.0;
   }
 
@@ -96,11 +126,5 @@ public abstract class BaseTask implements Runnable {
     totalExecutions = 0;
     recentExecutionTimes.clear();
     totalExecutionTime = 0;
-  }
-
-  private static long getDefaultThreshold(long interval) {
-    if (interval <= 2) return 5;
-    if (interval <= 40) return 20;
-    return 50;
   }
 }

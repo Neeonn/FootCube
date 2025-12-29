@@ -34,9 +34,13 @@ public class MatchesCommand implements CommandExecutor {
       logger.send(sender, MATCHES_LIST_HEADER);
       output.forEach(msg -> logger.send(sender, msg));
       logger.send(sender, MATCHES_LIST_FOOTER);
-    } else logger.send(sender, MATCHES_LIST_NO_MATCHES);
+    } else {
+      logger.send(sender, MATCHES_LIST_NO_MATCHES);
+    }
 
-    if (sender instanceof Player) system.recordPlayerAction((Player) sender);
+    if (sender instanceof Player) {
+      system.recordPlayerAction((Player) sender);
+    }
     return true;
   }
 }

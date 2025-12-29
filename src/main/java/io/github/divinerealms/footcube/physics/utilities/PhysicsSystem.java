@@ -64,7 +64,9 @@ public class PhysicsSystem {
    */
   public void scheduleSound() {
     Queue<CubeSoundAction> queue = data.getSoundQueue();
-    if (queue.isEmpty()) return;
+    if (queue.isEmpty()) {
+      return;
+    }
 
     Queue<CubeSoundAction> toPlay = new ArrayDeque<>(queue);
     queue.clear();
@@ -77,13 +79,17 @@ public class PhysicsSystem {
 
       if (action.isPlayerTargeted()) {
         Player player = action.getPlayer();
-        if (player == null || !player.isOnline()) return;
+        if (player == null || !player.isOnline()) {
+          return;
+        }
 
         location = player.getLocation();
         player.playSound(location, sound, volume, pitch);
       } else {
         location = action.getLocation();
-        if (location == null) return;
+        if (location == null) {
+          return;
+        }
 
         location.getWorld().playSound(location, sound, volume, pitch);
       }
@@ -95,14 +101,18 @@ public class PhysicsSystem {
    * Ensures the cubes list remains synchronized and prevents entity leaks.
    */
   public void scheduleCubeRemoval() {
-    if (data.getCubesToRemove().isEmpty()) return;
+    if (data.getCubesToRemove().isEmpty()) {
+      return;
+    }
 
     Set<Slime> toRemove = new HashSet<>(data.getCubesToRemove());
     data.getCubesToRemove().clear();
 
     scheduler.runTaskLater(plugin, () -> toRemove.forEach(cube -> {
       data.getCubes().remove(cube);
-      if (!cube.isDead()) cube.remove();
+      if (!cube.isDead()) {
+        cube.remove();
+      }
     }), CUBE_REMOVAL_DELAY_TICKS);
   }
 
@@ -113,7 +123,9 @@ public class PhysicsSystem {
    * @param location The location to be added to the sound queue. Must not be null.
    */
   public void queueSound(Location location, Sound sound, float volume, float pitch) {
-    if (location == null || sound == null) return;
+    if (location == null || sound == null) {
+      return;
+    }
     data.getSoundQueue().offer(new CubeSoundAction(location, null, sound, volume, pitch));
   }
 
@@ -123,12 +135,14 @@ public class PhysicsSystem {
    * If the player or sound is null, the method exits without queuing any action.
    *
    * @param player The player at whose location the sound will be played. Must not be null.
-   * @param sound The sound to be played. Must not be null.
+   * @param sound  The sound to be played. Must not be null.
    * @param volume The volume level of the sound. A float value where higher values indicate louder sounds.
-   * @param pitch The pitch of the sound. A float value where higher values indicate a higher pitch.
+   * @param pitch  The pitch of the sound. A float value where higher values indicate a higher pitch.
    */
   public void queueSound(Player player, Sound sound, float volume, float pitch) {
-    if (player == null || sound == null) return;
+    if (player == null || sound == null) {
+      return;
+    }
     data.getSoundQueue().offer(new CubeSoundAction(null, player, sound, volume, pitch));
   }
 
@@ -144,6 +158,7 @@ public class PhysicsSystem {
 
   /**
    * Calculates the final kick power based on player speed and current charge level.
+   *
    * @param player Player who initiated the calculation (who kicked the ball).
    * @return Player's kick power
    */
@@ -153,14 +168,18 @@ public class PhysicsSystem {
       boolean isCharged = player.isSneaking();
       double charge = CHARGE_BASE_VALUE + data.getCharges().getOrDefault(player.getUniqueId(), 0D) * CHARGE_MULTIPLIER;
       double speed = data.getSpeed().getOrDefault(player.getUniqueId(), MIN_SPEED_FOR_DAMPENING);
-      double power = isCharged ? speed * KICK_POWER_SPEED_MULTIPLIER + CHARGED_BASE_POWER : speed * KICK_POWER_SPEED_MULTIPLIER + REGULAR_BASE_POWER;
+      double power = isCharged
+                     ? speed * KICK_POWER_SPEED_MULTIPLIER + CHARGED_BASE_POWER
+                     : speed * KICK_POWER_SPEED_MULTIPLIER + REGULAR_BASE_POWER;
       double baseKickPower = charge * power;
       double finalKickPower = formulae.capKickPower(baseKickPower);
 
       return new PlayerKickResult(power, charge, baseKickPower, finalKickPower, isCharged);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#calculateKickPower() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#calculateKickPower() &ftook &e" + ms + "ms");
+      }
     }
   }
 
@@ -175,17 +194,22 @@ public class PhysicsSystem {
       for (Entity entity : entities) {
         if (entity instanceof Slime) {
           ((Slime) entity).setHealth(0);
-          if (!data.getCubes().contains(entity)) entity.remove();
+          if (!data.getCubes().contains(entity)) {
+            entity.remove();
+          }
         }
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removeCubes() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removeCubes() &ftook &e" + ms + "ms");
+      }
     }
   }
 
   /**
    * Spawns a new ball at the given location and disables its AI.
+   *
    * @param location The location to spawn the cube.
    * @return The spawned entity.
    */
@@ -196,7 +220,8 @@ public class PhysicsSystem {
       cube.setRemoveWhenFarAway(false);
       cube.setSize(SLIME_SIZE);
       // Permanent jump effect that stops the cube from hopping.
-      cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, JUMP_POTION_DURATION, JUMP_POTION_AMPLIFIER, true), true);
+      cube.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, JUMP_POTION_DURATION, JUMP_POTION_AMPLIFIER, true),
+          true);
 
       // NMS Hack to prevent the ball from trying to reach the player.
       EntitySlime nmsSlime = ((CraftSlime) cube).getHandle();
@@ -213,7 +238,9 @@ public class PhysicsSystem {
       return cube;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#spawnCube() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#spawnCube() &ftook &e" + ms + "ms");
+      }
     }
   }
 
@@ -266,7 +293,9 @@ public class PhysicsSystem {
       data.getCubeHits().remove(uuid);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removePlayer() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removePlayer() &ftook &e" + ms + "ms");
+      }
     }
   }
 
@@ -275,7 +304,7 @@ public class PhysicsSystem {
    * based on whether the hit is a charged or regular hit. This method also logs any performance
    * overhead if the execution time exceeds a millisecond.
    *
-   * @param player The player who performed the hit. This parameter must not be null.
+   * @param player     The player who performed the hit. This parameter must not be null.
    * @param kickResult The result of the kick action, containing details such as kick power,
    *                   charge level, and whether the hit was charged. This parameter must not be null.
    */
@@ -285,32 +314,42 @@ public class PhysicsSystem {
       UUID playerId = player.getUniqueId();
       boolean isChargedHit = kickResult.isChargedHit();
       double finalKickPower = kickResult.getFinalKickPower();
-      CubeTouchType type = isChargedHit ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
+      CubeTouchType type = isChargedHit
+                           ? CubeTouchType.CHARGED_KICK
+                           : CubeTouchType.REGULAR_KICK;
 
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
       long lastHitTime = 0L;
-      if (touches != null && touches.containsKey(type)) lastHitTime = touches.get(type).getTimestamp();
+      if (touches != null && touches.containsKey(type)) {
+        lastHitTime = touches.get(type).getTimestamp();
+      }
 
-      long cooldownDuration = isChargedHit ? CHARGED_KICK_COOLDOWN : REGULAR_KICK_COOLDOWN;
+      long cooldownDuration = isChargedHit
+                              ? CHARGED_KICK_COOLDOWN
+                              : REGULAR_KICK_COOLDOWN;
       long currentTime = System.currentTimeMillis();
       long timeElapsed = currentTime - lastHitTime;
       long timeRemainingMillis = Math.max(0, cooldownDuration - timeElapsed);
 
       String timeFormatted = String.format("%.1f", timeRemainingMillis / 1000.0);
-      String color = timeRemainingMillis > 50 ? "&c" : "&a";
+      String color = timeRemainingMillis > 50
+                     ? "&c"
+                     : "&a";
 
       logger.sendActionBar(player, HITDEBUG_PLAYER_WHOLE,
           isChargedHit
-              ? HITDEBUG_PLAYER_CHARGED.replace(
-                  String.format("%.2f", finalKickPower),
-                  String.format("%.2f", kickResult.getPower()),
-                  String.format("%.2f", kickResult.getCharge())
-              )
-              : HITDEBUG_PLAYER_REGULAR.replace(String.format("%.2f", finalKickPower)),
+          ? HITDEBUG_PLAYER_CHARGED.replace(
+              String.format("%.2f", finalKickPower),
+              String.format("%.2f", kickResult.getPower()),
+              String.format("%.2f", kickResult.getCharge())
+          )
+          : HITDEBUG_PLAYER_REGULAR.replace(String.format("%.2f", finalKickPower)),
           HITDEBUG_PLAYER_COOLDOWN.replace(color, timeFormatted));
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
+      }
     }
   }
 
@@ -328,17 +367,21 @@ public class PhysicsSystem {
   public String onHitDebug(Player player, PlayerKickResult result) {
     long start = System.nanoTime();
     try {
-      String coloredKickPower = result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a";
+      String coloredKickPower = result.getFinalKickPower() != result.getBaseKickPower()
+                                ? "&c"
+                                : "&a";
       return result.isChargedHit()
-          ? HITDEBUG_CHARGED.replace(
-              player.getDisplayName(), coloredKickPower + String.format("%.2f", result.getFinalKickPower()),
-              String.format("%.2f", result.getBaseKickPower()), String.format("%.2f", result.getPower()),
-              String.format("%.2f", result.getCharge()))
-          : HITDEBUG_REGULAR.replace(player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())
-      );
+             ? HITDEBUG_CHARGED.replace(
+          player.getDisplayName(), coloredKickPower + String.format("%.2f", result.getFinalKickPower()),
+          String.format("%.2f", result.getBaseKickPower()), String.format("%.2f", result.getPower()),
+          String.format("%.2f", result.getCharge()))
+             : HITDEBUG_REGULAR.replace(player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())
+             );
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#onHitDebug() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#onHitDebug() &ftook &e" + ms + "ms");
+      }
     }
   }
 
@@ -352,9 +395,12 @@ public class PhysicsSystem {
   public boolean cantSpawnYet(Player player) {
     long start = System.nanoTime();
     try {
-      if (player.hasPermission(PERM_BYPASS_COOLDOWN)) return false;
+      if (player.hasPermission(PERM_BYPASS_COOLDOWN)) {
+        return false;
+      }
       UUID playerId = player.getUniqueId();
-      long now = System.currentTimeMillis(), last = data.getButtonCooldowns().getOrDefault(playerId, 0L), diff = now - last;
+      long now = System.currentTimeMillis(), last = data.getButtonCooldowns().getOrDefault(playerId, 0L), diff =
+          now - last;
       if (diff < SPAWN_COOLDOWN_MS) {
         long remainingMs = SPAWN_COOLDOWN_MS - diff, seconds = remainingMs / 1000;
         logger.send(player, BLOCK_INTERACT_COOLDOWN, Utilities.formatTime(seconds));
@@ -363,7 +409,9 @@ public class PhysicsSystem {
       return false;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#cantSpawnYet() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#cantSpawnYet() &ftook &e" + ms + "ms");
+      }
     }
   }
 

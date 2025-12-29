@@ -52,7 +52,9 @@ public class PhysicsTask extends BaseTask {
   @Override
   protected void kaboom() {
     // Skip processing if there are no active players or cubes.
-    if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) return;
+    if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) {
+      return;
+    }
 
     // Build player cache once per tick for all cubes to reuse.
     Map<UUID, PlayerPhysicsCache> playerCache = buildPlayerCache();
@@ -60,12 +62,17 @@ public class PhysicsTask extends BaseTask {
     // Main cube processing loop.
     for (Slime cube : data.getCubes()) {
       // --- Cube validity check ---
-      if (cube.isDead()) { data.getCubesToRemove().add(cube); continue; }
+      if (cube.isDead()) {
+        data.getCubesToRemove().add(cube);
+        continue;
+      }
 
       // --- Initialization and state retrieval ---
       UUID cubeId = cube.getUniqueId();
       Location cubeLocation = cube.getLocation();
-      if (cubeLocation == null) continue;
+      if (cubeLocation == null) {
+        continue;
+      }
 
       // Retrieve or initialize previous velocity for collision calculations.
       Vector previousVelocity = data.getVelocities().get(cubeId);
@@ -85,7 +92,9 @@ public class PhysicsTask extends BaseTask {
         UUID playerId = player.getUniqueId();
 
         PlayerPhysicsCache cache = playerCache.get(playerId);
-        if (cache == null || !cache.canInteract()) continue;
+        if (cache == null || !cache.canInteract()) {
+          continue;
+        }
 
         // --- Player proximity and touch detection ---
         // Determines if the player is close enough to directly affect the cube.
@@ -93,7 +102,9 @@ public class PhysicsTask extends BaseTask {
 
         // Skip players beyond 3x hit radius for performance,
         // as they cannot meaningfully interact with the cube.
-        if (distance > HIT_RADIUS * 3) continue;
+        if (distance > HIT_RADIUS * 3) {
+          continue;
+        }
 
         // Cache the interaction data for later use.
         playerInteractions.put(playerId, new PlayerInteraction(player, cache, distance));
@@ -103,21 +114,26 @@ public class PhysicsTask extends BaseTask {
           double cubeSpeed = newVelocity.length(); // Current speed of the cube.
 
           // Apply speed dampening if cube is very close to player for dribbling effect.
-          if (distance < MIN_RADIUS && cubeSpeed > MIN_SPEED_FOR_DAMPENING)
+          if (distance < MIN_RADIUS && cubeSpeed > MIN_SPEED_FOR_DAMPENING) {
             newVelocity.multiply(DRIBBLE_SPEED_LIMIT / cubeSpeed); // Apply speed cap for dribbling effect.
+          }
 
           // Compute the resulting power from player movement and cube velocity.
           double previousSpeed = Math.max(previousVelocity.length(), VECTOR_CHANGE_THRESHOLD);
           double impactPower = cache.speed / PLAYER_SPEED_TOUCH_DIVISOR + previousSpeed / CUBE_SPEED_TOUCH_DIVISOR;
           Vector push = cache.direction.clone().multiply(impactPower); // Directional push vector from player to cube.
-          newVelocity.add(cubeSpeed < LOW_VELOCITY_THRESHOLD ? push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER) : push);
+          newVelocity.add(cubeSpeed < LOW_VELOCITY_THRESHOLD
+                          ? push.multiply(LOW_VELOCITY_PUSH_MULTIPLIER)
+                          : push);
 
           // Register the touch interaction with the organization system.
           matchManager.kick(player);
           wasMoved = true;
 
           // Trigger sound effect if impact force exceeds threshold.
-          if (impactPower > MIN_SOUND_POWER) playSound = true;
+          if (impactPower > MIN_SOUND_POWER) {
+            playSound = true;
+          }
         }
       }
 
@@ -127,26 +143,42 @@ public class PhysicsTask extends BaseTask {
       // If the cube stops moving horizontally (X=0), bounce it back with reduced energy.
       if (newVelocity.getX() == 0) {
         newVelocity.setX(-previousVelocity.getX() * WALL_BOUNCE_FACTOR); // Reverse and reduce X velocity on collision.
-        if (Math.abs(previousVelocity.getX()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
+        if (Math.abs(previousVelocity.getX()) > BOUNCE_THRESHOLD) {
+          playSound = true; // Trigger sound if impact force is strong enough.
+        }
 
         // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
-      } else if (!wasMoved && !cube.isOnGround() && Math.abs(previousVelocity.getX() - newVelocity.getX()) < VECTOR_CHANGE_THRESHOLD)
-        newVelocity.setX(previousVelocity.getX() * AIR_DRAG_FACTOR); // Apply air drag.
+      } else {
+        if (!wasMoved && !cube.isOnGround() &&
+            Math.abs(previousVelocity.getX() - newVelocity.getX()) < VECTOR_CHANGE_THRESHOLD) {
+          newVelocity.setX(previousVelocity.getX() * AIR_DRAG_FACTOR); // Apply air drag.
+        }
+      }
 
       // Z-axis collision and drag adjustment (mirrors X-axis logic).
       if (newVelocity.getZ() == 0) {
         newVelocity.setZ(-previousVelocity.getZ() * WALL_BOUNCE_FACTOR); // Reverse and reduce Z velocity on collision.
-        if (Math.abs(previousVelocity.getZ()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
+        if (Math.abs(previousVelocity.getZ()) > BOUNCE_THRESHOLD) {
+          playSound = true; // Trigger sound if impact force is strong enough.
+        }
 
         // If cube wasn’t recently kicked and velocity change is small, apply gradual air drag slowdown.
-      } else if (!wasMoved && !cube.isOnGround() && Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < VECTOR_CHANGE_THRESHOLD)
-        newVelocity.setZ(previousVelocity.getZ() * AIR_DRAG_FACTOR); // Apply air drag.
+      } else {
+        if (!wasMoved && !cube.isOnGround() &&
+            Math.abs(previousVelocity.getZ() - newVelocity.getZ()) < VECTOR_CHANGE_THRESHOLD) {
+          newVelocity.setZ(previousVelocity.getZ() * AIR_DRAG_FACTOR); // Apply air drag.
+        }
+      }
 
       // Y-axis bounce (vertical collision against floor or ceiling).
       // This ensures realistic vertical rebound, preventing velocity loss bugs on impact.
-      if (newVelocity.getY() < 0 && previousVelocity.getY() < 0 && previousVelocity.getY() < newVelocity.getY() - VERTICAL_BOUNCE_THRESHOLD) {
-        newVelocity.setY(-previousVelocity.getY() * WALL_BOUNCE_FACTOR); // Reverse and reduce Y velocity on downward collision.
-        if (Math.abs(previousVelocity.getY()) > BOUNCE_THRESHOLD) playSound = true; // Trigger sound if impact force is strong enough.
+      if (newVelocity.getY() < 0 && previousVelocity.getY() < 0 &&
+          previousVelocity.getY() < newVelocity.getY() - VERTICAL_BOUNCE_THRESHOLD) {
+        newVelocity.setY(
+            -previousVelocity.getY() * WALL_BOUNCE_FACTOR); // Reverse and reduce Y velocity on downward collision.
+        if (Math.abs(previousVelocity.getY()) > BOUNCE_THRESHOLD) {
+          playSound = true; // Trigger sound if impact force is strong enough.
+        }
       }
 
       // --- Anticipatory Hover Effect ---
@@ -170,8 +202,12 @@ public class PhysicsTask extends BaseTask {
 
         // Find the closest player and determine if anyone is in hover range.
         for (PlayerInteraction interaction : playerInteractions.values()) {
-          if (interaction.distance < closestPlayerDistance) closestPlayerDistance = interaction.distance; // Update closest distance.
-          if (interaction.distance < HIT_RADIUS * 2) hasClosePlayer = true; // Define hover range as twice the hit radius (about 2.4 blocks).
+          if (interaction.distance < closestPlayerDistance) {
+            closestPlayerDistance = interaction.distance; // Update closest distance.
+          }
+          if (interaction.distance < HIT_RADIUS * 2) {
+            hasClosePlayer = true; // Define hover range as twice the hit radius (about 2.4 blocks).
+          }
         }
 
         // If players are nearby, apply a gentle upward force.
@@ -182,15 +218,23 @@ public class PhysicsTask extends BaseTask {
 
           // Only apply the lift if the cube isn't already moving upward significantly.
           // This prevents the hover from interfering with natural bounces or kicks.
-          if (hoverForce < bounce) hoverForce = bounce;
-        } else hoverForce = bounce;
+          if (hoverForce < bounce) {
+            hoverForce = bounce;
+          }
+        } else {
+          hoverForce = bounce;
+        }
 
         // Apply the lift if there are players nearby and if the cube isn't already hovering.
-        if (newVelocity.getY() < hoverForce) newVelocity.setY(hoverForce);
+        if (newVelocity.getY() < hoverForce) {
+          newVelocity.setY(hoverForce);
+        }
       }
 
       // Queue impact sound effect if any significant collision occurred.
-      if (playSound) system.queueSound(cubeLocation);
+      if (playSound) {
+        system.queueSound(cubeLocation);
+      }
 
       // --- Anti-clipping / Proximity Logic ---
       // Prevents the cube from passing through players at high speeds.
@@ -201,14 +245,18 @@ public class PhysicsTask extends BaseTask {
 
         // Evaluate each player interaction for potential clipping.
         for (PlayerInteraction interaction : playerInteractions.values()) {
-          if (interaction == null || interaction.cache == null) continue;
+          if (interaction == null || interaction.cache == null) {
+            continue;
+          }
 
           // Retrieve cached player data and distance.
           PlayerPhysicsCache cache = interaction.cache;
           double distance = interaction.distance;
 
           // Skip if player is too far away for clipping to be possible.
-          if (distance >= cubeSpeed * PROXIMITY_THRESHOLD_MULTIPLIER) continue;
+          if (distance >= cubeSpeed * PROXIMITY_THRESHOLD_MULTIPLIER) {
+            continue;
+          }
 
           // Check vertical alignment with player height.
           double playerLocationY = cache.location.getY();
@@ -216,26 +264,32 @@ public class PhysicsTask extends BaseTask {
 
           // Check if the cube's vertical position aligns with player's height.
           boolean withinY = (cubePos.getY() < playerLocationY + PLAYER_HEAD_LEVEL &&
-              cubePos.getY() > playerLocationY - PLAYER_FOOT_LEVEL)
-              || (projectedNextPos.getY() < playerLocationY + PLAYER_HEAD_LEVEL &&
-              projectedNextPos.getY() > playerLocationY - PLAYER_FOOT_LEVEL);
+                             cubePos.getY() > playerLocationY - PLAYER_FOOT_LEVEL)
+                            || (projectedNextPos.getY() < playerLocationY + PLAYER_HEAD_LEVEL &&
+                                projectedNextPos.getY() > playerLocationY - PLAYER_FOOT_LEVEL);
 
           // If vertically aligned, check if the cube's path intersects player's collision radius.
           if (withinY && formulae.getPerpendicularDistance(newVelocity, cubePos, interaction.player) < MIN_RADIUS) {
-            Vector toPlayer = cache.location.toVector().subtract(cubePos).setY(0).normalize(); // Horizontal vector to player.
-            Vector ballDirection = new Vector(newVelocity.getX(), 0, newVelocity.getZ()).normalize(); // Horizontal movement direction.
+            Vector toPlayer = cache.location.toVector().subtract(cubePos).setY(
+                0).normalize(); // Horizontal vector to player.
+            Vector ballDirection = new Vector(newVelocity.getX(), 0,
+                newVelocity.getZ()).normalize(); // Horizontal movement direction.
             double dot = toPlayer.dot(ballDirection); // Cosine of angle between cube movement and direction to player.
 
             // Scale back velocity if moving toward player to prevent clipping.
             if (dot > ANTI_CLIP_DOT_THRESHOLD) {
               double scaleFactor = distance / cubeSpeed; // Scale factor based on distance and speed.
-              if (scaleFactor < minScaleFactor) minScaleFactor = scaleFactor; // Track minimum scale factor needed.
+              if (scaleFactor < minScaleFactor) {
+                minScaleFactor = scaleFactor; // Track minimum scale factor needed.
+              }
             }
           }
         }
 
         // Apply the most restrictive scale factor to the cube's velocity.
-        if (minScaleFactor < 1) newVelocity.multiply(minScaleFactor);
+        if (minScaleFactor < 1) {
+          newVelocity.multiply(minScaleFactor);
+        }
       }
 
       // --- Velocity Capping ---
@@ -269,7 +323,9 @@ public class PhysicsTask extends BaseTask {
   private Map<UUID, PlayerPhysicsCache> buildPlayerCache() {
     Map<UUID, PlayerPhysicsCache> cache = new HashMap<>();
     for (Player player : fcManager.getCachedPlayers()) {
-      if (player == null || !player.isOnline()) continue;
+      if (player == null || !player.isOnline()) {
+        continue;
+      }
       cache.put(player.getUniqueId(), new PlayerPhysicsCache(player, system, data));
     }
     return cache;

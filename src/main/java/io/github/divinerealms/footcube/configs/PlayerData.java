@@ -11,7 +11,8 @@ public class PlayerData {
   private final String playerName;
   private final ConfigManager configManager;
   private final PlayerDataManager dataManager;
-  @Getter private final FileConfiguration config;
+  @Getter
+  private final FileConfiguration config;
 
   public PlayerData(String playerName, ConfigManager configManager, PlayerDataManager dataManager) {
     this.configManager = configManager;
@@ -27,13 +28,16 @@ public class PlayerData {
   }
 
   public Object get(String path) {
-    return config == null ? 0 : config.get(path, 0);
+    return config == null
+           ? 0
+           : config.get(path, 0);
   }
 
   public void set(String path, Object value) {
     Object current = config.get(path);
 
-    if ((current == null && value != null) || (current != null && !current.equals(value))) {
+    if ((current == null && value != null)
+        || (current != null && !current.equals(value))) {
       config.set(path, value);
       dataManager.queueAdd(playerName);
     }
@@ -46,7 +50,9 @@ public class PlayerData {
 
   public void remove(String key) {
     int current = (int) get(key);
-    set(key, current > 0 ? current - 1 : 0);
+    set(key, current > 0
+             ? current - 1
+             : 0);
   }
 
   public void save() {

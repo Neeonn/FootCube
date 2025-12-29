@@ -21,13 +21,17 @@ public class FootCube extends JavaPlugin {
   }
 
   public void onDisable() {
-    if (fcManager == null) return;
+    if (fcManager == null) {
+      return;
+    }
 
     try {
       fcManager.setDisabling(true);
       fcManager.getPhysicsSystem().removeCubes();
       fcManager.getTaskManager().stopAll();
-      if (fcManager.getMatchManager() != null) fcManager.getMatchManager().forceLeaveAllPlayers();
+      if (fcManager.getMatchManager() != null) {
+        fcManager.getMatchManager().forceLeaveAllPlayers();
+      }
       fcManager.saveAll();
       fcManager.cleanup();
       getServer().getScheduler().cancelTasks(this);

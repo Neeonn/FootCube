@@ -14,8 +14,8 @@ public class TaskStats {
 
   public double getTotalAverageMs() {
     return physicsAvgMs + touchCleanupAvgMs + playerUpdateAvgMs
-        + particleTrailAvgMs + cubeCleanerAvgMs + matchmakingAvgMs
-        + cacheCleanupAvgMs + queueStatusAvgMs + highScoresAvgMs;
+           + particleTrailAvgMs + cubeCleanerAvgMs + matchmakingAvgMs
+           + cacheCleanupAvgMs + queueStatusAvgMs + highScoresAvgMs;
   }
 
   public double getAveragePerTask() {

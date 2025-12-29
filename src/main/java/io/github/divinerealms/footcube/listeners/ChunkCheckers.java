@@ -10,7 +10,10 @@ public class ChunkCheckers implements Listener {
   @EventHandler
   public void onUnloadChunk(ChunkUnloadEvent event) {
     for (Entity entity : event.getChunk().getEntities()) {
-      if (!(entity instanceof Slime)) continue;
+      if (!(entity instanceof Slime)) {
+        continue;
+      }
+
       ((Slime) entity).setHealth(0);
     }
   }

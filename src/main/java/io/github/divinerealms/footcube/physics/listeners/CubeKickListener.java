@@ -59,10 +59,18 @@ public class CubeKickListener implements Listener {
   public void leftClick(EntityDamageByEntityEvent event) {
     long start = System.nanoTime();
     try {
-      if (!(event.getEntity() instanceof Slime)) return;
-      if (!(event.getDamager() instanceof Player)) return;
-      if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
-      if (!data.getCubes().contains((Slime) event.getEntity())) return;
+      if (!(event.getEntity() instanceof Slime)) {
+        return;
+      }
+      if (!(event.getDamager() instanceof Player)) {
+        return;
+      }
+      if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
+        return;
+      }
+      if (!data.getCubes().contains((Slime) event.getEntity())) {
+        return;
+      }
 
       Slime cube = (Slime) event.getEntity();
       Player player = (Player) event.getDamager();
@@ -70,24 +78,32 @@ public class CubeKickListener implements Listener {
 
       // Creative players can remove cubes directly.
       if (player.getGameMode() == GameMode.CREATIVE && player.hasPermission(PERM_CLEAR_CUBE)) {
-        cube.setHealth(0); logger.send(player, CUBE_CLEAR);
+        cube.setHealth(0);
+        logger.send(player, CUBE_CLEAR);
         return;
       }
 
       // Prevent unauthorized players from interacting.
-      if (system.notAllowedToInteract(player)) return;
+      if (system.notAllowedToInteract(player)) {
+        return;
+      }
 
       // Check & Enforce cooldown.
-      CubeTouchType kickType = player.isSneaking() ? CubeTouchType.CHARGED_KICK : CubeTouchType.REGULAR_KICK;
+      CubeTouchType kickType = player.isSneaking()
+                               ? CubeTouchType.CHARGED_KICK
+                               : CubeTouchType.REGULAR_KICK;
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
-      if (touches != null && touches.containsKey(kickType)) return;
+      if (touches != null && touches.containsKey(kickType)) {
+        return;
+      }
 
       // Calculate kick result.
       PlayerKickResult kickResult = system.calculateKickPower(player);
 
       // Compute final kick direction and apply impulse.
       Location playerLocation = player.getLocation();
-      Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(KICK_VERTICAL_BOOST);
+      Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(
+          KICK_VERTICAL_BOOST);
       cube.setVelocity(cube.getVelocity().add(kick));
 
       // Register player hit cooldown and record interaction.
@@ -102,15 +118,23 @@ public class CubeKickListener implements Listener {
       // Schedule post-processing for player sound feedback and debug info.
       scheduler.runTask(plugin, () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
-        if (settings != null && settings.isKickSoundEnabled()) system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);
-        if (data.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, playerLocation, 100, HITDEBUG_WHOLE, system.onHitDebug(player, kickResult));
-        if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
+        if (settings != null && settings.isKickSoundEnabled()) {
+          system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);
+        }
+        if (data.isHitDebugEnabled()) {
+          logger.send(PERM_HIT_DEBUG, playerLocation, 100, HITDEBUG_WHOLE, system.onHitDebug(player, kickResult));
+        }
+        if (data.getCubeHits().contains(playerId)) {
+          system.showHits(player, kickResult);
+        }
       });
 
       event.setCancelled(true);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dCubeKickListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) {
+        logger.send("group.fcfa", "{prefix-admin}&dCubeKickListener &ftook &e" + ms + "ms");
+      }
     }
   }
 }

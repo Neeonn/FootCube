@@ -470,24 +470,26 @@ public class MatchUtils {
   public static void broadcastGoalMessage(Match match, MatchSystem.ScoringResult result,
                                           Location goalLoc, Utilities utilities,
                                           FCManager fcManager, Logger logger) {
-    UUID scorerUUID = getPlayerUUID(result.getScorer());
-    UUID assisterUUID = getPlayerUUID(result.getAssister());
+    String prefixedScorer = NOBODY.toString();
+    String prefixedAssister = null;
 
-    CompletableFuture<String> scorerPrefixFuture = fetchPrefixedName(scorerUUID, result.getScorer(), utilities);
-    CompletableFuture<String> assisterPrefixFuture = fetchPrefixedName(assisterUUID, result.getAssister(), utilities);
+    if (result.getScorer() != null && result.getScorer().getPlayer() != null) {
+      Player scorer = result.getScorer().getPlayer();
+      prefixedScorer = utilities.getCachedPrefixedName(
+          scorer.getUniqueId(),
+          scorer.getName()
+      );
+    }
 
-    scorerPrefixFuture.thenCombine(assisterPrefixFuture,
-            (scorerName, assisterName) -> new String[]{scorerName, assisterName})
-        .thenAccept(names -> {
-          String prefixedScorer = names[0] != null
-                                  ? names[0]
-                                  : NOBODY.toString();
-          String prefixedAssister = names[1];
+    if (result.getAssister() != null && result.getAssister().getPlayer() != null) {
+      Player assister = result.getAssister().getPlayer();
+      prefixedAssister = utilities.getCachedPrefixedName(
+          assister.getUniqueId(),
+          assister.getName()
+      );
+    }
 
-          Bukkit.getScheduler().runTask(fcManager.getPlugin(), () ->
-              sendGoalMessages(match, result, prefixedScorer, prefixedAssister, goalLoc, fcManager, logger)
-          );
-        });
+    sendGoalMessages(match, result, prefixedScorer, prefixedAssister, goalLoc, fcManager, logger);
   }
 
   private static void sendGoalMessages(Match match, MatchSystem.ScoringResult result,

@@ -663,6 +663,33 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         logger.send(player, SET_BLOCK_SUCCESS, buttonType);
         break;
 
+      case "refreshprefix":
+      case "rp":
+        if (!sender.hasPermission(PERM_ADMIN)) {
+          logger.send(sender, NO_PERM, PERM_ADMIN, label + " " + sub);
+          return true;
+        }
+
+        if (args.length < 2) {
+          logger.send(sender, USAGE, label + " " + sub + " <player>");
+          return true;
+        }
+
+        target = plugin.getServer().getPlayer(args[1]);
+        if (target == null) {
+          logger.send(sender, PLAYER_NOT_FOUND);
+          return true;
+        }
+
+        fcManager.cachePrefixedName(target);
+        logger.send(sender, PREFIX_ADMIN + "Refreshing prefix for " + target.getName() + "...");
+
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+          String refreshed = fcManager.getPrefixedName(target.getUniqueId());
+          logger.send(sender, PREFIX_ADMIN + "Refreshed: " + refreshed);
+        }, 20L);
+        break;
+
       case "help":
       case "h":
         sendHelp(sender);
@@ -711,7 +738,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
       completions.addAll(Arrays.asList(
           "reload", "tasks", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "clear",
           "setlobby", "setpracticearea", "spa", "matchman", "mm", "hitsdebug", "hits", "commanddisabler",
-          "cd", "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "help", "h"
+          "cd", "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "refreshprefix", "rp", "help", "h"
       ));
     } else {
       if (args.length == 2) {
@@ -730,6 +757,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           case "ban":
           case "unban":
           case "checkban":
+          case "refreshprefix":
             fcManager.getCachedPlayers().forEach(p -> completions.add(p.getName()));
             break;
 

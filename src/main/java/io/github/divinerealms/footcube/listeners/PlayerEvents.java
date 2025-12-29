@@ -102,6 +102,7 @@ public class PlayerEvents implements Listener {
       dataManager.addDefaults(playerData);
       fcManager.preloadSettings(asyncPlayer, playerData);
       fcManager.getCachedPlayers().add(asyncPlayer);
+      fcManager.cachePrefixedName(asyncPlayer);
     });
   }
 
@@ -116,6 +117,7 @@ public class PlayerEvents implements Listener {
     system.removePlayer(player);
     fcManager.getCachedPlayers().remove(player);
     fcManager.getPlayerSettings().remove(player.getUniqueId());
+    fcManager.getCachedPrefixedNames().remove(player.getUniqueId());
 
     Collection<Queue<Player>> playerQueues = fcManager.getMatchData().getPlayerQueues().values();
     for (Queue<Player> queue : playerQueues) {

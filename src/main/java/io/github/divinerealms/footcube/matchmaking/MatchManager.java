@@ -775,32 +775,34 @@ public class MatchManager {
       return;
     }
 
-    UUID uuid = sender.getUniqueId();
-    String playerName = sender.getName();
-
-    utilities.getPrefixedName(uuid, playerName).thenAcceptAsync(prefixedName ->
-        Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> {
-          String formattedMessage = (teamColor == TeamColor.RED
-                                     ? TEAMCHAT_RED.replace(prefixedName)
-                                     : TEAMCHAT_BLUE.replace(prefixedName)) + message;
-
-          List<MatchPlayer> players = match.getPlayers();
-          if (players == null) {
-            return;
-          }
-          for (MatchPlayer matchPlayer : players) {
-            if (matchPlayer == null) {
-              continue;
-            }
-            Player player = matchPlayer.getPlayer();
-            if (player == null || !player.isOnline()) {
-              continue;
-            }
-            if (matchPlayer.getTeamColor() == teamColor) {
-              logger.send(player, formattedMessage);
-            }
-          }
-        })
+    String prefixedName = utilities.getCachedPrefixedName(
+        sender.getUniqueId(),
+        sender.getName()
     );
+
+    String formattedMessage = (teamColor == TeamColor.RED
+                               ? TEAMCHAT_RED.replace(prefixedName)
+                               : TEAMCHAT_BLUE.replace(prefixedName)
+                              ) + message;
+
+    List<MatchPlayer> players = match.getPlayers();
+    if (players == null) {
+      return;
+    }
+
+    for (MatchPlayer matchPlayer : players) {
+      if (matchPlayer == null) {
+        continue;
+      }
+
+      Player player = matchPlayer.getPlayer();
+      if (player == null || !player.isOnline()) {
+        continue;
+      }
+
+      if (matchPlayer.getTeamColor() == teamColor) {
+        logger.send(player, formattedMessage);
+      }
+    }
   }
 }

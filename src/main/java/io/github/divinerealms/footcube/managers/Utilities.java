@@ -16,11 +16,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public class Utilities {
+  private final FCManager fcManager;
   private static Plugin plugin;
   public LuckPerms luckPerms;
 
   public Utilities(FCManager fcManager) {
     plugin = fcManager.getPlugin();
+    this.fcManager = fcManager;
     this.luckPerms = fcManager.getLuckPerms();
   }
 
@@ -144,6 +146,15 @@ public class Utilities {
     } catch (Exception exception) {
       plugin.getLogger().log(Level.SEVERE, "Error while trying to send particle", exception);
     }
+  }
+
+  public String getCachedPrefixedName(UUID uuid, String playerName) {
+    String cached = fcManager.getPrefixedName(uuid);
+    if (cached != null) {
+      return cached;
+    }
+
+    return playerName;
   }
 
   public CompletableFuture<String> getPrefixedName(UUID uuid, String playerName) {

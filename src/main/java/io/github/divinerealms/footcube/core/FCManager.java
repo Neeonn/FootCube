@@ -70,6 +70,7 @@ public class FCManager {
   private final TaskManager taskManager;
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
+  private final Map<UUID, String> cachedPrefixedNames = new ConcurrentHashMap<>();
   private Economy economy;
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
@@ -329,11 +330,26 @@ public class FCManager {
     }
   }
 
+  public String getPrefixedName(UUID uuid) {
+    return cachedPrefixedNames.get(uuid);
+  }
+
+  public void cachePrefixedName(Player player) {
+    UUID uuid = player.getUniqueId();
+    String playerName = player.getName();
+
+    utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
+        cachedPrefixedNames.put(uuid, prefixedName)
+    );
+  }
+
   public void cleanup() {
     long start = System.nanoTime();
     try {
       physicsData.cleanup();
       playerSettings.clear();
+      cachedPrefixedNames.clear();
+      cachedPlayers.clear();
     } catch (Exception exception) {
       Bukkit.getLogger().log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);
     } finally {

@@ -231,7 +231,7 @@ public class MatchUtils {
                              ? GM_EPIC_SUBTITLE_1.toString()
                              : isViewerScorer
                                ? GM_EPIC_SUBTITLE_1_SCORER.toString()
-                               : GM_EPIC_SUBTITLE_1_OTHER.toString();
+                               : GM_EPIC_SUBTITLE_1_OTHER.replace(scorerName);
 
     logger.title(player, initialTitle, initialSubtitle, 5, 35, 10);
 

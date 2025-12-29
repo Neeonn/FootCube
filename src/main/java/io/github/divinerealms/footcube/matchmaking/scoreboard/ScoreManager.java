@@ -6,7 +6,6 @@ import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
-import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import me.neznamy.tab.api.TabAPI;
 import me.neznamy.tab.api.TabPlayer;
 import me.neznamy.tab.api.scoreboard.Scoreboard;
@@ -21,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static io.github.divinerealms.footcube.configs.Lang.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
 
 public class ScoreManager {
   private final FCManager fcManager;
@@ -243,7 +243,7 @@ public class ScoreManager {
     if (match.getPhase() == MatchPhase.CONTINUING) {
       timeDisplay = MATCHES_LIST_CONTINUING.replace(String.valueOf(match.getCountdown()));
     } else {
-      long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO
+      long matchDuration = match.getArena().getType() == TWO_V_TWO
                            ? 120
                            : 300;
       long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();

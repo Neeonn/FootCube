@@ -2,7 +2,6 @@ package io.github.divinerealms.footcube.listeners;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -31,6 +30,7 @@ import java.util.List;
 
 import static io.github.divinerealms.footcube.configs.Lang.*;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
 
 public class SignManipulation implements Listener {
@@ -297,7 +297,7 @@ public class SignManipulation implements Listener {
           break;
 
         case "matches":
-          List<String> matches = MatchUtils.getFormattedMatches(matchManager.getData().getMatches());
+          List<String> matches = getFormattedMatches(matchManager.getData().getMatches());
           if (!matches.isEmpty()) {
             logger.send(player, MATCHES_LIST_HEADER);
             matches.forEach(msg -> logger.send(player, msg));

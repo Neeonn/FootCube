@@ -12,7 +12,6 @@ import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -348,7 +347,7 @@ public class MatchSystem {
               } else {
                 player.teleport(match.getArena().getBlueSpawn());
               }
-              MatchUtils.giveArmor(player, mp.getTeamColor());
+              giveArmor(player, mp.getTeamColor());
               if (player.getGameMode() != GameMode.SURVIVAL) {
                 player.setGameMode(GameMode.SURVIVAL);
               }

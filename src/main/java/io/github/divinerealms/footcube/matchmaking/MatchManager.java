@@ -12,8 +12,6 @@ import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
-import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -25,6 +23,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 import static io.github.divinerealms.footcube.configs.Lang.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.clearPlayer;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.giveArmor;
 
 @Getter
 public class MatchManager {
@@ -273,7 +274,7 @@ public class MatchManager {
           if (lobby != null) {
             player.teleport(lobby);
           }
-          MatchUtils.clearPlayer(player);
+          clearPlayer(player);
         }
         scoreboardManager.removeScoreboard(player);
         return;
@@ -314,7 +315,7 @@ public class MatchManager {
         if (lobby != null) {
           player.teleport(lobby);
         }
-        MatchUtils.clearPlayer(player);
+        clearPlayer(player);
       }
 
       match.setTakePlaceNeeded(true);
@@ -384,7 +385,7 @@ public class MatchManager {
         player.teleport(match.getArena().getBlueSpawn());
       }
 
-      MatchUtils.giveArmor(player, teamToJoin);
+      giveArmor(player, teamToJoin);
 
       if (match.getPhase() == MatchPhase.LOBBY || match.getPhase() == MatchPhase.STARTING) {
         scoreboardManager.showLobbyScoreboard(match, player);
@@ -427,7 +428,7 @@ public class MatchManager {
     String winningTeam = winner == TeamColor.RED
                          ? RED.toString()
                          : BLUE.toString();
-    boolean shouldCount = match.getArena().getType() != MatchConstants.TWO_V_TWO;
+    boolean shouldCount = match.getArena().getType() != TWO_V_TWO;
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
       if (matchPlayer == null) {
@@ -493,7 +494,7 @@ public class MatchManager {
       if (lobby != null) {
         player.teleport(lobby);
       }
-      MatchUtils.clearPlayer(player);
+      clearPlayer(player);
 
       scoreboardManager.removeScoreboard(player);
       scoreboardManager.unregisterScoreboard(match.getMatchScoreboard());
@@ -709,7 +710,7 @@ public class MatchManager {
           if (p == null) {
             continue;
           }
-          MatchUtils.clearPlayer(p);
+          clearPlayer(p);
           scoreboardManager.removeScoreboard(p);
           logger.send(p, MATCHMAN_FORCE_END, match.getArena().getType() + "v" + match.getArena().getType());
         }

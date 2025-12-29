@@ -2,7 +2,6 @@ package io.github.divinerealms.footcube.commands;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.command.Command;
@@ -13,6 +12,7 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 import static io.github.divinerealms.footcube.configs.Lang.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
 
 public class MatchesCommand implements CommandExecutor {
   private final FCManager fcManager;
@@ -28,7 +28,7 @@ public class MatchesCommand implements CommandExecutor {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     MatchManager matchManager = fcManager.getMatchManager();
-    List<String> output = MatchUtils.getFormattedMatches(matchManager.getData().getMatches());
+    List<String> output = getFormattedMatches(matchManager.getData().getMatches());
 
     if (!output.isEmpty()) {
       logger.send(sender, MATCHES_LIST_HEADER);

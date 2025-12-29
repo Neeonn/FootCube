@@ -49,7 +49,7 @@ public class Logger {
    */
   public void info(Object messageObj, String... args) {
     String message = formatMessage(messageObj, args);
-    consoleSender.sendMessage(consolePrefix + clearPrefixes(message));
+    consoleSender.sendMessage(consolePrefix + replacePlaceholders(message, true));
   }
 
   /**
@@ -68,7 +68,7 @@ public class Logger {
     if (sender instanceof Player) {
       sender.sendMessage(message);
     } else {
-      consoleSender.sendMessage(consolePrefix + clearPrefixes(message));
+      consoleSender.sendMessage(consolePrefix + replacePlaceholders(message, true));
     }
   }
 
@@ -85,7 +85,7 @@ public class Logger {
     String formatted = formatMessage(messageObj, args);
 
     server.broadcast(formatted, permission);
-    consoleSender.sendMessage(consolePrefix + clearPrefixes(formatted));
+    consoleSender.sendMessage(consolePrefix + replacePlaceholders(formatted, true));
   }
 
   /**
@@ -111,9 +111,11 @@ public class Logger {
       if (player.getWorld() != center.getWorld()) {
         continue;
       }
+
       if (!player.hasPermission(permission)) {
         continue;
       }
+
       if (player.getLocation().distanceSquared(center) > radiusSquared) {
         continue;
       }
@@ -121,7 +123,7 @@ public class Logger {
       player.sendMessage(formatted);
     }
 
-    consoleSender.sendMessage(consolePrefix + clearPrefixes(formatted));
+    consoleSender.sendMessage(consolePrefix + replacePlaceholders(formatted, true));
   }
 
   /**
@@ -133,9 +135,9 @@ public class Logger {
    */
   public void send(CommandSender sender, String message) {
     if (sender instanceof Player) {
-      sender.sendMessage(color(replacePrefixes(message)));
+      sender.sendMessage(color(replacePlaceholders(message, false)));
     } else {
-      consoleSender.sendMessage(consolePrefix + color(clearPrefixes(message)));
+      consoleSender.sendMessage(consolePrefix + color(replacePlaceholders(message, true)));
     }
   }
 
@@ -223,39 +225,23 @@ public class Logger {
     if (messageObj instanceof Lang) {
       return ((Lang) messageObj).replace(args);
     } else {
-      return color(replacePrefixes(messageObj.toString()));
+      return color(replacePlaceholders(messageObj.toString(), false));
     }
   }
 
   /**
-   * Replaces prefix placeholders in a message with their actual formatted values.
-   * This method is used when sending messages to players or formatting raw strings,
-   * where the prefixes should be visible and properly colored. For example, it converts
-   * "{prefix}" into the actual colored prefix like "[FootCube]" that players see in chat.
+   * Handles prefix placeholder replacement or removal based on context.
+   * When clear is true, removes placeholders entirely for clean console output.
+   * When clear is false, replaces placeholders with their formatted prefix values for player messages.
    *
    * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
-   * @return the message with placeholders replaced by their formatted prefix values
+   * @param clear if true, removes placeholders; if false, replaces them with formatted values
+   * @return the processed message with placeholders either removed or replaced
    */
-  private String replacePrefixes(String message) {
+  public String replacePlaceholders(String message, boolean clear) {
     return message
-        .replace("{prefix}", PREFIX.toString())
-        .replace("{prefix-admin}", PREFIX_ADMIN.toString());
-  }
-
-  /**
-   * Removes prefix placeholders from a message entirely, returning clean text.
-   * This method is used when logging to the console, where the prefixes would be
-   * redundant since the console already shows "[FootCube]" at the start of each line.
-   * Removing them prevents duplicate prefixes like "[FootCube] [FootCube] message" and
-   * keeps console output clean and readable.
-   *
-   * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
-   * @return the message with all prefix placeholders removed (replaced with empty strings)
-   */
-  private String clearPrefixes(String message) {
-    return message
-        .replace("{prefix}", "")
-        .replace("{prefix-admin}", "");
+        .replace("{prefix}", clear ? "" : PREFIX.toString())
+        .replace("{prefix-admin}", clear ? "" : PREFIX_ADMIN.toString());
   }
 
   /**

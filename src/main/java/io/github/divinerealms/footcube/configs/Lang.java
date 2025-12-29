@@ -344,7 +344,7 @@ public enum Lang {
 
   public String replace(String... args) {
     if (LANG == null) {
-      return ChatColor.translateAlternateColorCodes('&', def).trim();
+      return ChatColor.translateAlternateColorCodes('&', def);
     }
 
     String value = LANG.getString(this.path, this.def);
@@ -365,7 +365,7 @@ public enum Lang {
       }
     }
 
-    return ChatColor.translateAlternateColorCodes('&', value).trim();
+    return ChatColor.translateAlternateColorCodes('&', value);
   }
 
   @Override

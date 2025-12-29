@@ -235,13 +235,17 @@ public class Logger {
    * When clear is false, replaces placeholders with their formatted prefix values for player messages.
    *
    * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
-   * @param clear if true, removes placeholders; if false, replaces them with formatted values
+   * @param clear   if true, removes placeholders; if false, replaces them with formatted values
    * @return the processed message with placeholders either removed or replaced
    */
   public String replacePlaceholders(String message, boolean clear) {
     return message
-        .replace("{prefix}", clear ? "" : PREFIX.toString())
-        .replace("{prefix-admin}", clear ? "" : PREFIX_ADMIN.toString());
+        .replace("{prefix}", clear
+                             ? ""
+                             : PREFIX.toString())
+        .replace("{prefix-admin}", clear
+                                   ? ""
+                                   : PREFIX_ADMIN.toString());
   }
 
   /**

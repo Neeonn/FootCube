@@ -22,6 +22,7 @@ public class HighScoreManager {
   private final Logger logger;
   private final Utilities utilities;
   private final PlayerDataManager playerDataManager;
+  private final Object highScoreLock = new Object();
   public double[] bestRatings;
   public int[] mostGoals;
   public int[] mostAssists;
@@ -115,6 +116,7 @@ public class HighScoreManager {
     participants = new String[files != null
                               ? files.length
                               : 0];
+
     for (int i = 0; i < participants.length; i++) {
       participants[i] = files[i].getName().replace(".yml", "");
     }
@@ -122,6 +124,43 @@ public class HighScoreManager {
     lastUpdatedParticipant = 0;
     finishCalled = false;
     isUpdating = true;
+    clearArrays();
+  }
+
+  private void clearArrays() {
+    synchronized (highScoreLock) {
+      String nobody = NOBODY.toString();
+
+      for (int i = 0; i < 3; i++) {
+        bestRatings[i] = 0.0;
+        topSkillNames[i] = nobody;
+      }
+
+      for (int i = 0; i < 3; i++) {
+        mostGoals[i] = 0;
+        topGoalsNames[i] = nobody;
+      }
+
+      for (int i = 0; i < 3; i++) {
+        mostAssists[i] = 0;
+        topAssistsNames[i] = nobody;
+      }
+
+      for (int i = 0; i < 3; i++) {
+        mostOwnGoals[i] = 0;
+        topOwnGoalsNames[i] = nobody;
+      }
+
+      for (int i = 0; i < 3; i++) {
+        mostWins[i] = 0;
+        topWinsNames[i] = nobody;
+      }
+
+      for (int i = 0; i < 3; i++) {
+        longestStreak[i] = 0;
+        topStreakNames[i] = nobody;
+      }
+    }
   }
 
   public List<CompletableFuture<Void>> processBatch(int batchSize) {
@@ -196,40 +235,104 @@ public class HighScoreManager {
     value = (double) Math.round(value * 100) / 100;
     double finalValue = value;
 
-    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName -> {
-      synchronized (array) {
-        for (int i = 0; i < 3; i++) {
-          if (finalValue > array[i]) {
-            for (int j = 2; j > i; j--) {
-              array[j] = array[j - 1];
-              names[j] = names[j - 1];
-            }
+    String cachedPrefix = utilities.getCachedPrefixedName(uuid, playerName);
 
-            array[i] = finalValue;
-            names[i] = prefixedName;
-            break;
-          }
-        }
-      }
-    });
+    if (cachedPrefix != null && !cachedPrefix.equals(playerName)) {
+      insertIntoArray(array, names, finalValue, cachedPrefix);
+      return CompletableFuture.completedFuture(null);
+    }
+
+    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
+        insertIntoArray(array, names, finalValue, prefixedName)
+    );
   }
 
   private CompletableFuture<Void> insertTop3(int[] array, String[] names, int value, UUID uuid, String playerName) {
-    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName -> {
-      synchronized (array) {
-        for (int i = 0; i < 3; i++) {
-          if (value > array[i]) {
-            for (int j = 2; j > i; j--) {
-              array[j] = array[j - 1];
-              names[j] = names[j - 1];
-            }
+    String cachedPrefix = utilities.getCachedPrefixedName(uuid, playerName);
 
-            array[i] = value;
-            names[i] = prefixedName;
-            break;
-          }
+    if (cachedPrefix != null && !cachedPrefix.equals(playerName)) {
+      insertIntoArray(array, names, value, cachedPrefix);
+      return CompletableFuture.completedFuture(null);
+    }
+
+    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
+        insertIntoArray(array, names, value, prefixedName)
+    );
+  }
+
+  private void insertIntoArray(double[] array, String[] names, double value, String prefixedName) {
+    synchronized (highScoreLock) {
+      int existingIndex = -1;
+      for (int i = 0; i < 3; i++) {
+        if (names[i] != null && names[i].equals(prefixedName)) {
+          existingIndex = i;
+          break;
         }
       }
-    });
+
+      if (existingIndex != -1 && array[existingIndex] >= value) {
+        return;
+      }
+
+      if (existingIndex != -1) {
+        for (int j = existingIndex; j < 2; j++) {
+          array[j] = array[j + 1];
+          names[j] = names[j + 1];
+        }
+        array[2] = 0;
+        names[2] = NOBODY.toString();
+      }
+
+      for (int i = 0; i < 3; i++) {
+        if (value > array[i]) {
+          for (int j = 2; j > i; j--) {
+            array[j] = array[j - 1];
+            names[j] = names[j - 1];
+          }
+
+          array[i] = value;
+          names[i] = prefixedName;
+          break;
+        }
+      }
+    }
+  }
+
+  private void insertIntoArray(int[] array, String[] names, int value, String prefixedName) {
+    synchronized (highScoreLock) {
+      int existingIndex = -1;
+      for (int i = 0; i < 3; i++) {
+        if (names[i] != null && names[i].equals(prefixedName)) {
+          existingIndex = i;
+          break;
+        }
+      }
+
+      if (existingIndex != -1 && array[existingIndex] >= value) {
+        return;
+      }
+
+      if (existingIndex != -1) {
+        for (int j = existingIndex; j < 2; j++) {
+          array[j] = array[j + 1];
+          names[j] = names[j + 1];
+        }
+        array[2] = 0;
+        names[2] = NOBODY.toString();
+      }
+
+      for (int i = 0; i < 3; i++) {
+        if (value > array[i]) {
+          for (int j = 2; j > i; j--) {
+            array[j] = array[j - 1];
+            names[j] = names[j - 1];
+          }
+
+          array[i] = value;
+          names[i] = prefixedName;
+          break;
+        }
+      }
+    }
   }
 }

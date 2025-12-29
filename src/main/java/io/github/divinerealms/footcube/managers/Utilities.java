@@ -16,8 +16,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public class Utilities {
-  private final FCManager fcManager;
   private static Plugin plugin;
+  private final FCManager fcManager;
   public LuckPerms luckPerms;
 
   public Utilities(FCManager fcManager) {

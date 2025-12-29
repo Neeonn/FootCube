@@ -9,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class CubeDamageListener implements Listener {
   private final PhysicsData physicsData;
@@ -35,7 +36,7 @@ public class CubeDamageListener implements Listener {
         event.setCancelled(true);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dCubeDamageListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dCubeDamageListener &ftook &e" + ms + "ms");
     }
   }
 }

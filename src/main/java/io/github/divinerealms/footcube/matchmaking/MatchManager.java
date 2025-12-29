@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.matchmaking;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
@@ -24,6 +23,8 @@ import org.bukkit.entity.Player;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
+
+import static io.github.divinerealms.footcube.configs.Lang.*;
 
 @Getter
 public class MatchManager {
@@ -59,7 +60,7 @@ public class MatchManager {
     for (Player p : playersToQueue) {
       if (p == null || !p.isOnline()) continue;
       if (getMatch(p).isPresent() || system.isInAnyQueue(p)) {
-        logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null));
+        logger.send(player, JOIN_ALREADYINGAME);
         return;
       }
     }
@@ -76,7 +77,7 @@ public class MatchManager {
     for (Player p : playersToQueue) {
       if (p == null || !p.isOnline()) continue;
       for (Queue<Player> otherQueue : data.getPlayerQueues().values()) otherQueue.remove(p);
-      logger.send(p, Lang.JOIN_SUCCESS.replace(new String[]{matchTypeString}));
+      logger.send(p, JOIN_SUCCESS, matchTypeString);
       p.setLevel(0);
     }
 
@@ -109,13 +110,13 @@ public class MatchManager {
 
   public void forceStartMatch(Player player) {
     Optional<Match> matchOpt = getMatch(player);
-    if (matchOpt.isEmpty()) { logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return; }
+    if (matchOpt.isEmpty()) { logger.send(player, MATCHES_LIST_NO_MATCHES); return; }
 
     Match targetMatch = matchOpt.get();
-    if (targetMatch.getPhase() != MatchPhase.LOBBY) { logger.send(player, Lang.MATCH_ALREADY_STARTED.replace(null)); return; }
+    if (targetMatch.getPhase() != MatchPhase.LOBBY) { logger.send(player, MATCH_ALREADY_STARTED); return; }
 
     List<MatchPlayer> allPlayers = targetMatch.getPlayers();
-    if (allPlayers == null) { logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null)); return; }
+    if (allPlayers == null) { logger.send(player, MATCHES_LIST_NO_MATCHES); return; }
 
     List<MatchPlayer> playersInLobby = new ArrayList<>();
     for (MatchPlayer mp : allPlayers) {
@@ -134,7 +135,7 @@ public class MatchManager {
       targetMatch.setPhase(MatchPhase.STARTING);
       targetMatch.setCountdown(15);
 
-      logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{"1v1"}));
+      logger.send(player, MATCHMAN_FORCE_START, "1v1");
       scoreboardManager.updateScoreboard(targetMatch);
       return;
     }
@@ -178,7 +179,7 @@ public class MatchManager {
     targetMatch.setPhase(MatchPhase.STARTING);
     targetMatch.setCountdown(15);
 
-    logger.send(player, Lang.MATCHMAN_FORCE_START.replace(new String[]{targetMatch.getArena().getType() + "v" + targetMatch.getArena().getType()}));
+    logger.send(player, MATCHMAN_FORCE_START, targetMatch.getArena().getType() + "v" + targetMatch.getArena().getType());
     scoreboardManager.updateScoreboard(targetMatch);
   }
 
@@ -256,7 +257,7 @@ public class MatchManager {
       }
     }
 
-    if (matchOpt.isEmpty()) { logger.send(player, Lang.TAKEPLACE_INVALID_ID.replace(new String[]{String.valueOf(matchId)})); return; }
+    if (matchOpt.isEmpty()) { logger.send(player, TAKEPLACE_INVALID_ID, String.valueOf(matchId)); return; }
 
     Match match = matchOpt.get();
     long redTeamCount = 0, blueTeamCount = 0;
@@ -296,15 +297,16 @@ public class MatchManager {
 
       match.setTakePlaceNeeded(false);
       match.setLastTakePlaceAnnounceTick(0);
-      logger.send(player, Lang.TAKEPLACE_SUCCESS.replace(new String[]{String.valueOf(match.getArena().getId())}));
-    } else logger.send(player, Lang.TAKEPLACE_FULL.replace(new String[]{String.valueOf(matchId)}));
+      logger.send(player, TAKEPLACE_SUCCESS, String.valueOf(match.getArena().getId()));
+    } else logger.send(player, TAKEPLACE_FULL, String.valueOf(matchId));
   }
 
   public void endMatch(Match match) {
     TeamColor winner = null;
     if (match.getScoreRed() > match.getScoreBlue()) winner = TeamColor.RED;
     else if (match.getScoreBlue() > match.getScoreRed()) winner = TeamColor.BLUE;
-    String winningTeam = winner == TeamColor.RED ? Lang.RED.replace(null) : Lang.BLUE.replace(null);
+
+    String winningTeam = winner == TeamColor.RED ? RED.toString() : BLUE.toString();
     boolean shouldCount = match.getArena().getType() != MatchConstants.TWO_V_TWO;
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
@@ -322,8 +324,8 @@ public class MatchManager {
           }
 
           fcManager.getEconomy().depositPlayer(player, 5);
-          logger.send(player, Lang.MATCH_TIED.replace(null));
-          logger.send(player, Lang.MATCH_TIED_CREDITS.replace(null));
+          logger.send(player, MATCH_TIED);
+          logger.send(player, MATCH_TIED_CREDITS);
         } else if (matchPlayer.getTeamColor() == winner) {
           if (shouldCount) {
             data.add("wins");
@@ -335,20 +337,20 @@ public class MatchManager {
 
             if ((int) data.get("winstreak") > 0 && (int) data.get("winstreak") % 5 == 0) {
               fcManager.getEconomy().depositPlayer(player, 100);
-              logger.send(player, Lang.MATCH_WINSTREAK_CREDITS.replace(new String[]{String.valueOf(data.get("winstreak"))}));
+              logger.send(player, MATCH_WINSTREAK_CREDITS, String.valueOf(data.get("winstreak")));
             }
           }
 
           fcManager.getEconomy().depositPlayer(player, 15);
-          logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
-          logger.send(player, Lang.MATCH_WIN_CREDITS.replace(null));
+          logger.send(player, MATCH_TIMES_UP, winningTeam);
+          logger.send(player, MATCH_WIN_CREDITS);
         } else {
           if (shouldCount) {
             data.set("winstreak", 0);
             data.add("losses");
             data.add("matches");
           }
-          logger.send(player, Lang.MATCH_TIMES_UP.replace(new String[]{winningTeam}));
+          logger.send(player, MATCH_TIMES_UP, winningTeam);
         }
 
         if (shouldCount) {
@@ -519,7 +521,7 @@ public class MatchManager {
           if (p == null) continue;
           MatchUtils.clearPlayer(p);
           scoreboardManager.removeScoreboard(p);
-          logger.send(p, Lang.MATCHMAN_FORCE_END.replace(new String[]{match.getArena().getType() + "v" + match.getArena().getType()}));
+          logger.send(p, MATCHMAN_FORCE_END, match.getArena().getType() + "v" + match.getArena().getType());
         }
       }
 
@@ -545,7 +547,7 @@ public class MatchManager {
 
   public void teamChat(Player sender, String message) {
     Optional<Match> matchOpt = getMatch(sender);
-    if (matchOpt.isEmpty()) { logger.send(sender, Lang.LEAVE_NOT_INGAME.replace(null)); return; }
+    if (matchOpt.isEmpty()) { logger.send(sender, LEAVE_NOT_INGAME); return; }
 
     Match match = matchOpt.get();
     MatchPlayer senderMP = null;
@@ -568,8 +570,8 @@ public class MatchManager {
     utilities.getPrefixedName(uuid, playerName).thenAcceptAsync(prefixedName ->
         Bukkit.getScheduler().runTask(fcManager.getPlugin(), () -> {
           String formattedMessage = (teamColor == TeamColor.RED
-              ? Lang.TEAMCHAT_RED.replace(new String[]{prefixedName})
-              : Lang.TEAMCHAT_BLUE.replace(new String[]{prefixedName})) + message;
+              ? TEAMCHAT_RED.replace(prefixedName)
+              : TEAMCHAT_BLUE.replace(prefixedName)) + message;
 
           List<MatchPlayer> players = match.getPlayers();
           if (players == null) return;

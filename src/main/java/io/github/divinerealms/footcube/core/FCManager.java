@@ -110,7 +110,6 @@ public class FCManager {
     this.highscoreManager = new HighScoreManager(this);
     this.matchManager = new MatchManager(this);
 
-    this.cubeCleaner = new CubeCleaner(this);
     this.disableCommands = new DisableCommands(this);
     this.scheduler = plugin.getServer().getScheduler();
 
@@ -118,6 +117,7 @@ public class FCManager {
     this.physicsSystem = new PhysicsSystem(physicsData, logger, scheduler, plugin);
     this.physicsFormulae = new PhysicsFormulae(logger);
 
+    this.cubeCleaner = new CubeCleaner(this);
     this.listenerManager = new ListenerManager(this);
     this.taskManager = new TaskManager(this);
 

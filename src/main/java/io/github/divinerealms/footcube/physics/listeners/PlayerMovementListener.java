@@ -14,17 +14,16 @@ import java.util.UUID;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.PLAYER_HEAD_LEVEL;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class PlayerMovementListener implements Listener {
   private final PhysicsData data;
   private final PhysicsSystem system;
-
   private final Logger logger;
 
   public PlayerMovementListener(FCManager fcManager) {
     this.data = fcManager.getPhysicsData();
     this.system = fcManager.getPhysicsSystem();
-
     this.logger = fcManager.getLogger();
   }
 
@@ -59,7 +58,7 @@ public class PlayerMovementListener implements Listener {
       data.getSpeed().put(playerId, speed);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPlayerMovementListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerMovementListener &ftook &e" + ms + "ms");
     }
   }
 }

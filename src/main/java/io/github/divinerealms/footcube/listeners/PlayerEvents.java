@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.listeners;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
@@ -28,6 +27,8 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.*;
 
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_CANT_USE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_DISABLED_COMMANDS;
 
 public class PlayerEvents implements Listener {
@@ -65,7 +66,7 @@ public class PlayerEvents implements Listener {
     if (cmd.contains(":")) cmd = cmd.split(":")[1];
 
     if (disableCommands.getCommands().contains(cmd)) {
-      logger.send(player, Lang.COMMAND_DISABLER_CANT_USE.replace(null));
+      logger.send(player, COMMAND_DISABLER_CANT_USE);
       event.setCancelled(true);
     }
   }
@@ -117,7 +118,7 @@ public class PlayerEvents implements Listener {
     if (teamManager.isInTeam(player)) {
       Team team = teamManager.getTeam(player);
       if (team != null && team.getMembers() != null) {
-        for (Player p : team.getMembers()) if (p != null && p.isOnline() && !p.equals(player)) logger.send(p, Lang.TEAM_DISBANDED.replace(new String[]{player.getName()}));
+        for (Player p : team.getMembers()) if (p != null && p.isOnline() && !p.equals(player)) logger.send(p, TEAM_DISBANDED, player.getName());
         teamManager.disbandTeam(team);
       }
     }

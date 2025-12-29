@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.matchmaking.highscore;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
@@ -15,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import static io.github.divinerealms.footcube.configs.Lang.*;
 
 public class HighScoreManager {
   private final Plugin plugin;
@@ -59,7 +60,7 @@ public class HighScoreManager {
     mostWins = new int[3];
     longestStreak = new int[3];
 
-    String nobody = Lang.NOBODY.replace(null);
+    String nobody = NOBODY.toString();
     topSkillNames = new String[]{nobody, nobody, nobody};
     topGoalsNames = new String[]{nobody, nobody, nobody};
     topAssistsNames = new String[]{nobody, nobody, nobody};
@@ -69,42 +70,42 @@ public class HighScoreManager {
   }
 
   public void showHighScores(Player player) {
-    logger.send(player, Lang.BEST_HEADER.replace(null));
+    logger.send(player, BEST_HEADER);
     showTopCategory(player, topSkillNames, bestRatings);
 
-    logger.send(player, Lang.BEST_GOALS.replace(null));
+    logger.send(player, BEST_GOALS);
     showTopCategory(player, topGoalsNames, mostGoals);
 
-    logger.send(player, Lang.BEST_ASSISTS.replace(null));
+    logger.send(player, BEST_ASSISTS);
     showTopCategory(player, topAssistsNames, mostAssists);
 
-    logger.send(player, Lang.BEST_OWN_GOALS.replace(null));
+    logger.send(player, BEST_OWN_GOALS);
     showTopCategory(player, topOwnGoalsNames, mostOwnGoals);
 
-    logger.send(player, Lang.BEST_WINS.replace(null));
+    logger.send(player, BEST_WINS);
     showTopCategory(player, topWinsNames, mostWins);
 
-    logger.send(player, Lang.BEST_WINSTREAK.replace(null));
+    logger.send(player, BEST_WINSTREAK);
     showTopCategory(player, topStreakNames, longestStreak);
   }
 
   private void showTopCategory(Player player, String[] names, double[] values) {
     for (int i = 0; i < 3; i++) {
-      logger.send(player, Lang.BEST_ENTRY.replace(new String[]{
+      logger.send(player, BEST_ENTRY,
           String.valueOf(i + 1),
           names[i],
           String.valueOf(values[i])
-      }));
+      );
     }
   }
 
   private void showTopCategory(Player player, String[] names, int[] values) {
     for (int i = 0; i < 3; i++) {
-      logger.send(player, Lang.BEST_ENTRY.replace(new String[]{
+      logger.send(player, BEST_ENTRY,
           String.valueOf(i + 1),
           names[i],
           String.valueOf(values[i])
-      }));
+      );
     }
   }
 

@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.matchmaking.scoreboard;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
@@ -20,6 +19,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static io.github.divinerealms.footcube.configs.Lang.*;
 
 public class ScoreManager {
   private final FCManager fcManager;
@@ -41,13 +42,13 @@ public class ScoreManager {
     if (tabAPI == null || match == null) return;
 
     if (match.getLobbyScoreboard() != null) {
-      try {
-        manager.removeScoreboard(match.getLobbyScoreboard());
+      try { 
+        manager.removeScoreboard(match.getLobbyScoreboard()); 
       } catch (IllegalArgumentException ignored) {}
     }
 
     String type = match.getArena().getType() + "v" + match.getArena().getType();
-    String title = Lang.MATCHES_LIST_LOBBY.replace(new String[]{type, String.valueOf(match.getArena().getId())});
+    String title = MATCHES_LIST_LOBBY.replace(type, String.valueOf(match.getArena().getId()));
     List<String> lines = Arrays.asList(buildLobbyScoreboard(match).split(System.lineSeparator()));
     String scoreboardName = "FCLobby" + match.getArena().getId() + "_" + UUID.randomUUID().toString().substring(0, 8);
     Scoreboard newScoreboard = manager.createScoreboard(scoreboardName, title, lines);
@@ -71,7 +72,7 @@ public class ScoreManager {
     }
 
     String type = match.getArena().getType() + "v" + match.getArena().getType();
-    String title = Lang.MATCHES_LIST_MATCH.replace(new String[]{type, String.valueOf(match.getArena().getId())});
+    String title = MATCHES_LIST_MATCH.replace(type, String.valueOf(match.getArena().getId()));
     List<String> lines = Arrays.asList(buildMatchScoreboard(match).split(System.lineSeparator()));
     String scoreboardName = "FCMatch" + match.getArena().getId() + "_" + UUID.randomUUID().toString().substring(0, 8);
     Scoreboard newScoreboard = manager.createScoreboard(scoreboardName, title, lines);
@@ -146,42 +147,49 @@ public class ScoreManager {
     if (match.getPhase() == MatchPhase.STARTING) {
       for (int i = 0; i < redPlayers.size(); i++) {
         if (playersListBuilder.length() > 0) playersListBuilder.append(System.lineSeparator());
-        playersListBuilder.append(Lang.SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
-            new String[]{String.valueOf(i + 1), redPlayers.get(i).getName()}
-        ));
+        playersListBuilder.append(SCOREBOARD_LINES_RED_PLAYERS_ENTRY.replace(
+            String.valueOf(i + 1), redPlayers.get(i).getName())
+        );
       }
 
-      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) playersListBuilder.append(System.lineSeparator()).append(ChatColor.RESET).append(System.lineSeparator());
+      if (!redPlayers.isEmpty() && !bluePlayers.isEmpty()) playersListBuilder
+          .append(System.lineSeparator())
+          .append(ChatColor.RESET)
+          .append(System.lineSeparator());
 
       for (int i = 0; i < bluePlayers.size(); i++) {
-        if (i > 0 || (!redPlayers.isEmpty() && playersListBuilder.length() > 0 && !playersListBuilder.toString().endsWith(System.lineSeparator()))) {
+        if (i > 0 || (!redPlayers.isEmpty() && playersListBuilder.length() > 0
+            && !playersListBuilder.toString().endsWith(System.lineSeparator()))) {
           if (i > 0) playersListBuilder.append(System.lineSeparator());
         }
-        playersListBuilder.append(Lang.SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
-            new String[]{String.valueOf(i + 1), bluePlayers.get(i).getName()}
-        ));
+        playersListBuilder.append(SCOREBOARD_LINES_BLUE_PLAYERS_ENTRY.replace(
+            String.valueOf(i + 1), bluePlayers.get(i).getName())
+        );
       }
     } else {
       for (int i = 0; i < waitingPlayers.size(); i++) {
         if (i > 0) playersListBuilder.append(System.lineSeparator());
-        playersListBuilder.append(Lang.SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY.replace(
-            new String[]{String.valueOf(i + 1), waitingPlayers.get(i).getName()}
-        ));
+        playersListBuilder.append(SCOREBOARD_LINES_WAITING_PLAYERS_ENTRY.replace(
+            String.valueOf(i + 1), waitingPlayers.get(i).getName())
+        );
       }
     }
 
-    String playersList = playersListBuilder.length() == 0 ? Lang.NOBODY.replace(null) : playersListBuilder.toString();
-    String status = match.getPhase() == MatchPhase.LOBBY ? Lang.MATCHES_LIST_WAITING.replace(null) : Lang.MATCHES_LIST_STARTING.replace(new String[]{String.valueOf(match.getCountdown())});
+    String playersList = playersListBuilder.length() == 0
+        ? NOBODY.toString()
+        : playersListBuilder.toString();
 
-    return Lang.SCOREBOARD_LINES_LOBBY.replace(new String[]{
-        playersList, status
-    }) + System.lineSeparator() + Lang.SCOREBOARD_FOOTER.replace(null);
+    String status = match.getPhase() == MatchPhase.LOBBY
+        ? MATCHES_LIST_WAITING.toString()
+        : MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
+
+    return SCOREBOARD_LINES_LOBBY.replace(playersList, status) + System.lineSeparator() + SCOREBOARD_FOOTER;
   }
 
   private String buildMatchScoreboard(Match match) {
     String timeDisplay;
     if (match.getPhase() == MatchPhase.CONTINUING) {
-      timeDisplay = Lang.MATCHES_LIST_CONTINUING.replace(new String[]{String.valueOf(match.getCountdown())});
+      timeDisplay = MATCHES_LIST_CONTINUING.replace(String.valueOf(match.getCountdown()));
     } else {
       long matchDuration = match.getArena().getType() == MatchConstants.TWO_V_TWO ? 120 : 300;
       long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
@@ -190,11 +198,9 @@ public class ScoreManager {
       timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
     }
 
-    return Lang.SCOREBOARD_LINES_MATCH.replace(new String[]{
-        Lang.RED.replace(null), String.valueOf(match.getScoreRed()),
-        String.valueOf(match.getScoreBlue()), Lang.BLUE.replace(null),
-        timeDisplay
-    }) + System.lineSeparator() + Lang.SCOREBOARD_FOOTER.replace(null);
+    return SCOREBOARD_LINES_MATCH.replace(RED.toString(), String.valueOf(match.getScoreRed()),
+        String.valueOf(match.getScoreBlue()), BLUE.toString(),
+        timeDisplay) + System.lineSeparator() + SCOREBOARD_FOOTER;
   }
 
   public void unregisterScoreboard(Scoreboard scoreboard) {

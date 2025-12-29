@@ -121,9 +121,4 @@ public class TaskManager {
     for (BaseTask task : tasks) if (task.isRunning()) count++;
     return count;
   }
-
-  public BaseTask getTask(String taskName) {
-    for (BaseTask task : tasks) if (task.getTaskName().equalsIgnoreCase(taskName)) return task;
-    return null;
-  }
 }

@@ -1,13 +1,11 @@
 package io.github.divinerealms.footcube.tasks;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
@@ -16,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static io.github.divinerealms.footcube.configs.Lang.HITDEBUG_VELOCITY_CAP;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
@@ -54,8 +53,6 @@ public class PhysicsTask extends BaseTask {
   protected void kaboom() {
     // Skip processing if there are no active players or cubes.
     if (fcManager.getCachedPlayers().isEmpty() || data.getCubes().isEmpty()) return;
-
-    data.tickCount++;
 
     // Build player cache once per tick for all cubes to reuse.
     Map<UUID, PlayerPhysicsCache> playerCache = buildPlayerCache();
@@ -163,12 +160,13 @@ public class PhysicsTask extends BaseTask {
       boolean isSolidBlockBelow = blockBelowLocation.getBlock().getType().isSolid();
       double distanceToGround = cubeY - (blockBelowY + 1);
 
-      boolean isActuallyGrounded = isSolidBlockBelow && distanceToGround < 0.15 && distanceToGround > -0.05;
-      boolean isSettledOnGround = Math.abs(newVelocity.getY()) < 0.08;
+      boolean isActuallyGrounded = isSolidBlockBelow && distanceToGround < 0.2 && distanceToGround > -0.1;
+      boolean isSettledOnGround = Math.abs(newVelocity.getY()) < 0.15;
 
-      if (isActuallyGrounded && isSettledOnGround && !system.wasRecentlyRaised(cubeId)) {
+      if (isActuallyGrounded && isSettledOnGround) {
         boolean hasClosePlayer = false;
         double closestPlayerDistance = Double.MAX_VALUE;
+        double hoverForce, bounce = MIN_BOUNCE_VELOCITY_Y * 0.4;
 
         // Find the closest player and determine if anyone is in hover range.
         for (PlayerInteraction interaction : playerInteractions.values()) {
@@ -180,12 +178,15 @@ public class PhysicsTask extends BaseTask {
         if (hasClosePlayer) {
           double hoverRange = HIT_RADIUS * 2; // Define hover range.
           double proximityFactor = 1 - (closestPlayerDistance / hoverRange); // Calculate proximity factor (0 to 1).
-          double anticipatoryLift = MIN_BOUNCE_VELOCITY_Y * 0.5 * proximityFactor; // Scale lift based on proximity.
+          hoverForce = MIN_BOUNCE_VELOCITY_Y * 1 * proximityFactor; // Scale lift based on proximity.
 
           // Only apply the lift if the cube isn't already moving upward significantly.
           // This prevents the hover from interfering with natural bounces or kicks.
-          if (newVelocity.getY() < anticipatoryLift) newVelocity.setY(anticipatoryLift);
-        }
+          if (hoverForce < bounce) hoverForce = bounce;
+        } else hoverForce = bounce;
+
+        // Apply the lift if there are players nearby and if the cube isn't already hovering.
+        if (newVelocity.getY() < hoverForce) newVelocity.setY(hoverForce);
       }
 
       // Queue impact sound effect if any significant collision occurred.
@@ -234,10 +235,7 @@ public class PhysicsTask extends BaseTask {
         }
 
         // Apply the most restrictive scale factor to the cube's velocity.
-        if (minScaleFactor < 1) {
-          newVelocity.multiply(minScaleFactor);
-          system.queueSound(cubeLocation, Sound.SLIME_WALK2, SOUND_VOLUME, SOUND_PITCH);
-        }
+        if (minScaleFactor < 1) newVelocity.multiply(minScaleFactor);
       }
 
       // --- Velocity Capping ---
@@ -246,7 +244,9 @@ public class PhysicsTask extends BaseTask {
       if (finalSpeed > MAX_KP) {
         newVelocity.multiply(MAX_KP / finalSpeed); // Scale back to MAX_KP.
         // Log violation to players with debugging permissions.
-        logger.send(PERM_HIT_DEBUG, Lang.HITDEBUG_VELOCITY_CAP.replace(new String[]{String.format("%.2f", finalSpeed), String.valueOf(MAX_KP)}));
+        logger.send(PERM_HIT_DEBUG, HITDEBUG_VELOCITY_CAP,
+            String.format("%.2f", finalSpeed), String.valueOf(MAX_KP)
+        );
       }
 
       // Apply final computed velocity to the cube and update its tracked state.

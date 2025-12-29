@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
@@ -26,6 +25,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_CLEAR;
+import static io.github.divinerealms.footcube.configs.Lang.HITDEBUG_WHOLE;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_CUBE;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
@@ -69,7 +70,8 @@ public class CubeKickListener implements Listener {
 
       // Creative players can remove cubes directly.
       if (player.getGameMode() == GameMode.CREATIVE && player.hasPermission(PERM_CLEAR_CUBE)) {
-        cube.setHealth(0); logger.send(player, Lang.CUBE_CLEAR.replace(null)); return;
+        cube.setHealth(0); logger.send(player, CUBE_CLEAR);
+        return;
       }
 
       // Prevent unauthorized players from interacting.
@@ -101,7 +103,7 @@ public class CubeKickListener implements Listener {
       scheduler.runTask(plugin, () -> {
         PlayerSettings settings = fcManager.getPlayerSettings(player);
         if (settings != null && settings.isKickSoundEnabled()) system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);
-        if (data.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, playerLocation, 100, system.onHitDebug(player, kickResult));
+        if (data.isHitDebugEnabled()) logger.send(PERM_HIT_DEBUG, playerLocation, 100, HITDEBUG_WHOLE, system.onHitDebug(player, kickResult));
         if (data.getCubeHits().contains(playerId)) system.showHits(player, kickResult);
       });
 

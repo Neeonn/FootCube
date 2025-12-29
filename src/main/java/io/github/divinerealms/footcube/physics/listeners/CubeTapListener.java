@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.CUBE_JUMP_RIGHT_CLICK;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class CubeTapListener implements Listener {
   private final FCManager fcManager;
@@ -75,7 +76,7 @@ public class CubeTapListener implements Listener {
       system.queueSound(cube.getLocation());
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&bCubeTapListener &ftook &e" + ms + "ms");
     }
   }
 }

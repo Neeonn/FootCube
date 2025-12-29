@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 @SuppressWarnings("unused")
 public class PhysicsFormulae {
@@ -48,7 +49,7 @@ public class PhysicsFormulae {
       return Math.sqrt(dx * dx + dy * dy + dz * dz);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsFormulae#getDistance() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getDistance() &ftook &e" + ms + "ms");
     }
   }
 
@@ -71,7 +72,7 @@ public class PhysicsFormulae {
       return dx * dx + dy * dy + dz * dz;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsFormulae#getDistanceSquared() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getDistanceSquared() &ftook &e" + ms + "ms");
     }
   }
 
@@ -99,7 +100,7 @@ public class PhysicsFormulae {
       return Math.abs(slopeA * playerX - playerZ + interceptB) / Math.sqrt(slopeA * slopeA + 1);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistance() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistance() &ftook &e" + ms + "ms");
     }
   }
 
@@ -131,7 +132,7 @@ public class PhysicsFormulae {
       return (numerator * numerator) / (slopeA * slopeA + 1);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistanceSquared() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistanceSquared() &ftook &e" + ms + "ms");
     }
   }
 
@@ -148,7 +149,7 @@ public class PhysicsFormulae {
       return minRandomKP + RANDOM.nextDouble() * (MAX_KP - minRandomKP);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsFormulae#capKickPower() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#capKickPower() &ftook &e" + ms + "ms");
     }
   }
 }

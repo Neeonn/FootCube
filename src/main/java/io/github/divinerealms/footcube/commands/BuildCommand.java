@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static io.github.divinerealms.footcube.configs.Lang.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD_OTHER;
 
@@ -36,32 +37,32 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     if (args.length == 0) {
-      if (!(sender instanceof Player)) { logger.send(sender, Lang.INGAME_ONLY.replace(null)); return true; }
-      if (!sender.hasPermission(PERM_BUILD)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_BUILD, label})); return true; }
+      if (!(sender instanceof Player)) { logger.send(sender, INGAME_ONLY); return true; }
+      if (!sender.hasPermission(PERM_BUILD)) { logger.send(sender, NO_PERM, PERM_BUILD, label); return true; }
 
       Player player = (Player) sender;
       PlayerSettings settings = fcManager.getPlayerSettings(player);
 
-      if (matchManager.getMatch(player).isPresent()) { logger.send(sender, Lang.COMMAND_DISABLER_CANT_USE.replace(null)); return true; }
+      if (matchManager.getMatch(player).isPresent()) { logger.send(sender, COMMAND_DISABLER_CANT_USE); return true; }
 
       settings.toggleBuild();
-      String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
-      logger.send(player, Lang.SET_BUILD_MODE.replace(new String[]{status}));
+      String status = String.valueOf(settings.isBuildEnabled() ? Lang.ON : Lang.OFF);
+      logger.send(player, SET_BUILD_MODE, status);
       return true;
     }
 
-    if (!sender.hasPermission(PERM_BUILD_OTHER)) { logger.send(sender, Lang.NO_PERM.replace(new String[]{PERM_BUILD, label + " <player>"})); return true; }
+    if (!sender.hasPermission(PERM_BUILD_OTHER)) { logger.send(sender, NO_PERM, PERM_BUILD, label + " <player>"); return true; }
 
     Player target = Bukkit.getPlayerExact(args[0]);
-    if (target == null) { logger.send(sender, Lang.PLAYER_NOT_FOUND.replace(null)); return true; }
+    if (target == null) { logger.send(sender, PLAYER_NOT_FOUND); return true; }
 
     PlayerSettings settings = fcManager.getPlayerSettings(target);
-    if (matchManager.getMatch(target).isPresent()) { logger.send(sender, Lang.TEAM_ALREADY_IN_GAME.replace(new String[]{target.getDisplayName()})); return true; }
+    if (matchManager.getMatch(target).isPresent()) { logger.send(sender, TEAM_ALREADY_IN_GAME, target.getDisplayName()); return true; }
 
     settings.toggleBuild();
-    String status = settings.isBuildEnabled() ? Lang.ON.replace(null) : Lang.OFF.replace(null);
-    logger.send(target, Lang.SET_BUILD_MODE.replace(new String[]{status}));
-    logger.send(sender, Lang.SET_BUILD_MODE_OTHER.replace(new String[]{target.getDisplayName(), status}));
+    String status = String.valueOf(settings.isBuildEnabled() ? Lang.ON : Lang.OFF);
+    logger.send(target, SET_BUILD_MODE, status);
+    logger.send(sender, SET_BUILD_MODE_OTHER, target.getDisplayName(), status);
 
     if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;

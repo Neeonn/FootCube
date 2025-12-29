@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.matchmaking.team;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
@@ -9,6 +8,8 @@ import lombok.Getter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
 
 @Getter
 public class TeamManager {
@@ -84,7 +85,7 @@ public class TeamManager {
     List<Player> members = team.getMembers();
     if (members != null) {
       for (Player player : members) {
-        if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+        if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, TEAM_DISBANDED, leaver.getName());
       }
     }
 
@@ -96,7 +97,7 @@ public class TeamManager {
     if (team == null) return;
 
     for (Player player : team.getMembers()) {
-      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, Lang.TEAM_DISBANDED.replace(new String[]{leaver.getName()}));
+      if (player != null && player.isOnline() && !player.equals(leaver)) logger.send(player, TEAM_DISBANDED, leaver.getName());
     }
 
     disbandTeam(team);

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.CLEANUP_LAST_TOUCHES_INTERVAL;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.RISE_COOLDOWN;
 
 /**
  * Maintenance task to be run at a lower frequency (e.g., every 5-10 seconds).
@@ -74,7 +75,11 @@ public class TouchCleanupTask extends BaseTask {
     Map<UUID, Long> raised = data.getRaised();
     if (raised.isEmpty()) return;
     cubesToRemove.clear();
-    for (Map.Entry<UUID, Long> entry : raised.entrySet()) if ((now - entry.getValue()) > 1000L) cubesToRemove.add(entry.getKey());
+    for (Map.Entry<UUID, Long> entry : raised.entrySet()) {
+      if ((now - entry.getValue()) > RISE_COOLDOWN) {
+        cubesToRemove.add(entry.getKey());
+      }
+    }
     for (UUID cubeId : cubesToRemove) raised.remove(cubeId);
   }
 }

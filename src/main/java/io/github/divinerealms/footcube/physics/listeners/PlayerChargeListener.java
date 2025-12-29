@@ -12,6 +12,7 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import java.util.UUID;
 
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class PlayerChargeListener implements Listener {
   private final Logger logger;
@@ -52,7 +53,7 @@ public class PlayerChargeListener implements Listener {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPlayerChargeListener &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPlayerChargeListener &ftook &e" + ms + "ms");
     }
   }
 }

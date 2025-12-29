@@ -25,7 +25,6 @@ public class FootCube extends JavaPlugin {
 
     try {
       fcManager.setDisabling(true);
-      fcManager.getCubeCleaner().clearCubes();
       fcManager.getPhysicsSystem().removeCubes();
       fcManager.getTaskManager().stopAll();
       if (fcManager.getMatchManager() != null) fcManager.getMatchManager().forceLeaveAllPlayers();

@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.physics.utilities;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.actions.CubeSoundAction;
@@ -27,8 +26,10 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.logging.Level;
 
+import static io.github.divinerealms.footcube.configs.Lang.*;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_COOLDOWN;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
 
 public class PhysicsSystem {
   private final PhysicsData data;
@@ -159,7 +160,7 @@ public class PhysicsSystem {
       return new PlayerKickResult(power, charge, baseKickPower, finalKickPower, isCharged);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#calculateKickPower() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#calculateKickPower() &ftook &e" + ms + "ms");
     }
   }
 
@@ -179,7 +180,7 @@ public class PhysicsSystem {
       }
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#removeCubes() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removeCubes() &ftook &e" + ms + "ms");
     }
   }
 
@@ -212,7 +213,7 @@ public class PhysicsSystem {
       return cube;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#spawnCube() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#spawnCube() &ftook &e" + ms + "ms");
     }
   }
 
@@ -265,7 +266,7 @@ public class PhysicsSystem {
       data.getCubeHits().remove(uuid);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#removePlayer() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#removePlayer() &ftook &e" + ms + "ms");
     }
   }
 
@@ -298,17 +299,18 @@ public class PhysicsSystem {
       String timeFormatted = String.format("%.1f", timeRemainingMillis / 1000.0);
       String color = timeRemainingMillis > 50 ? "&c" : "&a";
 
-      logger.sendActionBar(player, (isChargedHit
-          ? Lang.HITDEBUG_PLAYER_CHARGED.replace(new String[]{
-          String.format("%.2f", finalKickPower),
-          String.format("%.2f", kickResult.getPower()),
-          String.format("%.2f", kickResult.getCharge())
-      })
-          : Lang.HITDEBUG_PLAYER_REGULAR.replace(new String[]{String.format("%.2f", finalKickPower)})
-      ) + Lang.HITDEBUG_PLAYER_COOLDOWN.replace(new String[]{color, timeFormatted}));
+      logger.sendActionBar(player, HITDEBUG_PLAYER_WHOLE,
+          isChargedHit
+              ? HITDEBUG_PLAYER_CHARGED.replace(
+                  String.format("%.2f", finalKickPower),
+                  String.format("%.2f", kickResult.getPower()),
+                  String.format("%.2f", kickResult.getCharge())
+              )
+              : HITDEBUG_PLAYER_REGULAR.replace(String.format("%.2f", finalKickPower)),
+          HITDEBUG_PLAYER_COOLDOWN.replace(color, timeFormatted));
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#showHits() &ftook &e" + ms + "ms");
     }
   }
 
@@ -328,14 +330,15 @@ public class PhysicsSystem {
     try {
       String coloredKickPower = result.getFinalKickPower() != result.getBaseKickPower() ? "&c" : "&a";
       return result.isChargedHit()
-          ? Lang.HITDEBUG_CHARGED.replace(new String[]{
-          player.getDisplayName(), coloredKickPower + String.format("%.2f", result.getFinalKickPower()),
-          String.format("%.2f", result.getBaseKickPower()), String.format("%.2f", result.getPower()), String.format("%.2f", result.getCharge())
-      })
-          : Lang.HITDEBUG_REGULAR.replace(new String[]{player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())});
+          ? HITDEBUG_CHARGED.replace(
+              player.getDisplayName(), coloredKickPower + String.format("%.2f", result.getFinalKickPower()),
+              String.format("%.2f", result.getBaseKickPower()), String.format("%.2f", result.getPower()),
+              String.format("%.2f", result.getCharge()))
+          : HITDEBUG_REGULAR.replace(player.getDisplayName(), String.format("%.2f", result.getFinalKickPower())
+      );
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#onHitDebug() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#onHitDebug() &ftook &e" + ms + "ms");
     }
   }
 
@@ -354,13 +357,13 @@ public class PhysicsSystem {
       long now = System.currentTimeMillis(), last = data.getButtonCooldowns().getOrDefault(playerId, 0L), diff = now - last;
       if (diff < SPAWN_COOLDOWN_MS) {
         long remainingMs = SPAWN_COOLDOWN_MS - diff, seconds = remainingMs / 1000;
-        logger.send(player, Lang.BLOCK_INTERACT_COOLDOWN.replace(new String[]{Utilities.formatTime(seconds)}));
+        logger.send(player, BLOCK_INTERACT_COOLDOWN, Utilities.formatTime(seconds));
         return true;
       }
       return false;
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
-      if (ms > DEBUG_ON_MS) logger.send("group.fcfa", "{prefix-admin}&dPhysicsSystem#cantSpawnYet() &ftook &e" + ms + "ms");
+      if (ms > DEBUG_ON_MS) logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsSystem#cantSpawnYet() &ftook &e" + ms + "ms");
     }
   }
 

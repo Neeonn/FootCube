@@ -1,12 +1,14 @@
 package io.github.divinerealms.footcube.physics;
 
 import lombok.Getter;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 @Getter
 public class PhysicsConstants {
   // --- Debug & Monitoring ---
   public static final int DEBUG_ON_MS = 5;
+  public static final long TESTING_INTERVAL = 20 * 5;
 
   // --- Task Intervals (Ticks) ---
   public static final long PHYSICS_TASK_INTERVAL_TICKS = 1;
@@ -19,7 +21,7 @@ public class PhysicsConstants {
   // --- Timeouts & Cooldowns (Milliseconds) ---
   public static final long REGULAR_KICK_COOLDOWN = 150;
   public static final long CHARGED_KICK_COOLDOWN = 500;
-  public static final long RISE_COOLDOWN = 500;
+  public static final long RISE_COOLDOWN = 1000;
   public static final long AFK_THRESHOLD = 60_000;
   public static final long SPAWN_COOLDOWN_MS = 3_000L;
 

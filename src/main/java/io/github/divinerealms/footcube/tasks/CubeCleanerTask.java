@@ -1,8 +1,9 @@
 package io.github.divinerealms.footcube.tasks;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.utils.CubeCleaner;
+
+import static io.github.divinerealms.footcube.configs.Lang.CLEARED_CUBES;
 
 /**
  * Task that periodically cleans up cubes in practice areas.
@@ -17,22 +18,22 @@ public class CubeCleanerTask extends BaseTask {
   }
 
   @Override
+  protected void kaboom() {
+    cubeCleaner.clearCubes();
+    if (!cubeCleaner.isEmpty()) {
+      logger.broadcast(CLEARED_CUBES,
+          String.valueOf(cubeCleaner.getAmount())
+      );
+    }
+  }
+
+  @Override
   public void start() {
-    if (!cubeCleaner.practiceAreasSet()) {
-      logger.info("&eCubeCleaner task not started - no practice areas configured!");
+    if (cubeCleaner.noPracticeAreasSet()) {
+      logger.info("&e! &dCubeCleaner &etask not started - no practice areas configured!");
       return;
     }
 
     super.start();
-  }
-
-  @Override
-  protected void kaboom() {
-    cubeCleaner.clearCubes();
-    if (!cubeCleaner.isEmpty()) {
-      logger.broadcast(Lang.CLEARED_CUBES.replace(
-          new String[]{ String.valueOf(cubeCleaner.getAmount()) }
-      ));
-    }
   }
 }

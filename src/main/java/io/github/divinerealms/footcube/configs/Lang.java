@@ -35,9 +35,11 @@ public enum Lang {
 
   FORCE_LEAVE("force-leave", "{prefix-admin}Izbačen igrač {0}&f iz svih mečeva/lobbya."),
 
+  HITDEBUG_PLAYER_WHOLE("debug.hits-player.whole", "{0}{1}"),
   HITDEBUG_PLAYER_CHARGED("debug.hits-player.charged", "&8[&dCharged&8] &a{0}KP &8[&e&o{1}PW&8, &d&o{2}CH&8]"),
   HITDEBUG_PLAYER_REGULAR("debug.hits-player.regular", "&8[&aRegular&8] &a{0}KP"),
   HITDEBUG_PLAYER_COOLDOWN("debug.hits-player.cooldown", "&8 [&fCD: {0}{1}ms&8]"),
+  HITDEBUG_WHOLE("debug.hits.whole", "{0}"),
   HITDEBUG_CHARGED("debug.hits.charged", "{prefix}&dCharged &8| {0} &8| {1}KP &8| &e{2}PW&7, &d{3}CH"),
   HITDEBUG_REGULAR("debug.hits.regular", "{prefix}&aRegular &8| {0} &8| &a{1}KP"),
   HITDEBUG_VELOCITY_CAP("debug.hits.velocity-cap", "{prefix}&cVelocity Cap Triggered! &7Speed: &e{0} &7-> &a{1} &7| Hitter: &f{2}"),
@@ -107,9 +109,11 @@ public enum Lang {
 
   BALANCE("balance", "{prefix}&aYou currently have #{0}"),
 
-  TAKEPLACE_ANNOUNCEMENT("takeplace.announcement", "{prefix}&6ANNOUNCEMENT: &aA player left a {0}v{0} match during discussion phase"),
-  TAKEPLACE_ANNOUNCEMENT_2("takeplace.announcement-2", "{prefix}&6ANNOUNCEMENT: &aA player left a {0}v{0} match, he was running {1} with {2} seconds to play"),
-  TAKEPLACE_ANNOUNCEMENT_3("takeplace.announcement-3", "&aUse &b/fc takeplace &ato take his place"),
+  TAKE_PLACE_ANNOUNCEMENT_LOBBY("match.tkp-announcement.lobby", "{prefix}&6&lIZMENA: &aNeko je izašao iz {0}&a tokom faze diskusije."),
+  TAKE_PLACE_ANNOUNCEMENT_MATCH("match.tkp-announcement.match", String.join(System.lineSeparator(),
+      "{prefix}&6&lIZMENA: &aNeko je izašao iz {0}&a!",
+      "&aRezultat: {1} &f{2} - {3} {4} &7(preostalo vreme: &e{5}&7)",
+      "&aKucajte &e/tkp <id> &ada zauzmete mesto!")),
 
   CUBE_SPAWN("cube.spawn", "&aYou spawned a cube"),
   CUBE_CLEAR("cube.clear", "&aCleared nearest cube"),
@@ -144,6 +148,7 @@ public enum Lang {
   MATCH_SCORE_STATS("match.score-stats", String.join(System.lineSeparator(), "&aIt is now {0}-{1} Red-Blue", "&aThe match will continue in 10 seconds")),
   MATCH_SCORE_OWN_GOAL_ANNOUNCE("match.score-own-goal-announce", "{prefix}&6&lOWN GOAL! &a{0} scored a goal for the opposing team"),
   LEAVE_QUEUE_ACTIONBAR("match.leave-queue-actionbar", "&cIzašli ste iz {0} queue..."),
+  PLAYER_PLACEHOLDERS("match.player-placeholders", "%luckperms_prefix%%player_name%"),
 
   MATCH_STARTING_TITLE("match.starting-title", "&a&lGL HF!"),
   MATCH_STARTING_SUBTITLE("match.starting-subtitle", "&2Meč je počeo!"),
@@ -305,19 +310,27 @@ public enum Lang {
     return this.def;
   }
 
-  public String replace(String[] args) {
-    String value = ChatColor.translateAlternateColorCodes('&', LANG.getString(this.path, this.def));
-    if (args == null) {
-      return value;
-    } else if (args.length == 0) {
-      return value;
-    } else {
-      for (int i = 0; i < args.length; ++i) {
-        value = value.replace("{" + i + "}", args[i]);
-      }
+  public String replace(String... args) {
+    if (LANG == null) return ChatColor.translateAlternateColorCodes('&', def).trim();
 
-      value = ChatColor.translateAlternateColorCodes('&', value);
-      return value;
+    String value = LANG.getString(this.path, this.def);
+
+    if (value.contains("{prefix}")) value = value.replace("{prefix}", PREFIX.toString());
+    if (value.contains("{prefix-admin}")) value = value.replace("{prefix-admin}", PREFIX_ADMIN.toString());
+
+    if (args != null && args.length > 0) {
+      for (int i = 0; i < args.length; i++) {
+        if (args[i] != null) {
+          value = value.replace("{" + i + "}", args[i]);
+        }
+      }
     }
+
+    return ChatColor.translateAlternateColorCodes('&', value).trim();
+  }
+
+  @Override
+  public String toString() {
+    return this.replace();
   }
 }

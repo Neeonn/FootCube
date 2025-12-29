@@ -1,6 +1,5 @@
 package io.github.divinerealms.footcube.commands;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
@@ -12,6 +11,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+
+import static io.github.divinerealms.footcube.configs.Lang.*;
 
 public class MatchesCommand implements CommandExecutor {
   private final FCManager fcManager;
@@ -30,10 +31,10 @@ public class MatchesCommand implements CommandExecutor {
     List<String> output = MatchUtils.getFormattedMatches(matchManager.getData().getMatches());
 
     if (!output.isEmpty()) {
-      logger.send(sender, Lang.MATCHES_LIST_HEADER.replace(null));
+      logger.send(sender, MATCHES_LIST_HEADER);
       output.forEach(msg -> logger.send(sender, msg));
-      logger.send(sender, Lang.MATCHES_LIST_FOOTER.replace(null));
-    } else logger.send(sender, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
+      logger.send(sender, MATCHES_LIST_FOOTER);
+    } else logger.send(sender, MATCHES_LIST_NO_MATCHES);
 
     if (sender instanceof Player) system.recordPlayerAction((Player) sender);
     return true;

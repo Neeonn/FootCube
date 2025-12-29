@@ -1,9 +1,7 @@
 package io.github.divinerealms.footcube.listeners;
 
-import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
-import io.github.divinerealms.footcube.matchmaking.util.MatchConstants;
 import io.github.divinerealms.footcube.matchmaking.util.MatchUtils;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
@@ -31,6 +29,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import static io.github.divinerealms.footcube.configs.Lang.*;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
 
 public class SignManipulation implements Listener {
@@ -152,8 +152,8 @@ public class SignManipulation implements Listener {
           if (slimeCount < 10) {
             system.spawnCube(playerLocation.add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
-            logger.send(player, Lang.CUBE_SPAWN.replace(null));
-          } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
+            logger.send(player, CUBE_SPAWN);
+          } else logger.send(player, ALREADY_ENOUGH_CUBES);
           break;
 
         case RED:
@@ -168,8 +168,8 @@ public class SignManipulation implements Listener {
             }
           }
 
-          if (removed > 0) logger.send(player, Lang.CLEARED_CUBES.replace(new String[]{String.valueOf(removed)}));
-          else logger.send(player, Lang.CUBE_NO_CUBES.replace(null));
+          if (removed > 0) logger.send(player, CLEARED_CUBES, String.valueOf(removed));
+          else logger.send(player, CUBE_NO_CUBES);
           break;
 
         default: break;
@@ -183,29 +183,19 @@ public class SignManipulation implements Listener {
       String line1 = ChatColor.stripColor(sign.getLine(1));
       switch (line1.toLowerCase()) {
         case "join":
-          if (!player.hasPermission(PERM_PLAY)) { logger.send(player, Lang.NO_PERM.replace(new String[]{PERM_PLAY, "fc join"})); return; }
-          if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, Lang.FC_DISABLED.replace(null)); return; }
+          if (!player.hasPermission(PERM_PLAY)) { logger.send(player, NO_PERM, PERM_PLAY, "fc join"); return; }
+          if (!matchManager.getData().isMatchesEnabled()) { logger.send(player, FC_DISABLED); return; }
           if (matchManager.getBanManager().isBanned(player)) return;
           if (matchManager.getBanManager().isBanned(player)) return;
-          if (matchManager.getMatch(player).isPresent()) { logger.send(player, Lang.JOIN_ALREADYINGAME.replace(null)); return; }
+          if (matchManager.getMatch(player).isPresent()) { logger.send(player, JOIN_ALREADYINGAME); return; }
 
           String arenaType = ChatColor.stripColor(sign.getLine(2)).toLowerCase();
           int type;
           switch (arenaType) {
-            case "2v2":
-              type = MatchConstants.TWO_V_TWO;
-              break;
-
-            case "3v3":
-              type = MatchConstants.THREE_V_THREE;
-              break;
-
-            case "4v4":
-              type = MatchConstants.FOUR_V_FOUR;
-              break;
-
-            default:
-              return;
+            case "2v2": type = TWO_V_TWO; break;
+            case "3v3": type = THREE_V_THREE; break;
+            case "4v4": type = FOUR_V_FOUR; break;
+            default: return;
           }
 
           matchManager.joinQueue(player, type);
@@ -229,12 +219,12 @@ public class SignManipulation implements Listener {
           if (slimeCount < 10) {
             system.spawnCube(player.getLocation().add(new Vector(0.5, 0.5, 0.5)));
             system.setButtonCooldown(player);
-            logger.send(player, Lang.CUBE_SPAWN.replace(null));
-          } else logger.send(player, Lang.ALREADY_ENOUGH_CUBES.replace(null));
+            logger.send(player, CUBE_SPAWN);
+          } else logger.send(player, ALREADY_ENOUGH_CUBES);
           break;
 
         case "balance":
-          logger.send(player, Lang.BALANCE.replace(new String[]{String.valueOf(fcManager.getEconomy().getBalance(player))}));
+          logger.send(player, BALANCE, String.valueOf(fcManager.getEconomy().getBalance(player)));
           break;
 
         case "highscores":
@@ -244,10 +234,10 @@ public class SignManipulation implements Listener {
         case "matches":
           List<String> matches = MatchUtils.getFormattedMatches(matchManager.getData().getMatches());
           if (!matches.isEmpty()) {
-            logger.send(player, Lang.MATCHES_LIST_HEADER.replace(null));
+            logger.send(player, MATCHES_LIST_HEADER);
             matches.forEach(msg -> logger.send(player, msg));
-            logger.send(player, Lang.MATCHES_LIST_FOOTER.replace(null));
-          } else logger.send(player, Lang.MATCHES_LIST_NO_MATCHES.replace(null));
+            logger.send(player, MATCHES_LIST_FOOTER);
+          } else logger.send(player, MATCHES_LIST_NO_MATCHES);
           break;
       }
     }

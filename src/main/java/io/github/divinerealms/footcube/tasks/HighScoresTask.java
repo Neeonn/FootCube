@@ -20,6 +20,12 @@ public class HighScoresTask extends BaseTask {
 
   @Override
   protected void kaboom() {
+    if (highScoreManager.isUpdating()) {
+      int batchesToProcess = highScoreManager.isHasInitialData() ? 20 : 50;
+      for (int i = 0; i < batchesToProcess && !highScoreManager.isUpdateComplete(); i++) processBatch();
+      return;
+    }
+
     startUpdateCycle();
   }
 

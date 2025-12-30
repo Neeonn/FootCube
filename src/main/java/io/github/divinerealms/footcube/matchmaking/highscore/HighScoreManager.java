@@ -209,12 +209,17 @@ public class HighScoreManager {
         continue;
       }
 
-      nameFutures.add(insertTop3(bestRatings, topSkillNames, skillLevel, uuid, playerName));
-      nameFutures.add(insertTop3(mostGoals, topGoalsNames, goals, uuid, playerName));
-      nameFutures.add(insertTop3(mostAssists, topAssistsNames, assists, uuid, playerName));
-      nameFutures.add(insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, uuid, playerName));
-      nameFutures.add(insertTop3(mostWins, topWinsNames, wins, uuid, playerName));
-      nameFutures.add(insertTop3(longestStreak, topStreakNames, bestWinStreak, uuid, playerName));
+      CompletableFuture<Void> playerFuture = utilities.getPrefixedName(uuid, playerName)
+              .thenAccept(prefixedName -> {
+                insertTop3(bestRatings, topSkillNames, skillLevel, prefixedName);
+                insertTop3(mostGoals, topGoalsNames, goals, prefixedName);
+                insertTop3(mostAssists, topAssistsNames, assists, prefixedName);
+                insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, prefixedName);
+                insertTop3(mostWins, topWinsNames, wins, prefixedName);
+                insertTop3(longestStreak, topStreakNames, bestWinStreak, prefixedName);
+              });
+
+      nameFutures.add(playerFuture);
     }
 
     CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0])).join();
@@ -224,20 +229,13 @@ public class HighScoreManager {
     hasInitialData = true;
   }
 
-  private CompletableFuture<Void> insertTop3(double[] array, String[] names, double value, UUID uuid,
-                                             String playerName) {
+  private void insertTop3(double[] array, String[] names, double value, String prefixedName) {
     value = (double) Math.round(value * 100) / 100;
-    double finalValue = value;
-
-    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
-        insertIntoArray(array, names, finalValue, prefixedName)
-    );
+    insertIntoArray(array, names, value, prefixedName);
   }
 
-  private CompletableFuture<Void> insertTop3(int[] array, String[] names, int value, UUID uuid, String playerName) {
-    return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
-        insertIntoArray(array, names, value, prefixedName)
-    );
+  private void insertTop3(int[] array, String[] names, int value, String prefixedName) {
+    insertIntoArray(array, names, value, prefixedName);
   }
 
   private void insertIntoArray(double[] array, String[] names, double value, String prefixedName) {

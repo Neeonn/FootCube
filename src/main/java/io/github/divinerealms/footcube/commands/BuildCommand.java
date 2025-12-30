@@ -1,10 +1,25 @@
 package io.github.divinerealms.footcube.commands;
 
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_CANT_USE;
+import static io.github.divinerealms.footcube.configs.Lang.INGAME_ONLY;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.configs.Lang.OFF;
+import static io.github.divinerealms.footcube.configs.Lang.ON;
+import static io.github.divinerealms.footcube.configs.Lang.PLAYER_NOT_FOUND;
+import static io.github.divinerealms.footcube.configs.Lang.SET_BUILD_MODE;
+import static io.github.divinerealms.footcube.configs.Lang.SET_BUILD_MODE_OTHER;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ALREADY_IN_GAME;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD_OTHER;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -12,15 +27,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_BUILD_OTHER;
-
 public class BuildCommand implements CommandExecutor, TabCompleter {
+
   private final FCManager fcManager;
   private final MatchManager matchManager;
   private final Logger logger;
@@ -56,8 +64,8 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
 
       settings.toggleBuild();
       logger.send(player, SET_BUILD_MODE, settings.isBuildEnabled()
-                                          ? ON.toString()
-                                          : OFF.toString());
+          ? ON.toString()
+          : OFF.toString());
       return true;
     }
 
@@ -80,8 +88,8 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
 
     settings.toggleBuild();
     String status = settings.isBuildEnabled()
-                    ? ON.toString()
-                    : OFF.toString();
+        ? ON.toString()
+        : OFF.toString();
     logger.send(target, SET_BUILD_MODE, status);
     logger.send(sender, SET_BUILD_MODE_OTHER, target.getDisplayName(), status);
 
@@ -92,7 +100,8 @@ public class BuildCommand implements CommandExecutor, TabCompleter {
   }
 
   @Override
-  public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+  public List<String> onTabComplete(CommandSender sender, Command command, String alias,
+      String[] args) {
     if (!sender.hasPermission(PERM_BUILD_OTHER)) {
       return Collections.emptyList();
     }

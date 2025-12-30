@@ -1,6 +1,7 @@
 package io.github.divinerealms.footcube.utils;
 
 public class Permissions {
+
   public static final String PERM_MAIN = "footcube";
   public static final String PERM_PLAY = PERM_MAIN + ".play";
   public static final String PERM_CUBE = PERM_MAIN + ".cube";

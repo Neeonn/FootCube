@@ -5,11 +5,16 @@ import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.listeners.ChunkCheckers;
 import io.github.divinerealms.footcube.listeners.PlayerEvents;
 import io.github.divinerealms.footcube.listeners.SignManipulation;
-import io.github.divinerealms.footcube.physics.listeners.*;
+import io.github.divinerealms.footcube.physics.listeners.CubeDamageListener;
+import io.github.divinerealms.footcube.physics.listeners.CubeKickListener;
+import io.github.divinerealms.footcube.physics.listeners.CubeTapListener;
+import io.github.divinerealms.footcube.physics.listeners.PlayerChargeListener;
+import io.github.divinerealms.footcube.physics.listeners.PlayerMovementListener;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 
 public class ListenerManager {
+
   private final FCManager fcManager;
   private final FootCube plugin;
   private final PluginManager pluginManager;

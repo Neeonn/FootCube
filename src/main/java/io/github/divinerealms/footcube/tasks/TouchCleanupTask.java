@@ -1,26 +1,26 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CLEANUP_LAST_TOUCHES_INTERVAL;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.RISE_COOLDOWN;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.CLEANUP_LAST_TOUCHES_INTERVAL;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.RISE_COOLDOWN;
-
 /**
  * Maintenance task to be run at a lower frequency (e.g., every 5-10 seconds).
  * <p>
- * Cleans up expired touch data and other non-critical cache structures to
- * keep memory usage lean without interrupting the primary physics calculations.
+ * Cleans up expired touch data and other non-critical cache structures to keep memory usage lean
+ * without interrupting the primary physics calculations.
  * </p>
  */
 public class TouchCleanupTask extends BaseTask {
+
   private final PhysicsData data;
 
   private final List<UUID> playersToRemove = new ArrayList<>();

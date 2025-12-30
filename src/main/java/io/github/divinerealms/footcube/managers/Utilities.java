@@ -2,6 +2,9 @@ package io.github.divinerealms.footcube.managers;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.cacheddata.CachedMetaData;
 import net.minecraft.server.v1_8_R3.EnumParticle;
@@ -11,11 +14,8 @@ import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-
 public class Utilities {
+
   private static Plugin plugin;
   private final FCManager fcManager;
   public LuckPerms luckPerms;
@@ -131,9 +131,9 @@ public class Utilities {
   }
 
   public static void sendParticle(Player player, EnumParticle particle,
-                                  double x, double y, double z,
-                                  float offsetX, float offsetY, float offsetZ,
-                                  float speed, int count) {
+      double x, double y, double z,
+      float offsetX, float offsetY, float offsetZ,
+      float speed, int count) {
     if (PlayerSettings.DISALLOWED_PARTICLES.contains(particle)) {
       return;
     }

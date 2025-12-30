@@ -1,14 +1,13 @@
 package io.github.divinerealms.footcube.physics;
 
-import lombok.Getter;
-
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.Getter;
 
 @Getter
 public class PhysicsConstants {
+
   // --- Debug & Monitoring ---
   public static final int DEBUG_ON_MS = 5;
-  public static final long TESTING_INTERVAL = 20 * 5;
 
   // --- Task Intervals (Ticks) ---
   public static final long PHYSICS_TASK_INTERVAL_TICKS = 1;
@@ -49,7 +48,6 @@ public class PhysicsConstants {
   public static final double AIR_DRAG_FACTOR = 0.98;
   public static final double CUBE_JUMP_RIGHT_CLICK = 0.7;
   public static final double KICK_VERTICAL_BOOST = 0.3;
-  public static final double RAISE_COOLDOWN_MS = 200;
 
   // --- Distance & Collision Thresholds ---
   public static final double HIT_RADIUS = 1.2;
@@ -83,11 +81,24 @@ public class PhysicsConstants {
   public static final double DISTANCE_PARTICLE_THRESHOLD_SQUARED =
       DISTANCE_PARTICLE_THRESHOLD * DISTANCE_PARTICLE_THRESHOLD;
   public static final double MAX_PARTICLE_DISTANCE = 160;
-  public static final double MAX_PARTICLE_DISTANCE_SQUARED = MAX_PARTICLE_DISTANCE * MAX_PARTICLE_DISTANCE;
+  public static final double MAX_PARTICLE_DISTANCE_SQUARED =
+      MAX_PARTICLE_DISTANCE * MAX_PARTICLE_DISTANCE;
   public static final double PARTICLE_Y_OFFSET = 0.25;
   public static final float GENERIC_PARTICLE_OFFSET = 0.01F;
   public static final float GENERIC_PARTICLE_SPEED = 0.1F;
   public static final int GENERIC_PARTICLE_COUNT = 10;
+
+  // --- Anticipatory Hop Effect Constants ---
+  public static final int HOP_CHECK_INTERVAL = 3;
+  public static final int HOP_IDLE_CHECK_INTERVAL = 15;
+  public static final double HOP_BLOCK_CHECK_OFFSET = 0.3;
+  public static final double HOP_MAX_GROUND_DISTANCE = 0.3;
+  public static final double HOP_MIN_GROUND_DISTANCE = -0.15;
+  public static final double HOP_SETTLED_VELOCITY_THRESHOLD = 0.18;
+  public static final double HOP_PLAYER_RANGE = 2;
+  public static final double HOP_FORCE_MULTIPLIER = 2.5;
+  public static final double HOP_MIN_BOUNCE_MULTIPLIER = 1.25;
+  public static final double HOP_IDLE_FORCE_MULTIPLIER = 0.4;
 
   // --- Utility ---
   public static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();

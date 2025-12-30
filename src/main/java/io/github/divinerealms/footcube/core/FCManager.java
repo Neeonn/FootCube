@@ -1,5 +1,8 @@
 package io.github.divinerealms.footcube.core;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
+
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.commands.AdminCommands;
 import io.github.divinerealms.footcube.commands.BuildCommand;
@@ -7,7 +10,11 @@ import io.github.divinerealms.footcube.commands.FCCommand;
 import io.github.divinerealms.footcube.commands.MatchesCommand;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
-import io.github.divinerealms.footcube.managers.*;
+import io.github.divinerealms.footcube.managers.ConfigManager;
+import io.github.divinerealms.footcube.managers.ListenerManager;
+import io.github.divinerealms.footcube.managers.PlayerDataManager;
+import io.github.divinerealms.footcube.managers.TaskManager;
+import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.arena.ArenaManager;
 import io.github.divinerealms.footcube.matchmaking.ban.BanManager;
@@ -19,7 +26,20 @@ import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsFormulae;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
-import io.github.divinerealms.footcube.utils.*;
+import io.github.divinerealms.footcube.utils.CubeCleaner;
+import io.github.divinerealms.footcube.utils.DisableCommands;
+import io.github.divinerealms.footcube.utils.FCPlaceholders;
+import io.github.divinerealms.footcube.utils.Logger;
+import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import lombok.Getter;
 import lombok.Setter;
 import me.neznamy.tab.api.TabAPI;
@@ -33,15 +53,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.scheduler.BukkitScheduler;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
-
 @Getter
 public class FCManager {
+
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   private static final String CONFIG_PARTICLES_BASE = "particles.";
@@ -98,7 +112,7 @@ public class FCManager {
     this.matchData = new MatchData();
     this.teamManager = new TeamManager(this);
     this.matchSystem = new MatchSystem(this);
-    this.banManager = new BanManager();
+    this.banManager = new BanManager(this);
     this.highscoreManager = new HighScoreManager(this);
     this.matchManager = new MatchManager(this);
 
@@ -196,20 +210,22 @@ public class FCManager {
   }
 
   private void setupDependencies() throws IllegalStateException {
-    RegisteredServiceProvider<LuckPerms> luckPermsRsp = plugin.getServer().getServicesManager().getRegistration(
-        LuckPerms.class);
+    RegisteredServiceProvider<LuckPerms> luckPermsRsp = plugin.getServer().getServicesManager()
+        .getRegistration(
+            LuckPerms.class);
     this.luckPerms = luckPermsRsp == null
-                     ? null
-                     : luckPermsRsp.getProvider();
+        ? null
+        : luckPermsRsp.getProvider();
     if (luckPerms == null) {
       throw new IllegalStateException("LuckPerms not found!");
     }
 
-    RegisteredServiceProvider<Economy> economyRsp = plugin.getServer().getServicesManager().getRegistration(
-        Economy.class);
+    RegisteredServiceProvider<Economy> economyRsp = plugin.getServer().getServicesManager()
+        .getRegistration(
+            Economy.class);
     this.economy = economyRsp == null
-                   ? null
-                   : economyRsp.getProvider();
+        ? null
+        : economyRsp.getProvider();
     if (economy == null) {
       throw new IllegalStateException("Vault not found!");
     }
@@ -283,19 +299,22 @@ public class FCManager {
       settings.setKickSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".enabled"));
     }
     if (playerData.has(CONFIG_SOUNDS_KICK_BASE + ".sound")) {
-      settings.setKickSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
+      settings.setKickSound(
+          Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_KICK_BASE + ".sound")));
     }
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".enabled")) {
       settings.setGoalSoundEnabled((Boolean) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".enabled"));
     }
     if (playerData.has(CONFIG_SOUNDS_GOAL_BASE + ".sound")) {
-      settings.setGoalSound(Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
+      settings.setGoalSound(
+          Sound.valueOf((String) playerData.get(CONFIG_SOUNDS_GOAL_BASE + ".sound")));
     }
     if (playerData.has(CONFIG_PARTICLES_BASE + ".enabled")) {
       settings.setParticlesEnabled((Boolean) playerData.get(CONFIG_PARTICLES_BASE + ".enabled"));
     }
     if (playerData.has("ban")) {
-      matchManager.getBanManager().getBannedPlayers().put(player.getUniqueId(), (Long) playerData.get("ban"));
+      matchManager.getBanManager().getBannedPlayers()
+          .put(player.getUniqueId(), (Long) playerData.get("ban"));
     }
 
     String goalCelebration = "default";
@@ -319,7 +338,8 @@ public class FCManager {
 
     String[] banner = new String[]{
         "&2┏┓┏┓" + "&8 -+-------------------------------------------+-",
-        "&2┣ ┃ " + "&7  Created by &b" + joiner + "&7, version &f" + plugin.getDescription().getVersion(),
+        "&2┣ ┃ " + "&7  Created by &b" + joiner + "&7, version &f" + plugin.getDescription()
+            .getVersion(),
         "&2┻ ┗┛" + "&8 -+-------------------------------------------+-"
     };
 
@@ -351,7 +371,8 @@ public class FCManager {
       cachedPrefixedNames.clear();
       cachedPlayers.clear();
     } catch (Exception exception) {
-      Bukkit.getLogger().log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);
+      Bukkit.getLogger()
+          .log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {

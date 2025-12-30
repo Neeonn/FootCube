@@ -1,5 +1,28 @@
 package io.github.divinerealms.footcube.matchmaking;
 
+import static io.github.divinerealms.footcube.configs.Lang.BLUE;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_ALREADYINGAME;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.LEAVE_NOT_INGAME;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHMAN_FORCE_END;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHMAN_FORCE_START;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_ALREADY_STARTED;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_TIED;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_TIED_CREDITS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_TIMES_UP;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_WINSTREAK_CREDITS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_WIN_CREDITS;
+import static io.github.divinerealms.footcube.configs.Lang.RED;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_FULL;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_INVALID_ID;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.TEAMCHAT_BLUE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAMCHAT_RED;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.clearPlayer;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.giveArmor;
+
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
@@ -13,22 +36,23 @@ import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Level;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.clearPlayer;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.giveArmor;
-
 @Getter
 public class MatchManager {
+
   private final FCManager fcManager;
   private final ArenaManager arenaManager;
   private final ScoreManager scoreboardManager;
@@ -58,8 +82,8 @@ public class MatchManager {
 
     Team team = teamManager.getTeam(player);
     List<Player> playersToQueue = (team != null)
-                                  ? new ArrayList<>(team.getMembers())
-                                  : Collections.singletonList(player);
+        ? new ArrayList<>(team.getMembers())
+        : Collections.singletonList(player);
     String matchTypeString = matchType + "v" + matchType;
 
     for (Player p : playersToQueue) {
@@ -74,7 +98,8 @@ public class MatchManager {
 
     Match existingLobby = null;
     for (Match match : data.getMatches()) {
-      if (match.getPhase() == MatchPhase.LOBBY && match.getArena() != null && match.getArena().getType() == matchType) {
+      if (match.getPhase() == MatchPhase.LOBBY && match.getArena() != null
+          && match.getArena().getType() == matchType) {
         int nullCount = 0;
         for (MatchPlayer mp : match.getPlayers()) {
           if (mp == null) {
@@ -111,7 +136,8 @@ public class MatchManager {
       }
       scoreboardManager.updateScoreboard(existingLobby);
     } else {
-      Queue<Player> queue = data.getPlayerQueues().computeIfAbsent(matchType, k -> new ConcurrentLinkedQueue<>());
+      Queue<Player> queue = data.getPlayerQueues()
+          .computeIfAbsent(matchType, k -> new ConcurrentLinkedQueue<>());
       for (Player p : playersToQueue) {
         if (p != null && p.isOnline()) {
           queue.add(p);
@@ -175,8 +201,8 @@ public class MatchManager {
     }
 
     int arenaSize = (targetMatch.getArena() != null)
-                    ? targetMatch.getArena().getType()
-                    : 1;
+        ? targetMatch.getArena().getType()
+        : 1;
     int requiredPlayers = arenaSize * 2;
 
     List<MatchPlayer> finalPlayerLineup = new ArrayList<>();
@@ -225,8 +251,8 @@ public class MatchManager {
       MatchPlayer matchPlayer = targetMatch.getPlayers().get(i);
       if (matchPlayer != null) {
         matchPlayer.setTeamColor(i < arenaSize
-                                 ? TeamColor.RED
-                                 : TeamColor.BLUE);
+            ? TeamColor.RED
+            : TeamColor.BLUE);
       }
     }
 
@@ -270,7 +296,8 @@ public class MatchManager {
     getMatch(player).ifPresent(match -> {
       if (match.getPlayers() == null) {
         if (match.getPhase() != MatchPhase.LOBBY) {
-          Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml").get("lobby");
+          Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml")
+              .get("lobby");
           if (lobby != null) {
             player.teleport(lobby);
           }
@@ -283,7 +310,8 @@ public class MatchManager {
       int playerIndex = -1;
       for (int i = 0; i < match.getPlayers().size(); i++) {
         MatchPlayer matchPlayer = match.getPlayers().get(i);
-        if (matchPlayer != null && matchPlayer.getPlayer() != null && matchPlayer.getPlayer().equals(player)) {
+        if (matchPlayer != null && matchPlayer.getPlayer() != null && matchPlayer.getPlayer()
+            .equals(player)) {
           playerIndex = i;
           break;
         }
@@ -311,7 +339,8 @@ public class MatchManager {
       }
 
       if (match.getPhase() != MatchPhase.LOBBY) {
-        Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml").get("lobby");
+        Location lobby = (Location) fcManager.getConfigManager().getConfig("config.yml")
+            .get("lobby");
         if (lobby != null) {
           player.teleport(lobby);
         }
@@ -364,8 +393,8 @@ public class MatchManager {
     }
 
     TeamColor teamToJoin = (redTeamCount <= blueTeamCount)
-                           ? TeamColor.RED
-                           : TeamColor.BLUE;
+        ? TeamColor.RED
+        : TeamColor.BLUE;
     int openSlotIndex = -1;
     if (players != null) {
       for (int i = 0; i < players.size(); i++) {
@@ -426,8 +455,8 @@ public class MatchManager {
     }
 
     String winningTeam = winner == TeamColor.RED
-                         ? RED.toString()
-                         : BLUE.toString();
+        ? RED.toString()
+        : BLUE.toString();
     boolean shouldCount = match.getArena().getType() != TWO_V_TWO;
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
@@ -515,7 +544,8 @@ public class MatchManager {
       try {
         system.processQueues();
       } catch (Exception exception) {
-        Bukkit.getLogger().log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
+        Bukkit.getLogger()
+            .log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
       }
       return;
     }
@@ -529,9 +559,10 @@ public class MatchManager {
         system.updateMatch(match);
       } catch (Exception exception) {
         String arenaId = (match.getArena() != null)
-                         ? String.valueOf(match.getArena().getId())
-                         : "unknown";
-        Bukkit.getLogger().log(Level.SEVERE, "Error updating match (arena=" + arenaId + "): " + exception.getMessage(),
+            ? String.valueOf(match.getArena().getId())
+            : "unknown";
+        Bukkit.getLogger().log(Level.SEVERE,
+            "Error updating match (arena=" + arenaId + "): " + exception.getMessage(),
             exception);
       }
     }
@@ -539,7 +570,8 @@ public class MatchManager {
     try {
       system.processQueues();
     } catch (Exception exception) {
-      Bukkit.getLogger().log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
+      Bukkit.getLogger()
+          .log(Level.SEVERE, "Error processing queues: " + exception.getMessage(), exception);
     }
   }
 
@@ -608,8 +640,8 @@ public class MatchManager {
       }
       List<MatchPlayer> players = match.getPlayers();
       total += (players == null)
-               ? 0
-               : players.size();
+          ? 0
+          : players.size();
     }
     return total;
   }
@@ -712,7 +744,8 @@ public class MatchManager {
           }
           clearPlayer(p);
           scoreboardManager.removeScoreboard(p);
-          logger.send(p, MATCHMAN_FORCE_END, match.getArena().getType() + "v" + match.getArena().getType());
+          logger.send(p, MATCHMAN_FORCE_END,
+              match.getArena().getType() + "v" + match.getArena().getType());
         }
       }
 
@@ -781,9 +814,9 @@ public class MatchManager {
     );
 
     String formattedMessage = (teamColor == TeamColor.RED
-                               ? TEAMCHAT_RED.replace(prefixedName)
-                               : TEAMCHAT_BLUE.replace(prefixedName)
-                              ) + message;
+        ? TEAMCHAT_RED.replace(prefixedName)
+        : TEAMCHAT_BLUE.replace(prefixedName)
+    ) + message;
 
     List<MatchPlayer> players = match.getPlayers();
     if (players == null) {

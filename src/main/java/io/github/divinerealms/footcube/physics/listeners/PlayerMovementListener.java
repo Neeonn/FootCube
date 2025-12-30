@@ -1,22 +1,22 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.PLAYER_HEAD_LEVEL;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
-import java.util.UUID;
-
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.PLAYER_HEAD_LEVEL;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
-
 public class PlayerMovementListener implements Listener {
+
   private final PhysicsData data;
   private final PhysicsSystem system;
   private final Logger logger;

@@ -1,19 +1,19 @@
 package io.github.divinerealms.footcube.utils;
 
+import static io.github.divinerealms.footcube.configs.Lang.PRACTICE_AREAS_EMPTY;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Slime;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static io.github.divinerealms.footcube.configs.Lang.PRACTICE_AREAS_EMPTY;
-
 public class CubeCleaner {
+
   private final FileConfiguration practice;
   private final PhysicsData physicsData;
 
@@ -109,6 +109,7 @@ public class CubeCleaner {
   }
 
   private static class PracticeArea {
+
     private final Location center;
     private final double radiusSquared;
 

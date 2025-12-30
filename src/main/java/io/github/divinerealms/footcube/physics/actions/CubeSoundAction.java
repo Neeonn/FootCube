@@ -9,12 +9,13 @@ import org.bukkit.entity.Player;
 /**
  * Encapsulates a sound effect action within the physics system.
  * <p>
- * A {@code SoundAction} defines a sound event at a specific location, with optional player targeting.
- * It includes the sound type, playback volume, and pitch. If {@code player} is non-null, the sound is only
- * sent to that player; otherwise, it is broadcast to all nearby listeners.
+ * A {@code SoundAction} defines a sound event at a specific location, with optional player
+ * targeting. It includes the sound type, playback volume, and pitch. If {@code player} is non-null,
+ * the sound is only sent to that player; otherwise, it is broadcast to all nearby listeners.
  * </p>
  *
- * <p>This design allows flexible and fine-grained control over sound feedback, ensuring that auditory cues
+ * <p>This design allows flexible and fine-grained control over sound feedback, ensuring that
+ * auditory cues
  * are consistent with the player's experience and interaction with physics objects.</p>
  *
  * @see Sound
@@ -22,6 +23,7 @@ import org.bukkit.entity.Player;
 @Getter
 @AllArgsConstructor
 public class CubeSoundAction {
+
   private final Location location;
   private final Player player;
   private final Sound sound;

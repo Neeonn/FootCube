@@ -1,5 +1,8 @@
 package io.github.divinerealms.footcube.utils;
 
+import static io.github.divinerealms.footcube.configs.Lang.PREFIX;
+import static io.github.divinerealms.footcube.configs.Lang.PREFIX_ADMIN;
+
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.core.FCManager;
 import lombok.Getter;
@@ -15,15 +18,13 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
-import static io.github.divinerealms.footcube.configs.Lang.PREFIX;
-import static io.github.divinerealms.footcube.configs.Lang.PREFIX_ADMIN;
-
 /**
  * The Logger class provides a utility for managing formatted logging and messaging functionalities
  * in a Minecraft server environment. It handles message customization, replacement of placeholders,
  * and formatted broadcasting to players and the console, ensuring consistent and readable output.
  */
 public class Logger {
+
   private final FCManager fcManager;
   private final Server server;
   private final ConsoleCommandSender consoleSender;
@@ -35,14 +36,14 @@ public class Logger {
     this.server = fcManager.getPlugin().getServer();
     this.consoleSender = this.server.getConsoleSender();
     this.consolePrefix =
-        ChatColor.GREEN + "[" + fcManager.getPlugin().getDescription().getName() + "] " + ChatColor.DARK_GREEN;
+        ChatColor.GREEN + "[" + fcManager.getPlugin().getDescription().getName() + "] "
+            + ChatColor.DARK_GREEN;
   }
 
   /**
-   * Logs an informational message to the console.
-   * Accepts either a {@link Lang} entry or a raw string.
-   * The message is processed to remove specific prefixes (like {prefix}) to maintain
-   * a clean console log while keeping the actual text formatted.
+   * Logs an informational message to the console. Accepts either a {@link Lang} entry or a raw
+   * string. The message is processed to remove specific prefixes (like {prefix}) to maintain a
+   * clean console log while keeping the actual text formatted.
    *
    * @param messageObj the message to be logged (Lang or String)
    * @param args       optional arguments for placeholder replacement (only used with Lang entries)
@@ -53,10 +54,9 @@ public class Logger {
   }
 
   /**
-   * Sends a formatted message to a specified {@link CommandSender}.
-   * Accepts either a {@link Lang} entry or a raw string.
-   * If the sender is a player, the message includes full prefixes. If the sender is the
-   * console, prefixes are stripped for better readability.
+   * Sends a formatted message to a specified {@link CommandSender}. Accepts either a {@link Lang}
+   * entry or a raw string. If the sender is a player, the message includes full prefixes. If the
+   * sender is the console, prefixes are stripped for better readability.
    *
    * @param sender     the recipient of the message (player or console)
    * @param messageObj the message to send (Lang or String)
@@ -74,8 +74,8 @@ public class Logger {
 
   /**
    * Sends a formatted message to all players with a specific permission and logs it to the console.
-   * Accepts either a {@link Lang} entry or a raw string.
-   * Placeholders are automatically handled when using Lang entries.
+   * Accepts either a {@link Lang} entry or a raw string. Placeholders are automatically handled
+   * when using Lang entries.
    *
    * @param permission the permission required for players to receive the message
    * @param messageObj the message to send (Lang or String)
@@ -90,8 +90,8 @@ public class Logger {
 
   /**
    * Sends a formatted message to all players within a specified radius who have the given
-   * permission, and logs the message to the console.
-   * Accepts either a {@link Lang} entry or a raw string.
+   * permission, and logs the message to the console. Accepts either a {@link Lang} entry or a raw
+   * string.
    *
    * @param permission the permission required for players to receive the message
    * @param center     the center location to define the area
@@ -99,7 +99,8 @@ public class Logger {
    * @param messageObj the message to send (Lang or String)
    * @param args       optional arguments for placeholder replacement (only used with Lang entries)
    */
-  public void send(String permission, Location center, double radius, Object messageObj, String... args) {
+  public void send(String permission, Location center, double radius, Object messageObj,
+      String... args) {
     if (center == null || radius <= 0) {
       return;
     }
@@ -127,8 +128,8 @@ public class Logger {
   }
 
   /**
-   * Sends a raw string message to a sender. Primarily used for dynamic/admin-only
-   * notifications that are not stored in the Lang file.
+   * Sends a raw string message to a sender. Primarily used for dynamic/admin-only notifications
+   * that are not stored in the Lang file.
    *
    * @param sender  the recipient
    * @param message the raw string message
@@ -142,8 +143,8 @@ public class Logger {
   }
 
   /**
-   * Sends a broadcast message to all players on the server.
-   * Accepts either a {@link Lang} entry or a raw string.
+   * Sends a broadcast message to all players on the server. Accepts either a {@link Lang} entry or
+   * a raw string.
    *
    * @param messageObj the message to be broadcasted (Lang or String)
    * @param args       optional arguments for placeholder replacement (only used with Lang entries)
@@ -154,8 +155,8 @@ public class Logger {
   }
 
   /**
-   * Sends an action bar message to the specified player.
-   * Accepts either a {@link Lang} entry or a raw string.
+   * Sends an action bar message to the specified player. Accepts either a {@link Lang} entry or a
+   * raw string.
    *
    * @param player     the player to whom the action bar message will be sent
    * @param messageObj the message to send (Lang or String)
@@ -169,8 +170,8 @@ public class Logger {
   }
 
   /**
-   * Sends a formatted action bar message to all cached players on the server.
-   * Accepts either a {@link Lang} entry or a raw string.
+   * Sends a formatted action bar message to all cached players on the server. Accepts either a
+   * {@link Lang} entry or a raw string.
    *
    * @param messageObj the message to be broadcasted in the action bar (Lang or String)
    * @param args       optional arguments for placeholder replacement (only used with Lang entries)
@@ -187,8 +188,8 @@ public class Logger {
   }
 
   /**
-   * Sends a title and subtitle to a specified player with customized durations.
-   * Accepts both {@link Lang} objects and raw strings for title and subtitle.
+   * Sends a title and subtitle to a specified player with customized durations. Accepts both
+   * {@link Lang} objects and raw strings for title and subtitle.
    *
    * @param player      the player to whom the title and subtitle will be sent
    * @param titleObj    the main title text (Lang or String)
@@ -197,7 +198,8 @@ public class Logger {
    * @param stay        the time in ticks to remain on screen
    * @param fadeOut     the time in ticks for fade out
    */
-  public void title(Player player, Object titleObj, Object subtitleObj, int fadeIn, int stay, int fadeOut) {
+  public void title(Player player, Object titleObj, Object subtitleObj, int fadeIn, int stay,
+      int fadeOut) {
     String title = formatMessage(titleObj);
     String subtitle = formatMessage(subtitleObj);
 
@@ -209,13 +211,14 @@ public class Logger {
         new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.TITLE, titleJSON));
     craftPlayer.getHandle().playerConnection.sendPacket(
         new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, subtitleJSON));
-    craftPlayer.getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(fadeIn, stay, fadeOut));
+    craftPlayer.getHandle().playerConnection.sendPacket(
+        new PacketPlayOutTitle(fadeIn, stay, fadeOut));
   }
 
   /**
-   * Converts a message object (either Lang entry or raw String) into a formatted string.
-   * If the message is a Lang entry, it processes placeholders using the provided args.
-   * If the message is a raw String, it returns the colored string as-is.
+   * Converts a message object (either Lang entry or raw String) into a formatted string. If the
+   * message is a Lang entry, it processes placeholders using the provided args. If the message is a
+   * raw String, it returns the colored string as-is.
    *
    * @param messageObj the message object (Lang or String)
    * @param args       optional arguments for placeholder replacement (only used with Lang entries)
@@ -230,9 +233,9 @@ public class Logger {
   }
 
   /**
-   * Handles prefix placeholder replacement or removal based on context.
-   * When clear is true, removes placeholders entirely for clean console output.
-   * When clear is false, replaces placeholders with their formatted prefix values for player messages.
+   * Handles prefix placeholder replacement or removal based on context. When clear is true, removes
+   * placeholders entirely for clean console output. When clear is false, replaces placeholders with
+   * their formatted prefix values for player messages.
    *
    * @param message the message containing placeholder text like "{prefix}" or "{prefix-admin}"
    * @param clear   if true, removes placeholders; if false, replaces them with formatted values
@@ -241,16 +244,16 @@ public class Logger {
   public String replacePlaceholders(String message, boolean clear) {
     return message
         .replace("{prefix}", clear
-                             ? ""
-                             : PREFIX.toString())
+            ? ""
+            : PREFIX.toString())
         .replace("{prefix-admin}", clear
-                                   ? ""
-                                   : PREFIX_ADMIN.toString());
+            ? ""
+            : PREFIX_ADMIN.toString());
   }
 
   /**
-   * Translates alternate color codes in the given message using the '&' character
-   * as the prefix for color codes.
+   * Translates alternate color codes in the given message using the '&' character as the prefix for
+   * color codes.
    *
    * @param message the string containing alternate color codes to be translated
    * @return the formatted string with alternate color codes translated to actual color codes

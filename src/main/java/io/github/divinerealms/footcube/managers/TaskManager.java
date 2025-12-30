@@ -1,20 +1,29 @@
 package io.github.divinerealms.footcube.managers;
 
 import io.github.divinerealms.footcube.core.FCManager;
-import io.github.divinerealms.footcube.tasks.*;
+import io.github.divinerealms.footcube.tasks.BaseTask;
+import io.github.divinerealms.footcube.tasks.CacheCleanupTask;
+import io.github.divinerealms.footcube.tasks.CubeCleanerTask;
+import io.github.divinerealms.footcube.tasks.HighScoresTask;
+import io.github.divinerealms.footcube.tasks.MatchmakingTask;
+import io.github.divinerealms.footcube.tasks.ParticleTrailTask;
+import io.github.divinerealms.footcube.tasks.PhysicsTask;
+import io.github.divinerealms.footcube.tasks.PlayerUpdateTask;
+import io.github.divinerealms.footcube.tasks.QueueStatusTask;
+import io.github.divinerealms.footcube.tasks.TouchCleanupTask;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.TaskStats;
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
 
 /**
- * Centralized manager for all scheduled tasks.
- * Handles initialization, lifecycle, and cleanup of physics tasks.
+ * Centralized manager for all scheduled tasks. Handles initialization, lifecycle, and cleanup of
+ * physics tasks.
  */
 @Getter
 public class TaskManager {
+
   private final Logger logger;
   private final List<BaseTask> tasks;
 
@@ -42,7 +51,8 @@ public class TaskManager {
     this.particleTrailTask = new ParticleTrailTask(fcManager);
 
     // Initialize general tasks.
-    this.cubeCleanerTask = new CubeCleanerTask(fcManager, fcManager.getCubeCleaner().getRemoveInterval());
+    this.cubeCleanerTask = new CubeCleanerTask(fcManager,
+        fcManager.getCubeCleaner().getRemoveInterval());
     this.matchmakingTask = new MatchmakingTask(fcManager);
     this.cacheCleanupTask = new CacheCleanupTask(fcManager);
     this.queueStatusTask = new QueueStatusTask(fcManager);
@@ -66,10 +76,12 @@ public class TaskManager {
         task.start();
         started++;
       } catch (Exception exception) {
-        logger.info("&c✘ &4Failed to start " + task.getTaskName() + " task: " + exception.getMessage());
+        logger.info(
+            "&c✘ &4Failed to start " + task.getTaskName() + " task: " + exception.getMessage());
       }
     }
-    logger.info("&a✔ &2Started &e" + started + "/" + tasks.size() + " &2plugin tasks successfully!");
+    logger.info(
+        "&a✔ &2Started &e" + started + "/" + tasks.size() + " &2plugin tasks successfully!");
   }
 
   public void stopAll() {
@@ -81,7 +93,8 @@ public class TaskManager {
           task.stop();
           stopped++;
         } catch (Exception exception) {
-          logger.info("&c✘ &4Error stopping " + task.getTaskName() + " task: " + exception.getMessage());
+          logger.info(
+              "&c✘ &4Error stopping " + task.getTaskName() + " task: " + exception.getMessage());
         }
       }
     }

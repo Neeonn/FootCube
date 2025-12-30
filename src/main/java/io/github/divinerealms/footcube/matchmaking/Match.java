@@ -2,14 +2,14 @@ package io.github.divinerealms.footcube.matchmaking;
 
 import io.github.divinerealms.footcube.matchmaking.arena.Arena;
 import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
+import java.util.List;
 import lombok.Data;
 import me.neznamy.tab.api.scoreboard.Scoreboard;
 import org.bukkit.entity.Slime;
 
-import java.util.List;
-
 @Data
 public class Match {
+
   private final Arena arena;
   private final List<MatchPlayer> players;
   private MatchPhase phase;

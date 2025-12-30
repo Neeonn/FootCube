@@ -2,6 +2,7 @@ package io.github.divinerealms.footcube.matchmaking.util;
 
 @SuppressWarnings("unused")
 public class MatchConstants {
+
   public static final int ONE_V_ONE = 1;
   public static final int TWO_V_TWO = 2;
   public static final int THREE_V_THREE = 3;

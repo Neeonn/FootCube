@@ -5,6 +5,7 @@ import org.bukkit.Location;
 
 @Data
 public class Arena {
+
   private final int id;
   private final int type;
   private final Location blueSpawn;

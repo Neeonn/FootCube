@@ -4,6 +4,7 @@ import io.github.divinerealms.footcube.core.FCManager;
 import org.bukkit.entity.Player;
 
 public class CacheCleanupTask extends BaseTask {
+
   private static final long UPDATE_INTERVAL = 20 * 60 * 5; // 5 minutes
 
   public CacheCleanupTask(FCManager fcManager) {

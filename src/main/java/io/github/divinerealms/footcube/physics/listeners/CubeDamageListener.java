@@ -1,5 +1,8 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.utils.Logger;
@@ -8,10 +11,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
-
 public class CubeDamageListener implements Listener {
+
   private final PhysicsData physicsData;
   private final Logger logger;
 
@@ -32,7 +33,8 @@ public class CubeDamageListener implements Listener {
     long start = System.nanoTime();
     try {
       // Cancel all damage applied to physics cubes.
-      if (event.getEntity() instanceof Slime && physicsData.getCubes().contains((Slime) event.getEntity())) {
+      if (event.getEntity() instanceof Slime && physicsData.getCubes()
+          .contains((Slime) event.getEntity())) {
         event.setCancelled(true);
       }
     } finally {

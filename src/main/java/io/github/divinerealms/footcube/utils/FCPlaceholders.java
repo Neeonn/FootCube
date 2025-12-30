@@ -1,22 +1,24 @@
 package io.github.divinerealms.footcube.utils;
 
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
+import java.util.Arrays;
+import java.util.Queue;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Queue;
-
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
-
 public class FCPlaceholders extends PlaceholderExpansion {
+
   private final PluginDescriptionFile pluginDescriptionFile;
   private final MatchManager matchManager;
   private final HighScoreManager highscoreManager;
@@ -58,8 +60,8 @@ public class FCPlaceholders extends PlaceholderExpansion {
   public String onPlaceholderRequest(Player player, @NotNull String identifier) {
     if (identifier.equals("enabled")) {
       return matchManager.getData().isMatchesEnabled()
-             ? "YES"
-             : "NO";
+          ? "YES"
+          : "NO";
     }
 
     if (identifier.equals("active_lobbies_all")) {
@@ -100,17 +102,20 @@ public class FCPlaceholders extends PlaceholderExpansion {
 
     if (identifier.startsWith("active_lobbies_")) {
       String type = identifier.replace("active_lobbies_", "");
-      return String.valueOf(matchManager.countActiveLobbies(Integer.parseInt(type.substring(0, 1))));
+      return String.valueOf(
+          matchManager.countActiveLobbies(Integer.parseInt(type.substring(0, 1))));
     }
 
     if (identifier.startsWith("players_")) {
       String type = identifier.replace("players_", "");
-      return String.valueOf(matchManager.countPlayersInMatches(Integer.parseInt(type.substring(0, 1))));
+      return String.valueOf(
+          matchManager.countPlayersInMatches(Integer.parseInt(type.substring(0, 1))));
     }
 
     if (identifier.startsWith("waiting_")) {
       String type = identifier.replace("waiting_", "");
-      return String.valueOf(matchManager.countWaitingPlayers(Integer.parseInt(type.substring(0, 1))));
+      return String.valueOf(
+          matchManager.countWaitingPlayers(Integer.parseInt(type.substring(0, 1))));
     }
 
     if (identifier.startsWith("listplayers_")) {
@@ -210,18 +215,18 @@ public class FCPlaceholders extends PlaceholderExpansion {
       int bestWinStreak = (int) data.get("bestwinstreak");
 
       double winsPerMatch = matches > 0
-                            ? (double) wins / matches
-                            : 0;
+          ? (double) wins / matches
+          : 0;
       double goalsPerMatch = matches > 0
-                             ? (double) goals / matches
-                             : 0;
+          ? (double) goals / matches
+          : 0;
 
       double multiplier = 1.0 - Math.pow(0.9, matches);
       double goalBonus = matches > 0
-                         ? (goals == matches
-                            ? 1.0
-                            : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
-                         : 0.5;
+          ? (goals == matches
+          ? 1.0
+          : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
+          : 0.5;
 
       double addition = 0.0;
       if (matches > 0 && wins + ties > 0) {

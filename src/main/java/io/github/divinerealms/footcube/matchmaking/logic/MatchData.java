@@ -1,10 +1,10 @@
 package io.github.divinerealms.footcube.matchmaking.logic;
 
-import io.github.divinerealms.footcube.matchmaking.Match;
-import lombok.Getter;
-import lombok.Setter;
-import org.bukkit.entity.Player;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
 
+import io.github.divinerealms.footcube.matchmaking.Match;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -13,11 +13,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.bukkit.entity.Player;
 
 @Getter
 public class MatchData {
+
   private final List<Match> matches = new CopyOnWriteArrayList<>();
   private final List<Match> openMatches = new CopyOnWriteArrayList<>();
   private final Map<Integer, Queue<Player>> playerQueues = new ConcurrentHashMap<>();

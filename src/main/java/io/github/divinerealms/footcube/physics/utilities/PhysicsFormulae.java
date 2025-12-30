@@ -1,15 +1,21 @@
 package io.github.divinerealms.footcube.physics.utilities;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.BALL_TOUCH_Y_OFFSET;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CUBE_HITBOX_ADJUSTMENT;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.MAX_KP;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.RANDOM;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.SOFT_CAP_MIN_FACTOR;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
-
 @SuppressWarnings("unused")
 public class PhysicsFormulae {
+
   private final Logger logger;
 
   public PhysicsFormulae(Logger logger) {
@@ -17,11 +23,12 @@ public class PhysicsFormulae {
   }
 
   /**
-   * Calculates the Euclidean distance between two {@link Location} points,
-   * accounting for player and cube height offsets to ensure accurate collision detection.
+   * Calculates the Euclidean distance between two {@link Location} points, accounting for player
+   * and cube height offsets to ensure accurate collision detection.
    * <p>
    * This method is primarily used for short-range interaction checks (e.g., player–cube contact),
-   * and adjusts vertical distance to better reflect the cube’s physical hitbox rather than its entity base.
+   * and adjusts vertical distance to better reflect the cube’s physical hitbox rather than its
+   * entity base.
    * </p>
    *
    * <p><b>Implementation Details:</b></p>
@@ -52,14 +59,16 @@ public class PhysicsFormulae {
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {
-        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getDistance() &ftook &e" + ms + "ms");
+        logger.send(PERM_HIT_DEBUG,
+            "{prefix-admin}&dPhysicsFormulae#getDistance() &ftook &e" + ms + "ms");
       }
     }
   }
 
   /**
-   * Calculates the squared distance between two locations, optimized for physics calculations.
-   * This variant avoids using {@link Math#sqrt(double)} for performance reasons and adjusts for cube height.
+   * Calculates the squared distance between two locations, optimized for physics calculations. This
+   * variant avoids using {@link Math#sqrt(double)} for performance reasons and adjusts for cube
+   * height.
    *
    * @param locA The first location (usually player).
    * @param locB The second location (usually cube/ball).
@@ -79,14 +88,15 @@ public class PhysicsFormulae {
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {
-        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getDistanceSquared() &ftook &e" + ms + "ms");
+        logger.send(PERM_HIT_DEBUG,
+            "{prefix-admin}&dPhysicsFormulae#getDistanceSquared() &ftook &e" + ms + "ms");
       }
     }
   }
 
   /**
-   * Calculates the perpendicular distance from a player's position to the
-   * path of the cube's movement vector. Used for proximity and collision prediction.
+   * Calculates the perpendicular distance from a player's position to the path of the cube's
+   * movement vector. Used for proximity and collision prediction.
    *
    * @param newVelocity The velocity vector of the cube.
    * @param cubePos     The cube's current position.
@@ -111,14 +121,15 @@ public class PhysicsFormulae {
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {
-        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistance() &ftook &e" + ms + "ms");
+        logger.send(PERM_HIT_DEBUG,
+            "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistance() &ftook &e" + ms + "ms");
       }
     }
   }
 
   /**
-   * Calculates the squared perpendicular distance from a player's position to the
-   * path of the cube's movement vector. Used for proximity and collision prediction.
+   * Calculates the squared perpendicular distance from a player's position to the path of the
+   * cube's movement vector. Used for proximity and collision prediction.
    *
    * <p>Squared form avoids costly {@link Math#sqrt(double)} calls when only relative
    * distance comparisons are required.</p>
@@ -148,7 +159,8 @@ public class PhysicsFormulae {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {
         logger.send(PERM_HIT_DEBUG,
-            "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistanceSquared() &ftook &e" + ms + "ms");
+            "{prefix-admin}&dPhysicsFormulae#getPerpendicularDistanceSquared() &ftook &e" + ms
+                + "ms");
       }
     }
   }
@@ -170,7 +182,8 @@ public class PhysicsFormulae {
     } finally {
       long ms = (System.nanoTime() - start) / 1_000_000;
       if (ms > DEBUG_ON_MS) {
-        logger.send(PERM_HIT_DEBUG, "{prefix-admin}&dPhysicsFormulae#capKickPower() &ftook &e" + ms + "ms");
+        logger.send(PERM_HIT_DEBUG,
+            "{prefix-admin}&dPhysicsFormulae#capKickPower() &ftook &e" + ms + "ms");
       }
     }
   }

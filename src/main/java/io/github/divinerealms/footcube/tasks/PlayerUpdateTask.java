@@ -1,18 +1,24 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CHARGE_BASE_VALUE;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CHARGE_RECOVERY_RATE;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.EXP_UPDATE_INTERVAL_TICKS;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import org.bukkit.entity.Player;
 
-import java.util.*;
-
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
-
 /**
- * Handles player-specific updates like charge recovery.
- * Can be run at a lower frequency (e.g., 2-5 ticks) to save CPU.
+ * Handles player-specific updates like charge recovery. Can be run at a lower frequency (e.g., 2-5
+ * ticks) to save CPU.
  */
 public class PlayerUpdateTask extends BaseTask {
+
   private final PhysicsData data;
   private final Set<UUID> playersToRemove = new HashSet<>();
 
@@ -48,7 +54,7 @@ public class PlayerUpdateTask extends BaseTask {
 
       double currentCharge = entry.getValue();
       double recoveredCharge = CHARGE_BASE_VALUE -
-                               (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
+          (CHARGE_BASE_VALUE - currentCharge) * CHARGE_RECOVERY_RATE;
       entry.setValue(recoveredCharge);
 
       player.setExp((float) recoveredCharge);

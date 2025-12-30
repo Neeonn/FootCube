@@ -1,8 +1,10 @@
 package io.github.divinerealms.footcube.physics.touch;
 
-import lombok.Getter;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CHARGED_KICK_COOLDOWN;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.REGULAR_KICK_COOLDOWN;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.RISE_COOLDOWN;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
+import lombok.Getter;
 
 @Getter
 public enum CubeTouchType {

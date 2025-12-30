@@ -1,39 +1,47 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DISTANCE_PARTICLE_THRESHOLD_SQUARED;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_COUNT;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_OFFSET;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.GENERIC_PARTICLE_SPEED;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.GLOW_TASK_INTERVAL_TICKS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.MAX_PARTICLE_DISTANCE_SQUARED;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.PARTICLE_Y_OFFSET;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
-
 /**
- * Renders particle trails that visually follow cubes (Slime entities) for players who are far enough away
- * that they might not see the actual cube entity due to Minecraft 1.8.8 render distance limitations.
+ * Renders particle trails that visually follow cubes (Slime entities) for players who are far
+ * enough away that they might not see the actual cube entity due to Minecraft 1.8.8 render distance
+ * limitations.
  * <p>
  * This method improves visibility and game immersion by simulating cube motion with particles,
- * ensuring remote players can still perceive the ball's movement even outside their render distance.
+ * ensuring remote players can still perceive the ball's movement even outside their render
+ * distance.
  * </p>
  *
- * <p><b>Performance considerations:</b> Particle effects are sent only to players who are sufficiently far from the
- * cube,
- * reducing unnecessary network and client load. The method is optimized through caching of player locations
- * and settings to minimize per-interval lookups.</p>
+ * <p><b>Performance considerations:</b> Particle effects are sent only to players who are
+ * sufficiently far from the
+ * cube, reducing unnecessary network and client load. The method is optimized through caching of
+ * player locations and settings to minimize per-interval lookups.</p>
  *
- * @implNote This task is executed periodically every X ticks (default 10).
- * The interval balances visual responsiveness and server performance.
+ * @implNote This task is executed periodically every X ticks (default 10). The interval balances
+ * visual responsiveness and server performance.
  */
 public class ParticleTrailTask extends BaseTask {
+
   private final PhysicsData data;
 
   public ParticleTrailTask(FCManager fcManager) {
@@ -154,8 +162,8 @@ public class ParticleTrailTask extends BaseTask {
   }
 
   private void renderTrail(Player player, EnumParticle particle, PlayerSettings settings,
-                           int trailPoints, double prevX, double prevY, double prevZ,
-                           double x, double y, double z) {
+      int trailPoints, double prevX, double prevY, double prevZ,
+      double x, double y, double z) {
     for (int i = 0; i < trailPoints; i++) {
       double t = (double) i / Math.max(trailPoints - 1, 1);
 

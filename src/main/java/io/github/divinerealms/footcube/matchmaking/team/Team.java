@@ -1,13 +1,13 @@
 package io.github.divinerealms.footcube.matchmaking.team;
 
+import java.util.Arrays;
+import java.util.List;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Getter
 public class Team {
+
   private final Player leader;
   private final Player member;
   private final int matchType;

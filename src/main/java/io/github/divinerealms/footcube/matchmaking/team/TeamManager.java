@@ -1,18 +1,25 @@
 package io.github.divinerealms.footcube.matchmaking.team;
 
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.UUID;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
-import java.util.*;
-
-import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
-
 @Getter
 public class TeamManager {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final Map<Player, Map<Player, Integer>> teamInvites = new HashMap<>();
@@ -85,7 +92,8 @@ public class TeamManager {
     }
 
     boolean anyInQueue = false;
-    Collection<Queue<Player>> playerQueues = fcManager.getMatchManager().getData().getPlayerQueues().values();
+    Collection<Queue<Player>> playerQueues = fcManager.getMatchManager().getData().getPlayerQueues()
+        .values();
     for (Queue<Player> queue : playerQueues) {
       if (queue != null && queue.contains(leaver)) {
         anyInQueue = true;

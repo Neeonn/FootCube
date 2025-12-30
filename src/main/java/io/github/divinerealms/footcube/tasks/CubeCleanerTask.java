@@ -1,15 +1,16 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.configs.Lang.CLEARED_CUBES;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.utils.CubeCleaner;
 
-import static io.github.divinerealms.footcube.configs.Lang.CLEARED_CUBES;
-
 /**
- * Task that periodically cleans up cubes in practice areas.
- * Runs at an interval configured by the CubeCleaner.
+ * Task that periodically cleans up cubes in practice areas. Runs at an interval configured by the
+ * CubeCleaner.
  */
 public class CubeCleanerTask extends BaseTask {
+
   private final CubeCleaner cubeCleaner;
 
   public CubeCleanerTask(FCManager fcManager, long interval) {

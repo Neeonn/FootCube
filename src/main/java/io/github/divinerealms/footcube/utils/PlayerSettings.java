@@ -1,16 +1,21 @@
 package io.github.divinerealms.footcube.utils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Color;
 import org.bukkit.Sound;
 
-import java.util.*;
-
 @Setter
 @Getter
 public class PlayerSettings {
+
   public static final Set<EnumParticle> DISALLOWED_PARTICLES = EnumSet.of(
       EnumParticle.BARRIER,
       EnumParticle.ITEM_CRACK,

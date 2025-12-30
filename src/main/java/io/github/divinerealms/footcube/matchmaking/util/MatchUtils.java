@@ -1,5 +1,52 @@
 package io.github.divinerealms.footcube.matchmaking.util;
 
+import static io.github.divinerealms.footcube.configs.Lang.BLUE;
+import static io.github.divinerealms.footcube.configs.Lang.GM_ASSISTS_TEXT;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_ACTIONBAR;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_SUBTITLE_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_SUBTITLE_OWN;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_TITLE_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_TITLE_HATTY;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_TITLE_OWN;
+import static io.github.divinerealms.footcube.configs.Lang.GM_DEFAULT_TITLE_SCORER;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_SUBTITLE_1;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_SUBTITLE_1_OTHER;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_SUBTITLE_1_SCORER;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_SUBTITLE_2;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_SUBTITLE_3;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_1;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_1_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_1_HATTY;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_2;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_2_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.GM_EPIC_TITLE_3;
+import static io.github.divinerealms.footcube.configs.Lang.GM_MINIMAL_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.GM_MINIMAL_OWN;
+import static io.github.divinerealms.footcube.configs.Lang.GM_SIMPLE_SUBTITLE;
+import static io.github.divinerealms.footcube.configs.Lang.GM_SIMPLE_TITLE;
+import static io.github.divinerealms.footcube.configs.Lang.GM_SIMPLE_TITLE_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_BLUEPLAYERS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_LOBBY;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_MATCH;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_REDPLAYERS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_RESULT;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_STARTING;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_STATUS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_TIMELEFT;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_WAITING;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_WAITINGPLAYERS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_ASSIST_CREDITS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_GOALLL;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_HATTRICK;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_SCORE_CREDITS;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_SCORE_HATTRICK;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_SCORE_OWN_GOAL_ANNOUNCE;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_SCORE_STATS;
+import static io.github.divinerealms.footcube.configs.Lang.NOBODY;
+import static io.github.divinerealms.footcube.configs.Lang.RED;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.matchmaking.Match;
@@ -10,7 +57,15 @@ import io.github.divinerealms.footcube.matchmaking.player.TeamColor;
 import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
-import org.bukkit.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringJoiner;
+import java.util.concurrent.TimeUnit;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Effect;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -19,24 +74,15 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringJoiner;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
-
 public class MatchUtils {
+
   public static void giveArmor(Player player, TeamColor color) {
     ItemStack chestplate = createColoredArmor(Material.LEATHER_CHESTPLATE, color == TeamColor.RED
-                                                                           ? Color.RED
-                                                                           : Color.BLUE);
+        ? Color.RED
+        : Color.BLUE);
     ItemStack leggings = createColoredArmor(Material.LEATHER_LEGGINGS, color == TeamColor.RED
-                                                                       ? Color.RED
-                                                                       : Color.BLUE);
+        ? Color.RED
+        : Color.BLUE);
 
     PlayerInventory inventory = player.getInventory();
     inventory.setChestplate(chestplate);
@@ -126,9 +172,10 @@ public class MatchUtils {
           timeDisplay = MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
         } else {
           long matchDuration = match.getArena().getType() == TWO_V_TWO
-                               ? 120
-                               : 300;
-          long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
+              ? 120
+              : 300;
+          long elapsedMillis =
+              (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
           long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
           timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
@@ -138,18 +185,18 @@ public class MatchUtils {
       if (match.getPhase() == MatchPhase.LOBBY) {
         output.add(MATCHES_LIST_LOBBY.replace(type, String.valueOf(match.getArena().getId())));
         output.add(MATCHES_LIST_WAITINGPLAYERS.replace(waitingPlayers.isEmpty()
-                                                       ? "/"
-                                                       : joinStrings(waitingPlayers)));
+            ? "/"
+            : joinStrings(waitingPlayers)));
         output.add(MATCHES_LIST_STATUS.replace(timeDisplay));
       } else {
         if (match.getPhase() == MatchPhase.STARTING) {
           output.add(MATCHES_LIST_LOBBY.replace(type, String.valueOf(match.getArena().getId())));
           output.add(MATCHES_LIST_REDPLAYERS.replace(redPlayers.isEmpty()
-                                                     ? "/"
-                                                     : joinStrings(redPlayers)));
+              ? "/"
+              : joinStrings(redPlayers)));
           output.add(MATCHES_LIST_BLUEPLAYERS.replace(bluePlayers.isEmpty()
-                                                      ? "/"
-                                                      : joinStrings(bluePlayers)));
+              ? "/"
+              : joinStrings(bluePlayers)));
           output.add(MATCHES_LIST_STATUS.replace(timeDisplay));
         } else {
           output.add(MATCHES_LIST_MATCH.replace(type, String.valueOf(match.getArena().getId())));
@@ -159,11 +206,11 @@ public class MatchUtils {
               MATCHES_LIST_TIMELEFT.replace(timeDisplay))
           );
           output.add(MATCHES_LIST_REDPLAYERS.replace(redPlayers.isEmpty()
-                                                     ? "/"
-                                                     : joinStrings(redPlayers)));
+              ? "/"
+              : joinStrings(redPlayers)));
           output.add(MATCHES_LIST_BLUEPLAYERS.replace(bluePlayers.isEmpty()
-                                                      ? "/"
-                                                      : joinStrings(bluePlayers)));
+              ? "/"
+              : joinStrings(bluePlayers)));
         }
       }
     }
@@ -184,10 +231,10 @@ public class MatchUtils {
   }
 
   public static void displayGoalMessage(Player player, String style, boolean ownGoal,
-                                        boolean isHatTrick, boolean isViewerScorer,
-                                        String scorerName, String assistText,
-                                        String teamColorText, double distance,
-                                        Match match, Logger logger, Plugin plugin) {
+      boolean isHatTrick, boolean isViewerScorer,
+      String scorerName, String assistText,
+      String teamColorText, double distance,
+      Match match, Logger logger, Plugin plugin) {
     String distanceString = String.format("%.0f", distance);
     String redTeam = RED.toString(), blueTeam = BLUE.toString();
 
@@ -214,38 +261,38 @@ public class MatchUtils {
 
   public static boolean isValidGoalMessage(String style) {
     return style != null && (style.equals("default") || style.equals("epic")
-                             || style.equals("simple") || style.equals("minimal") || style.equals("custom"));
+        || style.equals("simple") || style.equals("minimal") || style.equals("custom"));
   }
 
   private static void displayEpicGoal(Player player, boolean ownGoal, boolean isHatTrick,
-                                      boolean isViewerScorer, String scorerName, String assistText,
-                                      String teamColorText, String distance, String redTeam,
-                                      String blueTeam, Match match, Logger logger, Plugin plugin) {
+      boolean isViewerScorer, String scorerName, String assistText,
+      String teamColorText, String distance, String redTeam,
+      String blueTeam, Match match, Logger logger, Plugin plugin) {
     String initialTitle = ownGoal
-                          ? GM_EPIC_TITLE_1.toString()
-                          : isHatTrick
-                            ? GM_EPIC_TITLE_1_HATTY.toString()
-                            : GM_EPIC_TITLE_1_GOAL.toString();
+        ? GM_EPIC_TITLE_1.toString()
+        : isHatTrick
+            ? GM_EPIC_TITLE_1_HATTY.toString()
+            : GM_EPIC_TITLE_1_GOAL.toString();
 
     String initialSubtitle = ownGoal
-                             ? GM_EPIC_SUBTITLE_1.toString()
-                             : isViewerScorer
-                               ? GM_EPIC_SUBTITLE_1_SCORER.toString()
-                               : GM_EPIC_SUBTITLE_1_OTHER.replace(scorerName);
+        ? GM_EPIC_SUBTITLE_1.toString()
+        : isViewerScorer
+            ? GM_EPIC_SUBTITLE_1_SCORER.toString()
+            : GM_EPIC_SUBTITLE_1_OTHER.replace(scorerName);
 
     logger.title(player, initialTitle, initialSubtitle, 5, 35, 10);
 
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
       String secondTitle = ownGoal
-                           ? GM_EPIC_TITLE_2.replace(teamColorText)
-                           : GM_EPIC_TITLE_2_GOAL.replace(teamColorText);
+          ? GM_EPIC_TITLE_2.replace(teamColorText)
+          : GM_EPIC_TITLE_2_GOAL.replace(teamColorText);
 
       String secondSubtitle = GM_EPIC_SUBTITLE_2
           .replace(
               scorerName,
               assistText.isEmpty()
-              ? ""
-              : assistText
+                  ? ""
+                  : assistText
           );
 
       logger.title(player, secondTitle, secondSubtitle, 0, 35, 10);
@@ -266,11 +313,11 @@ public class MatchUtils {
   }
 
   private static void displaySimpleGoal(Player player, boolean ownGoal,
-                                        String scorerName, String distance,
-                                        Logger logger) {
+      String scorerName, String distance,
+      Logger logger) {
     String title = ownGoal
-                   ? GM_SIMPLE_TITLE.toString()
-                   : GM_SIMPLE_TITLE_GOAL.toString();
+        ? GM_SIMPLE_TITLE.toString()
+        : GM_SIMPLE_TITLE_GOAL.toString();
 
     String subtitle = GM_SIMPLE_SUBTITLE.replace(scorerName, distance);
 
@@ -278,11 +325,11 @@ public class MatchUtils {
   }
 
   private static void displayMinimalGoal(Player player, boolean ownGoal,
-                                         String scorerName, String redTeam,
-                                         String blueTeam, Match match, Logger logger) {
+      String scorerName, String redTeam,
+      String blueTeam, Match match, Logger logger) {
     logger.sendActionBar(player, ownGoal
-                                 ? GM_MINIMAL_OWN
-                                 : GM_MINIMAL_GOAL,
+            ? GM_MINIMAL_OWN
+            : GM_MINIMAL_GOAL,
         scorerName, redTeam,
         String.valueOf(match.getScoreRed()),
         String.valueOf(match.getScoreBlue()),
@@ -291,24 +338,24 @@ public class MatchUtils {
   }
 
   private static void displayDefaultGoal(Player player, boolean ownGoal,
-                                         boolean isHatTrick, boolean isViewerScorer,
-                                         String scorerName, String assistText,
-                                         String teamColorText, String distance,
-                                         String redTeam, String blueTeam,
-                                         Match match, Logger logger) {
+      boolean isHatTrick, boolean isViewerScorer,
+      String scorerName, String assistText,
+      String teamColorText, String distance,
+      String redTeam, String blueTeam,
+      Match match, Logger logger) {
     String title = ownGoal
-                   ? GM_DEFAULT_TITLE_OWN.toString()
-                   : isHatTrick
-                     ? GM_DEFAULT_TITLE_HATTY.toString()
-                     : isViewerScorer
-                       ? GM_DEFAULT_TITLE_SCORER.toString()
-                       : GM_DEFAULT_TITLE_GOAL.toString();
+        ? GM_DEFAULT_TITLE_OWN.toString()
+        : isHatTrick
+            ? GM_DEFAULT_TITLE_HATTY.toString()
+            : isViewerScorer
+                ? GM_DEFAULT_TITLE_SCORER.toString()
+                : GM_DEFAULT_TITLE_GOAL.toString();
 
     String subtitle = ownGoal
-                      ? GM_DEFAULT_SUBTITLE_OWN.replace(scorerName, teamColorText)
-                      : GM_DEFAULT_SUBTITLE_GOAL.replace(scorerName, distance, assistText.isEmpty()
-                                                                               ? ""
-                                                                               : assistText);
+        ? GM_DEFAULT_SUBTITLE_OWN.replace(scorerName, teamColorText)
+        : GM_DEFAULT_SUBTITLE_GOAL.replace(scorerName, distance, assistText.isEmpty()
+            ? ""
+            : assistText);
 
     logger.title(player, title, subtitle, 10, 50, 10);
 
@@ -320,32 +367,20 @@ public class MatchUtils {
 
   public static boolean isPlayerOffline(MatchPlayer matchPlayer) {
     return matchPlayer == null
-           || matchPlayer.getPlayer() == null
-           || !matchPlayer.getPlayer().isOnline();
-  }
-
-  private static UUID getPlayerUUID(MatchPlayer matchPlayer) {
-    return (matchPlayer != null && matchPlayer.getPlayer() != null)
-           ? matchPlayer.getPlayer().getUniqueId()
-           : null;
-  }
-
-  private static CompletableFuture<String> fetchPrefixedName(UUID uuid, MatchPlayer matchPlayer, Utilities utilities) {
-    if (uuid != null && matchPlayer != null && matchPlayer.getPlayer() != null) {
-      return utilities.getPrefixedName(uuid, matchPlayer.getPlayer().getName());
-    }
-    return CompletableFuture.completedFuture(null);
+        || matchPlayer.getPlayer() == null
+        || !matchPlayer.getPlayer().isOnline();
   }
 
   private static boolean isHatTrickGoal(MatchSystem.ScoringResult result) {
     return !result.isOwnGoal()
-           && result.getScorer() != null
-           && result.getScorer().getPlayer() != null
-           && result.getScorer().getGoals() > 0
-           && result.getScorer().getGoals() % 3 == 0;
+        && result.getScorer() != null
+        && result.getScorer().getPlayer() != null
+        && result.getScorer().getGoals() > 0
+        && result.getScorer().getGoals() % 3 == 0;
   }
 
-  private static double calculateScoringDistance(MatchSystem.ScoringResult result, Location goalLoc) {
+  private static double calculateScoringDistance(MatchSystem.ScoringResult result,
+      Location goalLoc) {
     if (result.getScorer() != null && result.getScorer().getPlayer() != null) {
       return result.getScorer().getPlayer().getLocation().distance(goalLoc);
     }
@@ -372,7 +407,8 @@ public class MatchUtils {
     match.setCube(null);
   }
 
-  public static MatchSystem.ScoringResult determineScoringPlayers(Match match, TeamColor scoringTeam) {
+  public static MatchSystem.ScoringResult determineScoringPlayers(Match match,
+      TeamColor scoringTeam) {
     MatchPlayer scorer = match.getLastTouch();
     MatchPlayer assister = null;
     boolean ownGoal = false;
@@ -412,7 +448,8 @@ public class MatchUtils {
     return new MatchSystem.ScoringResult(scorer, assister, ownGoal, scoringTeam);
   }
 
-  public static void awardCreditsForGoal(MatchSystem.ScoringResult result, Logger logger, FCManager fcManager) {
+  public static void awardCreditsForGoal(MatchSystem.ScoringResult result, Logger logger,
+      FCManager fcManager) {
     MatchPlayer scorer = result.getScorer();
     MatchPlayer assister = result.getAssister();
 
@@ -436,8 +473,8 @@ public class MatchUtils {
 
   public static Location getGoalLocation(Match match, TeamColor scoringTeam) {
     return (scoringTeam == TeamColor.RED)
-           ? match.getArena().getBlueSpawn()
-           : match.getArena().getRedSpawn();
+        ? match.getArena().getBlueSpawn()
+        : match.getArena().getRedSpawn();
   }
 
   public static void playGoalEffects(Match match, Location goalLoc, FCManager fcManager) {
@@ -468,8 +505,8 @@ public class MatchUtils {
   }
 
   public static void broadcastGoalMessage(Match match, MatchSystem.ScoringResult result,
-                                          Location goalLoc, Utilities utilities,
-                                          FCManager fcManager, Logger logger) {
+      Location goalLoc, Utilities utilities,
+      FCManager fcManager, Logger logger) {
     String prefixedScorer = NOBODY.toString();
     String prefixedAssister = null;
 
@@ -493,29 +530,29 @@ public class MatchUtils {
   }
 
   private static void sendGoalMessages(Match match, MatchSystem.ScoringResult result,
-                                       String prefixedScorer, String prefixedAssister,
-                                       Location goalLoc, FCManager fcManager, Logger logger) {
+      String prefixedScorer, String prefixedAssister,
+      Location goalLoc, FCManager fcManager, Logger logger) {
     boolean isHatTrick = isHatTrickGoal(result);
     String teamColorText = result.getScoringTeam() == TeamColor.RED
-                           ? RED.toString()
-                           : BLUE.toString();
+        ? RED.toString()
+        : BLUE.toString();
 
     double distance = calculateScoringDistance(result, goalLoc);
     String assistText = prefixedAssister != null
-                        ? GM_ASSISTS_TEXT.replace(prefixedAssister)
-                        : "";
+        ? GM_ASSISTS_TEXT.replace(prefixedAssister)
+        : "";
 
     String goalMessage = result.isOwnGoal()
-                         ? MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(prefixedScorer, teamColorText)
-                         : MATCH_GOAL.replace(
-                             isHatTrick
-                             ? MATCH_HATTRICK.toString()
-                             : MATCH_GOALLL.toString(),
-                             prefixedScorer,
-                             teamColorText,
-                             String.format("%.0f", distance),
-                             assistText
-                         );
+        ? MATCH_SCORE_OWN_GOAL_ANNOUNCE.replace(prefixedScorer, teamColorText)
+        : MATCH_GOAL.replace(
+            isHatTrick
+                ? MATCH_HATTRICK.toString()
+                : MATCH_GOALLL.toString(),
+            prefixedScorer,
+            teamColorText,
+            String.format("%.0f", distance),
+            assistText
+        );
 
     String goalMessageStyle = "default";
     if (result.getScorer() != null && result.getScorer().getPlayer() != null) {

@@ -3,6 +3,10 @@ package io.github.divinerealms.footcube.matchmaking.arena;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.ConfigManager;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -11,13 +15,9 @@ import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 @Getter
 public class ArenaManager {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final Server server;
@@ -70,7 +70,8 @@ public class ArenaManager {
   }
 
   private Location getLocation(FileConfiguration config, World world, String path) {
-    Location location = new Location(world, config.getDouble(path + "x"), config.getDouble(path + "y"),
+    Location location = new Location(world, config.getDouble(path + "x"),
+        config.getDouble(path + "y"),
         config.getDouble(path + "z"));
     location.setPitch((float) config.getDouble(path + "pitch"));
     location.setYaw((float) config.getDouble(path + "yaw"));
@@ -81,25 +82,26 @@ public class ArenaManager {
     blueSpawn = normalizeLocation(blueSpawn);
     redSpawn = normalizeLocation(redSpawn);
 
-    boolean isXAxis = Math.abs(blueSpawn.getX() - redSpawn.getX()) > Math.abs(blueSpawn.getZ() - redSpawn.getZ());
+    boolean isXAxis =
+        Math.abs(blueSpawn.getX() - redSpawn.getX()) > Math.abs(blueSpawn.getZ() - redSpawn.getZ());
     boolean blueIsLess = isXAxis
-                         ? blueSpawn.getX() < redSpawn.getX()
-                         : blueSpawn.getZ() < redSpawn.getZ();
+        ? blueSpawn.getX() < redSpawn.getX()
+        : blueSpawn.getZ() < redSpawn.getZ();
 
     blueSpawn.setYaw(isXAxis
-                     ? (blueIsLess
-                        ? 90.0F
-                        : -90.0F)
-                     : (blueIsLess
-                        ? 180.0F
-                        : 0.0F));
+        ? (blueIsLess
+        ? 90.0F
+        : -90.0F)
+        : (blueIsLess
+            ? 180.0F
+            : 0.0F));
     redSpawn.setYaw(isXAxis
-                    ? (blueIsLess
-                       ? -90.0F
-                       : 90.0F)
-                    : (blueIsLess
-                       ? 0.0F
-                       : 180.0F));
+        ? (blueIsLess
+        ? -90.0F
+        : 90.0F)
+        : (blueIsLess
+            ? 0.0F
+            : 180.0F));
 
     blueSpawn.setPitch(0.0F);
     redSpawn.setPitch(0.0F);
@@ -133,8 +135,8 @@ public class ArenaManager {
         (blue.getY() + red.getY()) / 2.0 + 2.0, (blue.getZ() + red.getZ()) / 2.0);
     boolean isXAxis = Math.abs(blue.getX() - red.getX()) > Math.abs(blue.getZ() - red.getZ());
     boolean redIsGreater = isXAxis
-                           ? red.getX() > blue.getX()
-                           : red.getZ() > blue.getZ();
+        ? red.getX() > blue.getX()
+        : red.getZ() > blue.getZ();
     int id = arenas.size() + 1;
     arenas.add(new Arena(id, type, blue, red, center, isXAxis, redIsGreater));
   }
@@ -156,6 +158,7 @@ public class ArenaManager {
   @Getter
   @Setter
   public static class ArenaSetup {
+
     private int type;
     private Location blueSpawn;
 

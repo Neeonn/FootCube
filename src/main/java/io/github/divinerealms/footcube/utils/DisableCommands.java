@@ -2,14 +2,14 @@ package io.github.divinerealms.footcube.utils;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.ConfigManager;
-import lombok.Getter;
-import org.bukkit.configuration.file.FileConfiguration;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.Getter;
+import org.bukkit.configuration.file.FileConfiguration;
 
 public class DisableCommands {
+
   private final ConfigManager configManager;
   private final FileConfiguration config;
 

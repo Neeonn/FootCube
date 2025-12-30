@@ -1,23 +1,32 @@
 package io.github.divinerealms.footcube.matchmaking.highscore;
 
+import static io.github.divinerealms.footcube.configs.Lang.BEST_ASSISTS;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_ENTRY;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_GOALS;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_OWN_GOALS;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_UPDATING;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_WINS;
+import static io.github.divinerealms.footcube.configs.Lang.BEST_WINSTREAK;
+import static io.github.divinerealms.footcube.configs.Lang.NOBODY;
+import static io.github.divinerealms.footcube.configs.Lang.SIMPLE_FOOTER;
+
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.Logger;
-import lombok.Getter;
-import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.Plugin;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
+import lombok.Getter;
+import org.bukkit.command.CommandSender;
+import org.bukkit.plugin.Plugin;
 
 public class HighScoreManager {
+
   private final Plugin plugin;
   private final Logger logger;
   private final Utilities utilities;
@@ -125,8 +134,8 @@ public class HighScoreManager {
     File playerFolder = new File(plugin.getDataFolder(), "players");
     File[] files = playerFolder.listFiles((dir, name) -> name.endsWith(".yml"));
     participants = new String[files != null
-                              ? files.length
-                              : 0];
+        ? files.length
+        : 0];
 
     for (int i = 0; i < participants.length; i++) {
       participants[i] = files[i].getName().replace(".yml", "");
@@ -192,15 +201,15 @@ public class HighScoreManager {
 
       double multiplier = 1 - Math.pow(0.9, matches);
       double goalBonus = matches > 0
-                         ? (goals == matches
-                            ? 1
-                            : Math.min(1, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
-                         : 0.5;
+          ? (goals == matches
+          ? 1
+          : Math.min(1, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
+          : 0.5;
       double addition = (matches > 0 && wins + ties > 0)
-                        ? 8 * (1 / ((100 * matches) / (wins + 0.5 * ties) / 100)) - 4
-                        : (matches > 0
-                           ? -4
-                           : 0);
+          ? 8 * (1 / ((100 * matches) / (wins + 0.5 * ties) / 100)) - 4
+          : (matches > 0
+              ? -4
+              : 0);
       double skillLevel = Math.min(5 + goalBonus + addition * multiplier, 10);
 
       UUID uuid = playerDataManager.getUUID(playerName);
@@ -210,14 +219,14 @@ public class HighScoreManager {
       }
 
       CompletableFuture<Void> playerFuture = utilities.getPrefixedName(uuid, playerName)
-              .thenAccept(prefixedName -> {
-                insertTop3(bestRatings, topSkillNames, skillLevel, prefixedName);
-                insertTop3(mostGoals, topGoalsNames, goals, prefixedName);
-                insertTop3(mostAssists, topAssistsNames, assists, prefixedName);
-                insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, prefixedName);
-                insertTop3(mostWins, topWinsNames, wins, prefixedName);
-                insertTop3(longestStreak, topStreakNames, bestWinStreak, prefixedName);
-              });
+          .thenAccept(prefixedName -> {
+            insertTop3(bestRatings, topSkillNames, skillLevel, prefixedName);
+            insertTop3(mostGoals, topGoalsNames, goals, prefixedName);
+            insertTop3(mostAssists, topAssistsNames, assists, prefixedName);
+            insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, prefixedName);
+            insertTop3(mostWins, topWinsNames, wins, prefixedName);
+            insertTop3(longestStreak, topStreakNames, bestWinStreak, prefixedName);
+          });
 
       nameFutures.add(playerFuture);
     }

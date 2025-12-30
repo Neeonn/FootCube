@@ -1,20 +1,22 @@
 package io.github.divinerealms.footcube.commands;
 
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_FOOTER;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.List;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
-
 public class MatchesCommand implements CommandExecutor {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final PhysicsSystem system;

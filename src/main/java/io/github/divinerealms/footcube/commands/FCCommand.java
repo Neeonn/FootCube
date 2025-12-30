@@ -1,5 +1,68 @@
 package io.github.divinerealms.footcube.commands;
 
+import static io.github.divinerealms.footcube.configs.Lang.AVAILABLE_TYPE;
+import static io.github.divinerealms.footcube.configs.Lang.BANNER_PLAYER;
+import static io.github.divinerealms.footcube.configs.Lang.COLOR;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_CANT_USE;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_CLEAR;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_CLEAR_ALL;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_NO_CUBES;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_SPAWN;
+import static io.github.divinerealms.footcube.configs.Lang.FC_DISABLED;
+import static io.github.divinerealms.footcube.configs.Lang.HELP;
+import static io.github.divinerealms.footcube.configs.Lang.INGAME_ONLY;
+import static io.github.divinerealms.footcube.configs.Lang.INVALID_COLOR;
+import static io.github.divinerealms.footcube.configs.Lang.INVALID_TYPE;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_ALREADYINGAME;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_INVALIDTYPE;
+import static io.github.divinerealms.footcube.configs.Lang.LEAVE_LOSING;
+import static io.github.divinerealms.footcube.configs.Lang.LEAVE_NOT_INGAME;
+import static io.github.divinerealms.footcube.configs.Lang.LEAVE_QUEUE_ACTIONBAR;
+import static io.github.divinerealms.footcube.configs.Lang.LEFT;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.configs.Lang.OFF;
+import static io.github.divinerealms.footcube.configs.Lang.ON;
+import static io.github.divinerealms.footcube.configs.Lang.OR;
+import static io.github.divinerealms.footcube.configs.Lang.PARTICLE;
+import static io.github.divinerealms.footcube.configs.Lang.SET_GOAL_CELEBRATION;
+import static io.github.divinerealms.footcube.configs.Lang.SET_PARTICLE;
+import static io.github.divinerealms.footcube.configs.Lang.SET_PARTICLE_REDSTONE;
+import static io.github.divinerealms.footcube.configs.Lang.SET_SOUND_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.SET_SOUND_KICK;
+import static io.github.divinerealms.footcube.configs.Lang.SOUND;
+import static io.github.divinerealms.footcube.configs.Lang.STATSSET_IS_NOT_A_NUMBER;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_AVAILABLE_ENTRY;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_AVAILABLE_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_INGAME;
+import static io.github.divinerealms.footcube.configs.Lang.TAKEPLACE_NOPLACE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ACCEPT_OTHER;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ACCEPT_SELF;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ALREADY_IN_GAME;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ALREADY_IN_TEAM;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_ALREADY_IN_TEAM_2;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DECLINE_OTHER;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DECLINE_SELF;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_NOT_ONLINE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_NO_REQUEST;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_USAGE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_WANTS_TO_TEAM_OTHER;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_WANTS_TO_TEAM_SELF;
+import static io.github.divinerealms.footcube.configs.Lang.TOGGLES_GOAL;
+import static io.github.divinerealms.footcube.configs.Lang.TOGGLES_HIT_DEBUG;
+import static io.github.divinerealms.footcube.configs.Lang.TOGGLES_KICK;
+import static io.github.divinerealms.footcube.configs.Lang.TOGGLES_PARTICLES;
+import static io.github.divinerealms.footcube.configs.Lang.UNKNOWN_COMMAND;
+import static io.github.divinerealms.footcube.configs.Lang.USAGE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_CUBE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CUBE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SET_GOAL_CELEBRATION;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SET_PARTICLE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SET_SOUND;
+
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
@@ -14,6 +77,12 @@ import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.StringJoiner;
 import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Difficulty;
 import org.bukkit.GameMode;
@@ -27,13 +96,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
-import java.util.*;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
-import static io.github.divinerealms.footcube.utils.Permissions.*;
-
 public class FCCommand implements CommandExecutor, TabCompleter {
+
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Logger logger;
@@ -145,11 +209,11 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
             if (matchPlayer != null) {
               int playerScore = matchPlayer.getTeamColor() == TeamColor.RED
-                                ? match.getScoreRed()
-                                : match.getScoreBlue();
+                  ? match.getScoreRed()
+                  : match.getScoreBlue();
               int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED
-                                  ? match.getScoreBlue()
-                                  : match.getScoreRed();
+                  ? match.getScoreBlue()
+                  : match.getScoreRed();
 
               if (playerScore < opponentScore) {
                 fcManager.getEconomy().withdrawPlayer(player, 200);
@@ -304,8 +368,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
             target = teamManager.getInviter(player);
             targetName = target != null && target.isOnline()
-                         ? target.getName()
-                         : "";
+                ? target.getName()
+                : "";
             if (target == null || !target.isOnline()) {
               logger.send(player, TEAM_NOT_ONLINE, targetName);
               return true;
@@ -415,8 +479,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         if (sender instanceof Player) {
           Player p = (Player) sender;
           fcManager.getMatchSystem().checkStats(args.length > 1
-                                                ? args[1]
-                                                : p.getName(), sender);
+              ? args[1]
+              : p.getName(), sender);
         } else {
           if (args.length < 2) {
             logger.send(sender, "&cYou need to specify a player.");
@@ -538,7 +602,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
         player = (Player) sender;
         if (args.length < 2) {
-          logger.send(player, USAGE, label + " " + sub + " <kick|goal|particles|hits> <value|list>");
+          logger.send(player, USAGE,
+              label + " " + sub + " <kick|goal|particles|hits> <value|list>");
           return true;
         }
 
@@ -554,24 +619,24 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             settings.setKickSoundEnabled(!settings.isKickSoundEnabled());
             playerData.set("sounds.kick.enabled", settings.isKickSoundEnabled());
             logger.send(player, TOGGLES_KICK, settings.isKickSoundEnabled()
-                                              ? ON.toString()
-                                              : OFF.toString());
+                ? ON.toString()
+                : OFF.toString());
             break;
 
           case "goal":
             settings.setGoalSoundEnabled(!settings.isGoalSoundEnabled());
             playerData.set("sounds.goal.enabled", settings.isGoalSoundEnabled());
             logger.send(player, TOGGLES_GOAL, settings.isGoalSoundEnabled()
-                                              ? ON.toString()
-                                              : OFF.toString());
+                ? ON.toString()
+                : OFF.toString());
             break;
 
           case "particles":
             settings.setParticlesEnabled(!settings.isParticlesEnabled());
             playerData.set("particles.enabled", settings.isParticlesEnabled());
             logger.send(player, TOGGLES_PARTICLES, settings.isParticlesEnabled()
-                                                   ? ON.toString()
-                                                   : OFF.toString());
+                ? ON.toString()
+                : OFF.toString());
             break;
 
           case "hits":
@@ -584,12 +649,13 @@ public class FCCommand implements CommandExecutor, TabCompleter {
             }
 
             logger.send(player, TOGGLES_HIT_DEBUG, !wasEnabled
-                                                   ? ON.toString()
-                                                   : OFF.toString());
+                ? ON.toString()
+                : OFF.toString());
             break;
 
           default:
-            logger.send(player, USAGE, label + " " + sub + " <kick|goal|particles|hits> <value|list>");
+            logger.send(player, USAGE,
+                label + " " + sub + " <kick|goal|particles|hits> <value|list>");
         }
         break;
 
@@ -851,7 +917,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
   }
 
   @Override
-  public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+  public List<String> onTabComplete(CommandSender sender, Command command, String alias,
+      String[] args) {
     List<String> completions = new ArrayList<>();
 
     if (args.length == 1) {
@@ -898,8 +965,8 @@ public class FCCommand implements CommandExecutor, TabCompleter {
           if (sub.equalsIgnoreCase("setsound")) {
             completions.add("list");
             List<Sound> sounds = args[1].equalsIgnoreCase("kick")
-                                 ? PlayerSettings.ALLOWED_KICK_SOUNDS
-                                 : PlayerSettings.ALLOWED_GOAL_SOUNDS;
+                ? PlayerSettings.ALLOWED_KICK_SOUNDS
+                : PlayerSettings.ALLOWED_GOAL_SOUNDS;
             for (Sound s : sounds) {
               completions.add(s.name());
             }

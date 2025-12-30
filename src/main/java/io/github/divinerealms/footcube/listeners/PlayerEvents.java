@@ -1,5 +1,9 @@
 package io.github.divinerealms.footcube.listeners;
 
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_CANT_USE;
+import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_DISABLED_COMMANDS;
+
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.PlayerDataManager;
@@ -14,6 +18,11 @@ import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,16 +31,15 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
-import java.util.*;
-
-import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_CANT_USE;
-import static io.github.divinerealms.footcube.configs.Lang.TEAM_DISBANDED;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_BYPASS_DISABLED_COMMANDS;
-
 public class PlayerEvents implements Listener {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final Plugin plugin;
@@ -133,8 +141,8 @@ public class PlayerEvents implements Listener {
           List<MatchPlayer> players = match.getPlayers();
           if (players != null) {
             players.removeIf(mp -> mp == null
-                                   || mp.getPlayer() == null
-                                   || mp.getPlayer().equals(player));
+                || mp.getPlayer() == null
+                || mp.getPlayer().equals(player));
           }
         }
         fcManager.getScoreboardManager().updateScoreboard(match);
@@ -170,11 +178,11 @@ public class PlayerEvents implements Listener {
 
       if (matchPlayer != null) {
         int playerScore = matchPlayer.getTeamColor() == TeamColor.RED
-                          ? match.getScoreRed()
-                          : match.getScoreBlue();
+            ? match.getScoreRed()
+            : match.getScoreBlue();
         int opponentScore = matchPlayer.getTeamColor() == TeamColor.RED
-                            ? match.getScoreBlue()
-                            : match.getScoreRed();
+            ? match.getScoreBlue()
+            : match.getScoreRed();
 
         if (match.getPhase() == MatchPhase.IN_PROGRESS && playerScore < opponentScore) {
           fcManager.getEconomy().withdrawPlayer(player, 200);

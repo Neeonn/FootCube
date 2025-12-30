@@ -1,5 +1,14 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_CLEAR;
+import static io.github.divinerealms.footcube.configs.Lang.HITDEBUG_WHOLE;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.KICK_VERTICAL_BOOST;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.SOUND_PITCH;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.SOUND_VOLUME;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_CUBE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
@@ -8,6 +17,9 @@ import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.physics.utilities.PlayerKickResult;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.PlayerSettings;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -21,17 +33,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static io.github.divinerealms.footcube.configs.Lang.CUBE_CLEAR;
-import static io.github.divinerealms.footcube.configs.Lang.HITDEBUG_WHOLE;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.*;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_CUBE;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
-
 public class CubeKickListener implements Listener {
+
   private final FCManager fcManager;
   private final BukkitScheduler scheduler;
   private final Plugin plugin;
@@ -90,8 +93,8 @@ public class CubeKickListener implements Listener {
 
       // Check & Enforce cooldown.
       CubeTouchType kickType = player.isSneaking()
-                               ? CubeTouchType.CHARGED_KICK
-                               : CubeTouchType.REGULAR_KICK;
+          ? CubeTouchType.CHARGED_KICK
+          : CubeTouchType.REGULAR_KICK;
       Map<CubeTouchType, CubeTouchInfo> touches = data.getLastTouches().get(playerId);
       if (touches != null && touches.containsKey(kickType)) {
         return;
@@ -102,8 +105,9 @@ public class CubeKickListener implements Listener {
 
       // Compute final kick direction and apply impulse.
       Location playerLocation = player.getLocation();
-      Vector kick = player.getLocation().getDirection().normalize().multiply(kickResult.getFinalKickPower()).setY(
-          KICK_VERTICAL_BOOST);
+      Vector kick = player.getLocation().getDirection().normalize()
+          .multiply(kickResult.getFinalKickPower()).setY(
+              KICK_VERTICAL_BOOST);
       cube.setVelocity(cube.getVelocity().add(kick));
 
       // Register player hit cooldown and record interaction.
@@ -122,7 +126,8 @@ public class CubeKickListener implements Listener {
           system.queueSound(player, settings.getKickSound(), SOUND_VOLUME, SOUND_PITCH);
         }
         if (data.isHitDebugEnabled()) {
-          logger.send(PERM_HIT_DEBUG, playerLocation, 100, HITDEBUG_WHOLE, system.onHitDebug(player, kickResult));
+          logger.send(PERM_HIT_DEBUG, playerLocation, 100, HITDEBUG_WHOLE,
+              system.onHitDebug(player, kickResult));
         }
         if (data.getCubeHits().contains(playerId)) {
           system.showHits(player, kickResult);

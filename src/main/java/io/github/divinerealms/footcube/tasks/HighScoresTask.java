@@ -2,11 +2,11 @@ package io.github.divinerealms.footcube.tasks;
 
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
+import java.io.File;
 import org.bukkit.Bukkit;
 
-import java.io.File;
-
 public class HighScoresTask extends BaseTask {
+
   private final HighScoreManager highScoreManager;
 
   public HighScoresTask(FCManager fcManager) {
@@ -42,7 +42,8 @@ public class HighScoresTask extends BaseTask {
       totalPlayers = files.length;
     }
 
-    logger.info("&a✔ &2Started &d" + getTaskName() + " &2update (&e" + totalPlayers + " &2players to process)");
+    logger.info("&a✔ &2Started &d" + getTaskName() + " &2update (&e" + totalPlayers
+        + " &2players to process)");
     highScoreManager.startUpdate();
     logger.info("&a✔ &d" + getTaskName() + " &2update completed!");
   }

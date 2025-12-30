@@ -1,5 +1,41 @@
 package io.github.divinerealms.footcube.matchmaking.logic;
 
+import static io.github.divinerealms.footcube.configs.Lang.BLUE;
+import static io.github.divinerealms.footcube.configs.Lang.CLEARED_CUBE_INGAME;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_NOARENA;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_LOBBY;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_MATCH;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_STARTING;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_PREPARATION_SUBTITLE;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_PREPARATION_TITLE;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_PREPARING;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_PROCEED;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_STARTED;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_STARTED_ACTIONBAR;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_STARTING_ACTIONBAR;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_STARTING_SUBTITLE;
+import static io.github.divinerealms.footcube.configs.Lang.MATCH_STARTING_TITLE;
+import static io.github.divinerealms.footcube.configs.Lang.RED;
+import static io.github.divinerealms.footcube.configs.Lang.STARTING;
+import static io.github.divinerealms.footcube.configs.Lang.STATS;
+import static io.github.divinerealms.footcube.configs.Lang.STATS_NONE;
+import static io.github.divinerealms.footcube.configs.Lang.TAKE_PLACE_ANNOUNCEMENT_LOBBY;
+import static io.github.divinerealms.footcube.configs.Lang.TAKE_PLACE_ANNOUNCEMENT_MATCH;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FIVE_V_FIVE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.SCOREBOARD_UPDATE_INTERVAL;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TAKE_PLACE_ANNOUNCEMENT_INTERVAL_TICKS;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.awardCreditsForGoal;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.broadcastGoalMessage;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.determineScoringPlayers;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getGoalLocation;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.giveArmor;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.playGoalEffects;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.prepareMatchContinuation;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.updateMatchScore;
+
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.managers.Utilities;
@@ -13,6 +49,15 @@ import io.github.divinerealms.footcube.matchmaking.scoreboard.ScoreManager;
 import io.github.divinerealms.footcube.matchmaking.team.Team;
 import io.github.divinerealms.footcube.matchmaking.team.TeamManager;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -23,16 +68,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.util.Vector;
 
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.*;
-
 public class MatchSystem {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final ScoreManager scoreboardManager;
@@ -121,7 +158,7 @@ public class MatchSystem {
     }
 
     boolean x = Math.abs(arena.getBlueSpawn().getX() - arena.getRedSpawn().getX()) >
-                Math.abs(arena.getBlueSpawn().getZ() - arena.getRedSpawn().getZ());
+        Math.abs(arena.getBlueSpawn().getZ() - arena.getRedSpawn().getZ());
     if (x) {
       match.getCube().setVelocity(new Vector(0, vertical, horizontal));
     } else {
@@ -155,9 +192,10 @@ public class MatchSystem {
     }
 
     long matchDuration = match.getArena().getType() == TWO_V_TWO
-                         ? 120
-                         : 300;
-    long totalActiveElapsedMillis = (System.currentTimeMillis() - match.getStartTime() - match.getTotalPausedTime());
+        ? 120
+        : 300;
+    long totalActiveElapsedMillis = (System.currentTimeMillis() - match.getStartTime()
+        - match.getTotalPausedTime());
     long elapsedSeconds = TimeUnit.MILLISECONDS.toSeconds(totalActiveElapsedMillis);
 
     if (elapsedSeconds >= matchDuration) {
@@ -179,13 +217,13 @@ public class MatchSystem {
       if (arena.isRedIsGreater()
           && cubeLocation.getX() + cubeRadius > arena.getRedSpawn().getX()
           || !arena.isRedIsGreater()
-             && cubeLocation.getX() - cubeRadius < arena.getRedSpawn().getX()) {
+          && cubeLocation.getX() - cubeRadius < arena.getRedSpawn().getX()) {
         score(match, TeamColor.BLUE);
       } else {
         if (arena.isRedIsGreater()
             && cubeLocation.getX() - cubeRadius < arena.getBlueSpawn().getX()
             || !arena.isRedIsGreater()
-               && cubeLocation.getX() + cubeRadius > arena.getBlueSpawn().getX()) {
+            && cubeLocation.getX() + cubeRadius > arena.getBlueSpawn().getX()) {
           score(match, TeamColor.RED);
         }
       }
@@ -193,13 +231,13 @@ public class MatchSystem {
       if (arena.isRedIsGreater()
           && cubeLocation.getZ() + cubeRadius > arena.getRedSpawn().getZ()
           || !arena.isRedIsGreater()
-             && cubeLocation.getZ() - cubeRadius < arena.getRedSpawn().getZ()) {
+          && cubeLocation.getZ() - cubeRadius < arena.getRedSpawn().getZ()) {
         score(match, TeamColor.BLUE);
       } else {
         if (arena.isRedIsGreater()
             && cubeLocation.getZ() - cubeRadius < arena.getBlueSpawn().getZ()
             || !arena.isRedIsGreater()
-               && cubeLocation.getZ() + cubeRadius > arena.getBlueSpawn().getZ()) {
+            && cubeLocation.getZ() + cubeRadius > arena.getBlueSpawn().getZ()) {
           score(match, TeamColor.RED);
         }
       }
@@ -293,8 +331,8 @@ public class MatchSystem {
             Collections.shuffle(playersToAssign);
             for (int i = 0; i < playersToAssign.size(); i++) {
               playersToAssign.get(i).setTeamColor(i < requiredPlayers / 2
-                                                  ? TeamColor.RED
-                                                  : TeamColor.BLUE);
+                  ? TeamColor.RED
+                  : TeamColor.BLUE);
             }
           }
 
@@ -320,8 +358,8 @@ public class MatchSystem {
           String matchId = String.valueOf(match.getArena().getId());
 
           String matchTitle = match.getCountdown() == 0
-                              ? MATCHES_LIST_MATCH.replace(matchType, matchId)
-                              : MATCHES_LIST_LOBBY.replace(matchType, matchId);
+              ? MATCHES_LIST_MATCH.replace(matchType, matchId)
+              : MATCHES_LIST_LOBBY.replace(matchType, matchId);
 
           for (MatchPlayer mp : players) {
             if (mp == null || mp.getPlayer() == null) {
@@ -358,7 +396,8 @@ public class MatchSystem {
               logger.title(player, matchTitle, MATCH_PREPARING, 10, 50, 10);
             } else {
               if (match.getCountdown() == 5) {
-                logger.title(player, MATCH_PREPARATION_TITLE, MATCH_PREPARATION_SUBTITLE, 10, 50, 10);
+                logger.title(player, MATCH_PREPARATION_TITLE, MATCH_PREPARATION_SUBTITLE, 10, 50,
+                    10);
               } else {
                 if (match.getCountdown() <= 0) {
                   logger.title(player, MATCH_STARTING_TITLE, MATCH_STARTING_SUBTITLE, 5, 30, 5);
@@ -427,7 +466,8 @@ public class MatchSystem {
     }
 
     match.setTakePlaceNeeded(
-        currentPlayers < requiredPlayers && !match.isTakePlaceNeeded() && match.getPhase() != MatchPhase.LOBBY);
+        currentPlayers < requiredPlayers && !match.isTakePlaceNeeded()
+            && match.getPhase() != MatchPhase.LOBBY);
     if (match.isTakePlaceNeeded()) {
       announceTakePlace(match);
     }
@@ -555,21 +595,21 @@ public class MatchSystem {
     int losses = (int) data.get("losses");
 
     double winsPerMatch = (matches > 0)
-                          ? (double) wins / matches
-                          : 0;
+        ? (double) wins / matches
+        : 0;
 
     int goals = (int) data.get("goals");
     int assists = (int) data.get("assists");
     int ownGoals = (int) data.get("owngoals");
     double goalsPerMatch = (matches > 0)
-                           ? (double) goals / matches
-                           : 0;
+        ? (double) goals / matches
+        : 0;
     double multiplier = 1.0 - Math.pow(0.9, matches);
     double goalBonus = matches > 0
-                       ? (goals == matches
-                          ? 1.0
-                          : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
-                       : 0.5;
+        ? (goals == matches
+        ? 1.0
+        : Math.min(1.0, 1 - multiplier * Math.pow(0.2, (double) goals / matches)))
+        : 0.5;
 
     double addition = 0.0;
     if (matches > 0 && wins + ties > 0) {
@@ -699,31 +739,34 @@ public class MatchSystem {
   private void announceTakePlace(Match match) {
     boolean firstAnnouncement = match.getLastTakePlaceAnnounceTick() == 0;
     if (firstAnnouncement ||
-        match.getTick() - match.getLastTakePlaceAnnounceTick() >= TAKE_PLACE_ANNOUNCEMENT_INTERVAL_TICKS) {
+        match.getTick() - match.getLastTakePlaceAnnounceTick()
+            >= TAKE_PLACE_ANNOUNCEMENT_INTERVAL_TICKS) {
       match.setLastTakePlaceAnnounceTick(match.getTick());
 
       long matchDuration = match.getArena().getType() == TWO_V_TWO
-                           ? 120
-                           : 300;
-      long elapsedMillis = (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
+          ? 120
+          : 300;
+      long elapsedMillis =
+          (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
       long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
       int matchType = match.getArena().getType();
-      String matchIdString = String.valueOf(match.getArena().getId()), matchTypeString = matchType + "v" + matchType;
+      String matchIdString = String.valueOf(match.getArena().getId()), matchTypeString =
+          matchType + "v" + matchType;
       boolean activeMatch = match.getPhase() == MatchPhase.IN_PROGRESS;
 
       String matchTitle = activeMatch
-                          ? "&a&l" + matchTypeString + " Meča #" + matchIdString
-                          : "&b&l" + matchTypeString + " Queue #" + matchIdString;
+          ? "&a&l" + matchTypeString + " Meča #" + matchIdString
+          : "&b&l" + matchTypeString + " Queue #" + matchIdString;
 
       String announcement = activeMatch
-                            ? TAKE_PLACE_ANNOUNCEMENT_MATCH.replace(
+          ? TAKE_PLACE_ANNOUNCEMENT_MATCH.replace(
           matchTitle,
           RED.toString(), String.valueOf(match.getScoreRed()),
           String.valueOf(match.getScoreBlue()), BLUE.toString(),
           Utilities.formatTimePretty((int) remainingSeconds)
       )
-                            : TAKE_PLACE_ANNOUNCEMENT_LOBBY.replace(matchTitle);
+          : TAKE_PLACE_ANNOUNCEMENT_LOBBY.replace(matchTitle);
 
       for (Player player : Bukkit.getOnlinePlayers()) {
         if (player == null) {
@@ -737,10 +780,11 @@ public class MatchSystem {
   }
 
   /**
-   * Represents the result of determining who scored and assisted.
-   * This is a traditional Java class that holds immutable data about a scoring event.
+   * Represents the result of determining who scored and assisted. This is a traditional Java class
+   * that holds immutable data about a scoring event.
    */
   public static class ScoringResult {
+
     @Getter
     private final MatchPlayer scorer;
     @Getter
@@ -751,7 +795,7 @@ public class MatchSystem {
     private final TeamColor scoringTeam;
 
     public ScoringResult(MatchPlayer scorer, MatchPlayer assister,
-                         boolean ownGoal, TeamColor scoringTeam) {
+        boolean ownGoal, TeamColor scoringTeam) {
       this.scorer = scorer;
       this.assister = assister;
       this.ownGoal = ownGoal;
@@ -759,8 +803,8 @@ public class MatchSystem {
     }
 
     /**
-     * Determines if credits should be awarded for this goal.
-     * Credits are only awarded for regular goals, not own goals.
+     * Determines if credits should be awarded for this goal. Credits are only awarded for regular
+     * goals, not own goals.
      */
     public boolean shouldAwardCredits() {
       return !ownGoal && scorer != null;

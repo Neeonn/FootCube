@@ -1,15 +1,16 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.MATCH_TASK_INTERVAL_TICKS;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.MATCH_TASK_INTERVAL_TICKS;
-
 /**
- * Task that handles match updates and matchmaking logic.
- * Runs synchronously at configured interval (default: 1 tick).
+ * Task that handles match updates and matchmaking logic. Runs synchronously at configured interval
+ * (default: 1 tick).
  */
 public class MatchmakingTask extends BaseTask {
+
   private final MatchManager matchManager;
 
   public MatchmakingTask(FCManager fcManager) {

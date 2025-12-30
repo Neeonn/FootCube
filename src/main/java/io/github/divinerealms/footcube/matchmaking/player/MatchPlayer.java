@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 
 @Data
 public class MatchPlayer {
+
   private final Player player;
   private TeamColor teamColor;
   private int goals;

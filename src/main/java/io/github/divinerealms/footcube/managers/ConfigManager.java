@@ -1,17 +1,17 @@
 package io.github.divinerealms.footcube.managers;
 
 import io.github.divinerealms.footcube.configs.Lang;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 public class ConfigManager {
+
   @Getter
   private final Plugin plugin;
   private final String folderName;
@@ -26,8 +26,8 @@ public class ConfigManager {
 
   public void createNewFile(String name, String header) {
     File file = new File(plugin.getDataFolder(), folderName.isEmpty()
-                                                 ? name
-                                                 : folderName + File.separator + name);
+        ? name
+        : folderName + File.separator + name);
 
     FileConfiguration cfg;
 
@@ -62,8 +62,8 @@ public class ConfigManager {
 
   public void reloadConfig(String name) {
     File file = new File(plugin.getDataFolder(), folderName.isEmpty()
-                                                 ? name
-                                                 : folderName + File.separator + name);
+        ? name
+        : folderName + File.separator + name);
 
     if (!file.exists()) {
       copyDefaultsFromResource(name);
@@ -94,8 +94,8 @@ public class ConfigManager {
   private void copyDefaultsFromResource(String name) {
     try {
       String resourcePath = folderName.isEmpty()
-                            ? name
-                            : folderName + File.separator + name;
+          ? name
+          : folderName + File.separator + name;
       if (plugin.getResource(resourcePath) != null) {
         plugin.saveResource(resourcePath, false);
         plugin.getLogger().info("Copied default config from JAR: " + resourcePath);

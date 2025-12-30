@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class PlayerKickResult {
+
   private final double power;
   private final double charge;
   private final double baseKickPower;
@@ -11,7 +12,7 @@ public class PlayerKickResult {
   private final boolean isChargedHit;
 
   public PlayerKickResult(double power, double charge, double baseKickPower, double finalKickPower,
-                          boolean isChargedHit) {
+      boolean isChargedHit) {
     this.power = power;
     this.charge = charge;
     this.baseKickPower = baseKickPower;

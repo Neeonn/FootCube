@@ -1,5 +1,9 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_LOBBY;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_WAITING;
+import static io.github.divinerealms.footcube.configs.Lang.QUEUE_ACTIONBAR;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.Match;
 import io.github.divinerealms.footcube.matchmaking.MatchPhase;
@@ -7,9 +11,8 @@ import io.github.divinerealms.footcube.matchmaking.player.MatchPlayer;
 import io.github.divinerealms.footcube.utils.Logger;
 import org.bukkit.entity.Player;
 
-import static io.github.divinerealms.footcube.configs.Lang.*;
-
 public class QueueStatusTask extends BaseTask {
+
   private final Logger logger;
 
   public QueueStatusTask(FCManager fcManager) {
@@ -39,8 +42,8 @@ public class QueueStatusTask extends BaseTask {
       }
 
       String colorCode = (currentPlayers == requiredPlayers)
-                         ? "&a"
-                         : "&e";
+          ? "&a"
+          : "&e";
 
       for (MatchPlayer mp : match.getPlayers()) {
         if (mp == null) {

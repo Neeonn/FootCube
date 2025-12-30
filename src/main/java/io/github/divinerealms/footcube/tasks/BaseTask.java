@@ -1,19 +1,19 @@
 package io.github.divinerealms.footcube.tasks;
 
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.logging.Level;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.logging.Level;
-
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
-
 public abstract class BaseTask implements Runnable {
+
   protected final FCManager fcManager;
   protected final Plugin plugin;
   protected final Logger logger;
@@ -34,7 +34,8 @@ public abstract class BaseTask implements Runnable {
     this(fcManager, taskName, interval, async, getDefaultThreshold(interval));
   }
 
-  protected BaseTask(FCManager fcManager, String taskName, long interval, boolean async, long customThreshold) {
+  protected BaseTask(FCManager fcManager, String taskName, long interval, boolean async,
+      long customThreshold) {
     this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
@@ -60,15 +61,16 @@ public abstract class BaseTask implements Runnable {
       return;
     }
     if (async) {
-      task = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this, interval, interval);
+      task = plugin.getServer().getScheduler()
+          .runTaskTimerAsynchronously(plugin, this, interval, interval);
     } else {
       task = plugin.getServer().getScheduler().runTaskTimer(plugin, this, interval, interval);
     }
     running = true;
     logger.info("&a✔ &2Started &d" + taskName + "&2 task &7&o(type: " + (async
-                                                                         ? "&ba"
-                                                                         : "&a") + "sync&7&o, frequency: " + interval +
-                " ticks)");
+        ? "&ba"
+        : "&a") + "sync&7&o, frequency: " + interval +
+        " ticks)");
   }
 
   public void stop() {
@@ -88,7 +90,9 @@ public abstract class BaseTask implements Runnable {
     try {
       kaboom();
     } catch (Exception exception) {
-      Bukkit.getLogger().log(Level.SEVERE, "Error in " + taskName + " task: " + exception.getMessage(), exception);
+      Bukkit.getLogger()
+          .log(Level.SEVERE, "Error in " + taskName + " task: " + exception.getMessage(),
+              exception);
     } finally {
       long durationNanos = System.nanoTime() - start;
       recordExecution(durationNanos);
@@ -96,8 +100,9 @@ public abstract class BaseTask implements Runnable {
       long durationMillis = durationNanos / 1_000_000;
       if (durationMillis > debugThreshold) {
         logger.send(PERM_ADMIN,
-            "{prefix-admin}&d" + taskName + " &ftook &e" + durationMillis + "ms &f(threshold: " + debugThreshold +
-            "ms)");
+            "{prefix-admin}&d" + taskName + " &ftook &e" + durationMillis + "ms &f(threshold: "
+                + debugThreshold +
+                "ms)");
       }
     }
   }

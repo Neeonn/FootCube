@@ -1,11 +1,18 @@
 package io.github.divinerealms.footcube.physics.listeners;
 
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.CUBE_JUMP_RIGHT_CLICK;
+import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Slime;
 import org.bukkit.event.EventHandler;
@@ -13,15 +20,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.util.Vector;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.CUBE_JUMP_RIGHT_CLICK;
-import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
-
 public class CubeTapListener implements Listener {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final PhysicsData data;
@@ -39,7 +39,8 @@ public class CubeTapListener implements Listener {
    * <p>When a player right-clicks a tracked {@link Slime}, applies a vertical boost
    * and triggers sound effects to simulate a lighter form of interaction than a kick.</p>
    *
-   * @param event the {@link PlayerInteractEntityEvent} fired when a player interacts with an entity
+   * @param event the {@link PlayerInteractEntityEvent} fired when a player interacts with an
+   *              entity
    */
   @EventHandler
   public void rightClick(PlayerInteractEntityEvent event) {
@@ -74,7 +75,8 @@ public class CubeTapListener implements Listener {
 
       // Mark player action to prevent spamming.
       data.getLastTouches().computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-          .put(CubeTouchType.RISE, new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
+          .put(CubeTouchType.RISE,
+              new CubeTouchInfo(System.currentTimeMillis(), CubeTouchType.RISE));
       data.getRaised().put(cube.getUniqueId(), System.currentTimeMillis());
 
       system.recordPlayerAction(player);

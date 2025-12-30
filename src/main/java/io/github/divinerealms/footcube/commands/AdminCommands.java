@@ -1,5 +1,66 @@
 package io.github.divinerealms.footcube.commands;
 
+import static io.github.divinerealms.footcube.configs.Lang.ADMIN_STATSET;
+import static io.github.divinerealms.footcube.configs.Lang.BAN_REMAINING;
+import static io.github.divinerealms.footcube.configs.Lang.CLEAR_ARENAS_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.CLEAR_STATS_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_ALREADY_ADDED;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_LIST;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_SUCCESS_REMOVE;
+import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_WASNT_ADDED;
+import static io.github.divinerealms.footcube.configs.Lang.FC_TOGGLE;
+import static io.github.divinerealms.footcube.configs.Lang.FORCE_LEAVE;
+import static io.github.divinerealms.footcube.configs.Lang.HELP_ADMIN;
+import static io.github.divinerealms.footcube.configs.Lang.INGAME_ONLY;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHMAN_FORCE_END;
+import static io.github.divinerealms.footcube.configs.Lang.NOT_BANNED;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.configs.Lang.OFF;
+import static io.github.divinerealms.footcube.configs.Lang.ON;
+import static io.github.divinerealms.footcube.configs.Lang.PLAYER_BANNED;
+import static io.github.divinerealms.footcube.configs.Lang.PLAYER_NOT_FOUND;
+import static io.github.divinerealms.footcube.configs.Lang.PLAYER_UNBANNED;
+import static io.github.divinerealms.footcube.configs.Lang.PRACTICE_AREA_SET;
+import static io.github.divinerealms.footcube.configs.Lang.PREFIX_ADMIN;
+import static io.github.divinerealms.footcube.configs.Lang.RELOAD;
+import static io.github.divinerealms.footcube.configs.Lang.SETUP_ARENA_FIRST_SET;
+import static io.github.divinerealms.footcube.configs.Lang.SETUP_ARENA_START;
+import static io.github.divinerealms.footcube.configs.Lang.SETUP_ARENA_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.SET_BLOCK_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.SET_BLOCK_TOO_FAR;
+import static io.github.divinerealms.footcube.configs.Lang.STATSSET_IS_NOT_A_NUMBER;
+import static io.github.divinerealms.footcube.configs.Lang.STATSSET_NOT_A_STAT;
+import static io.github.divinerealms.footcube.configs.Lang.TASKS_REPORT_ENTRY;
+import static io.github.divinerealms.footcube.configs.Lang.TASKS_REPORT_FOOTER;
+import static io.github.divinerealms.footcube.configs.Lang.TASKS_REPORT_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.TASKS_RESET_STATS;
+import static io.github.divinerealms.footcube.configs.Lang.TASKS_RESTART;
+import static io.github.divinerealms.footcube.configs.Lang.TOGGLES_HIT_DEBUG;
+import static io.github.divinerealms.footcube.configs.Lang.UNDO;
+import static io.github.divinerealms.footcube.configs.Lang.UNKNOWN_COMMAND;
+import static io.github.divinerealms.footcube.configs.Lang.USAGE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_BAN;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_ARENAS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_CLEAR_STATS;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_COMMAND_DISABLER;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_FORCE_LEAVE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_HIT_DEBUG;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_MATCHMAN;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SETBUTON;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SETUP_ARENA;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SET_LOBBY;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_SET_PRACTICE_AREA;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_STAT_SET;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_TOGGLE;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_UNBAN;
+
 import io.github.divinerealms.footcube.FootCube;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
@@ -18,6 +79,12 @@ import io.github.divinerealms.footcube.tasks.BaseTask;
 import io.github.divinerealms.footcube.utils.DisableCommands;
 import io.github.divinerealms.footcube.utils.Logger;
 import io.github.divinerealms.footcube.utils.TaskStats;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -32,13 +99,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.material.Button;
 import org.bukkit.material.Wool;
 
-import java.util.*;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
-import static io.github.divinerealms.footcube.utils.Permissions.*;
-
 public class AdminCommands implements CommandExecutor, TabCompleter {
+
   private final FCManager fcManager;
   private final FootCube plugin;
   private final Logger logger;
@@ -143,8 +205,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         for (BaseTask task : taskManager.getTasks()) {
           double average = task.getAverageExecutionTime();
           String status = task.isRunning()
-                          ? "&a✔"
-                          : "&c✘";
+              ? "&a✔"
+              : "&c✘";
           String timeColor = getColorForTime(average);
 
           logger.send(sender, TASKS_REPORT_ENTRY,
@@ -174,8 +236,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         }
 
         logger.send(sender, FC_TOGGLE, state
-                                       ? OFF.toString()
-                                       : ON.toString());
+            ? OFF.toString()
+            : ON.toString());
         break;
 
       case "ban":
@@ -203,8 +265,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           }
 
           banManager.banPlayer(target, seconds * 1000L);
-          logger.send(sender, PREFIX_ADMIN + target.getDisplayName()
-                              + "&c je banovan iz FC na &e" + Utilities.formatTime(seconds) + "&c.");
+          logger.send(sender, PLAYER_BANNED, target.getDisplayName(),
+              Utilities.formatTime(seconds));
         } catch (NumberFormatException exception) {
           logger.send(sender, USAGE, label + " " + sub + " <player> <time>");
         }
@@ -228,7 +290,7 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         }
 
         banManager.unbanPlayer(target);
-        logger.send(sender, PREFIX_ADMIN + target.getDisplayName() + "&a je unbanovan.");
+        logger.send(sender, PLAYER_UNBANNED, target.getDisplayName());
         break;
 
       case "checkban":
@@ -251,11 +313,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (banManager.isBanned(target)) {
           long banTime = banManager.getBannedPlayers().get(target.getUniqueId());
           long secondsLeft = (banTime - System.currentTimeMillis()) / 1000L;
-          logger.send(sender,
-              PREFIX_ADMIN + target.getDisplayName() + "&c je banovan još &e" + Utilities.formatTime(secondsLeft) +
-              "&c.");
+          logger.send(sender, BAN_REMAINING, target.getDisplayName(),
+              Utilities.formatTime(secondsLeft));
         } else {
-          logger.send(sender, PREFIX_ADMIN + target.getDisplayName() + "&c nije banovan.");
+          logger.send(sender, NOT_BANNED, target.getDisplayName());
         }
         break;
 
@@ -293,15 +354,16 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (Arrays.asList("wins", "matches", "ties", "goals", "assists", "owngoals", "winstreak",
             "bestwinstreak").contains(stat)) {
           playerData.set(stat, clear
-                               ? 0
-                               : amount);
+              ? 0
+              : amount);
         } else {
           if (stat.equals("all")) {
             int finalAmount = amount;
-            Arrays.asList("wins", "matches", "ties", "goals", "assists", "owngoals", "winstreak", "bestwinstreak")
+            Arrays.asList("wins", "matches", "ties", "goals", "assists", "owngoals", "winstreak",
+                    "bestwinstreak")
                 .forEach(s -> playerData.set(s, clear
-                                                ? 0
-                                                : finalAmount));
+                    ? 0
+                    : finalAmount));
           } else {
             logger.send(sender, STATSSET_NOT_A_STAT, stat);
             return true;
@@ -491,8 +553,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         boolean status = data.isHitDebugEnabled();
         data.hitDebugEnabled = !status;
         logger.send(sender, TOGGLES_HIT_DEBUG, status
-                                               ? OFF.toString()
-                                               : ON.toString());
+            ? OFF.toString()
+            : ON.toString());
         break;
 
       case "commanddisabler":
@@ -579,7 +641,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
                 match.setPhase(MatchPhase.ENDED);
               }
 
-              logger.send(sender, MATCHMAN_FORCE_END, match.getArena().getType() + "v" + match.getArena().getType());
+              logger.send(sender, MATCHMAN_FORCE_END,
+                  match.getArena().getType() + "v" + match.getArena().getType());
             } else {
               logger.send(sender, MATCHES_LIST_NO_MATCHES);
             }
@@ -728,7 +791,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
   }
 
   @Override
-  public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+  public List<String> onTabComplete(CommandSender sender, Command command, String alias,
+      String[] args) {
     if (!sender.hasPermission(PERM_ADMIN)) {
       return Collections.emptyList();
     }
@@ -737,8 +801,10 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
     if (args.length == 1) {
       completions.addAll(Arrays.asList(
           "reload", "tasks", "reloadtab", "toggle", "statset", "setuparena", "set", "undo", "clear",
-          "setlobby", "setpracticearea", "spa", "matchman", "mm", "hitsdebug", "hits", "commanddisabler",
-          "cd", "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "refreshprefix", "rp", "help", "h"
+          "setlobby", "setpracticearea", "spa", "matchman", "mm", "hitsdebug", "hits",
+          "commanddisabler",
+          "cd", "forceleave", "fl", "ban", "unban", "checkban", "setbutton", "sb", "refreshprefix",
+          "rp", "help", "h"
       ));
     } else {
       if (args.length == 2) {
@@ -791,7 +857,8 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
           } else {
             if (args[0].equalsIgnoreCase("statset")) {
               completions.addAll(
-                  Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak", "bestwinstreak"));
+                  Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak",
+                      "bestwinstreak"));
             }
           }
         }

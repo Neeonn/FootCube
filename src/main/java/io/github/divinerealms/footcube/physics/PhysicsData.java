@@ -3,20 +3,20 @@ package io.github.divinerealms.footcube.physics;
 import io.github.divinerealms.footcube.physics.actions.CubeSoundAction;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchInfo;
 import io.github.divinerealms.footcube.physics.touch.CubeTouchType;
-import lombok.Getter;
-import org.bukkit.Location;
-import org.bukkit.entity.Slime;
-import org.bukkit.util.Vector;
-
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import lombok.Getter;
+import org.bukkit.Location;
+import org.bukkit.entity.Slime;
+import org.bukkit.util.Vector;
 
 @Getter
 public class PhysicsData {
+
   private final Set<Slime> cubes = ConcurrentHashMap.newKeySet();
   private final Set<Slime> cubesToRemove = ConcurrentHashMap.newKeySet();
 
@@ -36,6 +36,8 @@ public class PhysicsData {
 
   public boolean hitDebugEnabled = false;
 
+  public long tickRate = 0;
+
   public void cleanup() {
     cubes.clear();
     cubesToRemove.clear();
@@ -49,5 +51,6 @@ public class PhysicsData {
     soundQueue.clear();
     buttonCooldowns.clear();
     previousCubeLocations.clear();
+    tickRate = 0;
   }
 }

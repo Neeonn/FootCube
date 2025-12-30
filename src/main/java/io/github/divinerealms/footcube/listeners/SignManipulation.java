@@ -1,10 +1,30 @@
 package io.github.divinerealms.footcube.listeners;
 
+import static io.github.divinerealms.footcube.configs.Lang.ALREADY_ENOUGH_CUBES;
+import static io.github.divinerealms.footcube.configs.Lang.BALANCE;
+import static io.github.divinerealms.footcube.configs.Lang.CLEARED_CUBES;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_NO_CUBES;
+import static io.github.divinerealms.footcube.configs.Lang.CUBE_SPAWN;
+import static io.github.divinerealms.footcube.configs.Lang.FC_DISABLED;
+import static io.github.divinerealms.footcube.configs.Lang.JOIN_ALREADYINGAME;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_FOOTER;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
+import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
+import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
+
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
 import io.github.divinerealms.footcube.physics.PhysicsData;
 import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -24,16 +44,8 @@ import org.bukkit.material.MaterialData;
 import org.bukkit.material.Wool;
 import org.bukkit.util.Vector;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-
-import static io.github.divinerealms.footcube.configs.Lang.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.*;
-import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
-import static io.github.divinerealms.footcube.utils.Permissions.PERM_PLAY;
-
 public class SignManipulation implements Listener {
+
   private final FCManager fcManager;
   private final Logger logger;
   private final MatchManager matchManager;
@@ -156,8 +168,9 @@ public class SignManipulation implements Listener {
             return;
           }
 
-          Collection<Entity> nearbyEntities = playerLocation.getWorld().getNearbyEntities(playerLocation, 100, 100,
-              100);
+          Collection<Entity> nearbyEntities = playerLocation.getWorld()
+              .getNearbyEntities(playerLocation, 100, 100,
+                  100);
           int slimeCount = 0;
           if (nearbyEntities != null) {
             for (Entity entity : nearbyEntities) {
@@ -268,7 +281,8 @@ public class SignManipulation implements Listener {
           }
 
           Location location = player.getLocation();
-          Collection<Entity> nearbyEntities = location.getWorld().getNearbyEntities(location, 100, 100, 100);
+          Collection<Entity> nearbyEntities = location.getWorld()
+              .getNearbyEntities(location, 100, 100, 100);
           int slimeCount = 0;
 
           if (nearbyEntities != null) {

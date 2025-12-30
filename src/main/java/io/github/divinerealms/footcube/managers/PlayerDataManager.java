@@ -3,16 +3,20 @@ package io.github.divinerealms.footcube.managers;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.utils.Logger;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Level;
-
 public class PlayerDataManager {
+
   private final FCManager fcManager;
   private final Plugin plugin;
   private final ConfigManager configManager;
@@ -48,7 +52,8 @@ public class PlayerDataManager {
       return uuid;
     });
 
-    return playerCache.computeIfAbsent(player.getName(), name -> new PlayerData(name, configManager, this));
+    return playerCache.computeIfAbsent(player.getName(),
+        name -> new PlayerData(name, configManager, this));
   }
 
   public PlayerData get(String playerName) {
@@ -57,7 +62,8 @@ public class PlayerDataManager {
       return null;
     }
 
-    return playerCache.computeIfAbsent(playerName, name -> new PlayerData(name, configManager, this));
+    return playerCache.computeIfAbsent(playerName,
+        name -> new PlayerData(name, configManager, this));
   }
 
   public UUID getUUID(String playerName) {
@@ -159,7 +165,8 @@ public class PlayerDataManager {
           savePlayerData(playerName);
           totalSaved++;
         } catch (Exception exception) {
-          plugin.getLogger().log(Level.SEVERE, "Failed to save player data for " + playerName, exception);
+          plugin.getLogger()
+              .log(Level.SEVERE, "Failed to save player data for " + playerName, exception);
         }
         processed++;
       }
@@ -177,7 +184,8 @@ public class PlayerDataManager {
       }
 
       if (!dataQueue.isEmpty()) {
-        logger.info(dataQueue.size() + " player data file(s) remaining in queue, scheduling next batch...");
+        logger.info(
+            dataQueue.size() + " player data file(s) remaining in queue, scheduling next batch...");
         scheduleSave();
       }
     });

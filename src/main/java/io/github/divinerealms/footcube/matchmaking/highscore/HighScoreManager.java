@@ -6,7 +6,7 @@ import io.github.divinerealms.footcube.managers.PlayerDataManager;
 import io.github.divinerealms.footcube.managers.Utilities;
 import io.github.divinerealms.footcube.utils.Logger;
 import lombok.Getter;
-import org.bukkit.entity.Player;
+import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
@@ -38,12 +38,11 @@ public class HighScoreManager {
   @Getter
   private long lastUpdate;
   @Getter
-  private int lastUpdatedParticipant;
-  @Getter
   private String[] participants;
   @Getter
-  private boolean isUpdating, hasInitialData = false;
-  private boolean finishCalled = false;
+  private boolean isUpdating;
+  @Getter
+  private boolean hasInitialData = false;
 
   public HighScoreManager(FCManager fcManager) {
     this.plugin = fcManager.getPlugin();
@@ -70,29 +69,41 @@ public class HighScoreManager {
     topStreakNames = new String[]{nobody, nobody, nobody};
   }
 
-  public void showHighScores(Player player) {
-    logger.send(player, BEST_HEADER);
-    showTopCategory(player, topSkillNames, bestRatings);
+  public void showHighScores(CommandSender sender) {
+    if (isUpdating) {
+      logger.send(sender, BEST_UPDATING);
+      return;
+    }
 
-    logger.send(player, BEST_GOALS);
-    showTopCategory(player, topGoalsNames, mostGoals);
+    if (!hasInitialData) {
+      logger.send(sender, BEST_UPDATING);
+      return;
+    }
 
-    logger.send(player, BEST_ASSISTS);
-    showTopCategory(player, topAssistsNames, mostAssists);
+    logger.send(sender, BEST_HEADER);
+    showTopCategory(sender, topSkillNames, bestRatings);
 
-    logger.send(player, BEST_OWN_GOALS);
-    showTopCategory(player, topOwnGoalsNames, mostOwnGoals);
+    logger.send(sender, BEST_GOALS);
+    showTopCategory(sender, topGoalsNames, mostGoals);
 
-    logger.send(player, BEST_WINS);
-    showTopCategory(player, topWinsNames, mostWins);
+    logger.send(sender, BEST_ASSISTS);
+    showTopCategory(sender, topAssistsNames, mostAssists);
 
-    logger.send(player, BEST_WINSTREAK);
-    showTopCategory(player, topStreakNames, longestStreak);
+    logger.send(sender, BEST_OWN_GOALS);
+    showTopCategory(sender, topOwnGoalsNames, mostOwnGoals);
+
+    logger.send(sender, BEST_WINS);
+    showTopCategory(sender, topWinsNames, mostWins);
+
+    logger.send(sender, BEST_WINSTREAK);
+    showTopCategory(sender, topStreakNames, longestStreak);
+
+    logger.send(sender, SIMPLE_FOOTER);
   }
 
-  private void showTopCategory(Player player, String[] names, double[] values) {
+  private void showTopCategory(CommandSender sender, String[] names, double[] values) {
     for (int i = 0; i < 3; i++) {
-      logger.send(player, BEST_ENTRY,
+      logger.send(sender, BEST_ENTRY,
           String.valueOf(i + 1),
           names[i],
           String.valueOf(values[i])
@@ -100,9 +111,9 @@ public class HighScoreManager {
     }
   }
 
-  private void showTopCategory(Player player, String[] names, int[] values) {
+  private void showTopCategory(CommandSender sender, String[] names, int[] values) {
     for (int i = 0; i < 3; i++) {
-      logger.send(player, BEST_ENTRY,
+      logger.send(sender, BEST_ENTRY,
           String.valueOf(i + 1),
           names[i],
           String.valueOf(values[i])
@@ -121,10 +132,9 @@ public class HighScoreManager {
       participants[i] = files[i].getName().replace(".yml", "");
     }
 
-    lastUpdatedParticipant = 0;
-    finishCalled = false;
     isUpdating = true;
     clearArrays();
+    processAllPlayers();
   }
 
   private void clearArrays() {
@@ -163,15 +173,12 @@ public class HighScoreManager {
     }
   }
 
-  public List<CompletableFuture<Void>> processBatch(int batchSize) {
+  public void processAllPlayers() {
     List<CompletableFuture<Void>> nameFutures = new ArrayList<>();
-    int processed = 0;
 
-    while (lastUpdatedParticipant < participants.length && processed < batchSize) {
-      String playerName = participants[lastUpdatedParticipant++];
+    for (String playerName : participants) {
       PlayerData data = playerDataManager.get(playerName);
       if (data == null) {
-        processed++;
         continue;
       }
 
@@ -199,7 +206,6 @@ public class HighScoreManager {
       UUID uuid = playerDataManager.getUUID(playerName);
       if (uuid == null) {
         logger.info("&cUUID not found for player &b" + playerName);
-        processed++;
         continue;
       }
 
@@ -209,23 +215,11 @@ public class HighScoreManager {
       nameFutures.add(insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, uuid, playerName));
       nameFutures.add(insertTop3(mostWins, topWinsNames, wins, uuid, playerName));
       nameFutures.add(insertTop3(longestStreak, topStreakNames, bestWinStreak, uuid, playerName));
-
-      processed++;
     }
+
+    CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0])).join();
 
     lastUpdate = System.currentTimeMillis();
-    return nameFutures;
-  }
-
-  public boolean isUpdateComplete() {
-    return lastUpdatedParticipant >= participants.length;
-  }
-
-  public void finishUpdate() {
-    if (finishCalled) {
-      return;
-    }
-    finishCalled = true;
     isUpdating = false;
     hasInitialData = true;
   }
@@ -235,26 +229,12 @@ public class HighScoreManager {
     value = (double) Math.round(value * 100) / 100;
     double finalValue = value;
 
-    String cachedPrefix = utilities.getCachedPrefixedName(uuid, playerName);
-
-    if (cachedPrefix != null && !cachedPrefix.equals(playerName)) {
-      insertIntoArray(array, names, finalValue, cachedPrefix);
-      return CompletableFuture.completedFuture(null);
-    }
-
     return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
         insertIntoArray(array, names, finalValue, prefixedName)
     );
   }
 
   private CompletableFuture<Void> insertTop3(int[] array, String[] names, int value, UUID uuid, String playerName) {
-    String cachedPrefix = utilities.getCachedPrefixedName(uuid, playerName);
-
-    if (cachedPrefix != null && !cachedPrefix.equals(playerName)) {
-      insertIntoArray(array, names, value, cachedPrefix);
-      return CompletableFuture.completedFuture(null);
-    }
-
     return utilities.getPrefixedName(uuid, playerName).thenAccept(prefixedName ->
         insertIntoArray(array, names, value, prefixedName)
     );

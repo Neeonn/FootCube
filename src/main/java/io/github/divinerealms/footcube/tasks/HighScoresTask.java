@@ -4,28 +4,19 @@ import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.highscore.HighScoreManager;
 import org.bukkit.Bukkit;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.io.File;
 
 public class HighScoresTask extends BaseTask {
-  private static final int BATCH_SIZE = 50;
-  private static final long UPDATE_INTERVAL = 12000L; // 10 minutes
   private final HighScoreManager highScoreManager;
 
   public HighScoresTask(FCManager fcManager) {
-    super(fcManager, "HighScores", UPDATE_INTERVAL, true);
+    super(fcManager, "HighScores", 20 * 60 * 10, true);
     this.highScoreManager = fcManager.getHighscoreManager();
   }
 
   @Override
   protected void kaboom() {
     if (highScoreManager.isUpdating()) {
-      int batchesToProcess = highScoreManager.isHasInitialData()
-                             ? 20
-                             : 50;
-      for (int i = 0; i < batchesToProcess && !highScoreManager.isUpdateComplete(); i++) {
-        processBatch();
-      }
       return;
     }
 
@@ -35,13 +26,7 @@ public class HighScoresTask extends BaseTask {
   @Override
   public void start() {
     super.start();
-    Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
-      startUpdateCycle();
-
-      while (highScoreManager.isUpdating() && !highScoreManager.isUpdateComplete()) {
-        processBatch();
-      }
-    }, 20 * 2);
+    Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, this::startUpdateCycle, 20 * 2);
   }
 
   public void startUpdateCycle() {
@@ -50,27 +35,15 @@ public class HighScoresTask extends BaseTask {
       return;
     }
 
-    highScoreManager.startUpdate();
-    int totalPlayers = highScoreManager.getParticipants().length;
-    logger.info("&a✔ &2Started &d" + getTaskName() + " &2update (&e" + totalPlayers + " &2players to process)");
-  }
-
-  private void processBatch() {
-    List<CompletableFuture<Void>> nameFutures = highScoreManager.processBatch(BATCH_SIZE);
-
-    if (!nameFutures.isEmpty()) {
-      CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0])).thenRun(this::checkCompletion);
-    } else {
-      checkCompletion();
+    int totalPlayers = 0;
+    File playerFolder = new File(plugin.getDataFolder(), "players");
+    File[] files = playerFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+    if (files != null) {
+      totalPlayers = files.length;
     }
-  }
 
-  private void checkCompletion() {
-    Bukkit.getScheduler().runTask(plugin, () -> {
-      if (highScoreManager.isUpdateComplete() && highScoreManager.isUpdating()) {
-        highScoreManager.finishUpdate();
-        logger.info("&a✔ &d" + getTaskName() + " &2update completed!");
-      }
-    });
+    logger.info("&a✔ &2Started &d" + getTaskName() + " &2update (&e" + totalPlayers + " &2players to process)");
+    highScoreManager.startUpdate();
+    logger.info("&a✔ &d" + getTaskName() + " &2update completed!");
   }
 }

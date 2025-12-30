@@ -195,6 +195,7 @@ public enum Lang {
   BEST_OWN_GOALS("best.most-own-goals", "&bMost own goals:"),
   BEST_WINS("best.most-wins", "&bMost wins:"),
   BEST_WINSTREAK("best.winstreak", "&bLongest win streak:"),
+  BEST_UPDATING("best.updating", "{prefix}&cHighScores nisu još dostupni. Probajte ponovo za par sekundi..."),
 
   NOBODY("nobody", "nobody"),
 
@@ -323,7 +324,9 @@ public enum Lang {
       "&7 &lOverall Average Tick Time: &a{0}ms",
       "&e---------------------------------------------")),
   TASKS_RESTART("plugin-stats.report.tasks.restart", "{prefix-admin}&aAll tasks have been restarted."),
-  TASKS_RESET_STATS("plugin-stats.report.tasks.reset-stats", "{prefix-admin}&aAll task statistics have been reset.");
+  TASKS_RESET_STATS("plugin-stats.report.tasks.reset-stats", "{prefix-admin}&aAll task statistics have been reset."),
+
+  SIMPLE_FOOTER("simple-footer", "&e---------------------------------------------");
 
   private static FileConfiguration LANG;
   private final String path;

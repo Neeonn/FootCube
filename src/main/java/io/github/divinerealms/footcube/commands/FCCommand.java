@@ -428,11 +428,7 @@ public class FCCommand implements CommandExecutor, TabCompleter {
 
       case "highscores":
       case "best":
-        if (!(sender instanceof Player)) {
-          return inGameOnly(sender);
-        }
-
-        fcManager.getHighscoreManager().showHighScores((Player) sender);
+        fcManager.getHighscoreManager().showHighScores(sender);
         break;
 
       case "cube":

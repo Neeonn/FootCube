@@ -159,7 +159,10 @@ public class Utilities {
 
   public CompletableFuture<String> getPrefixedName(UUID uuid, String playerName) {
     return luckPerms.getUserManager().loadUser(uuid).thenApplyAsync(user -> {
-      CachedMetaData meta = user.getCachedData().getMetaData();
+      CachedMetaData meta = user.getCachedData().getMetaData(
+          luckPerms.getContextManager().getStaticQueryOptions()
+      );
+
       String prefix = meta.getPrefix();
       if (prefix == null) {
         prefix = "";

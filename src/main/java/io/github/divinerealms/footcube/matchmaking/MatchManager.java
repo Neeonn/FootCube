@@ -81,9 +81,8 @@ public class MatchManager {
     }
 
     Team team = teamManager.getTeam(player);
-    List<Player> playersToQueue = (team != null)
-        ? new ArrayList<>(team.getMembers())
-        : Collections.singletonList(player);
+    List<Player> playersToQueue =
+        (team != null) ? new ArrayList<>(team.getMembers()) : Collections.singletonList(player);
     String matchTypeString = matchType + "v" + matchType;
 
     for (Player p : playersToQueue) {
@@ -200,9 +199,7 @@ public class MatchManager {
       return;
     }
 
-    int arenaSize = (targetMatch.getArena() != null)
-        ? targetMatch.getArena().getType()
-        : 1;
+    int arenaSize = (targetMatch.getArena() != null) ? targetMatch.getArena().getType() : 1;
     int requiredPlayers = arenaSize * 2;
 
     List<MatchPlayer> finalPlayerLineup = new ArrayList<>();
@@ -250,9 +247,7 @@ public class MatchManager {
     for (int i = 0; i < requiredPlayers; i++) {
       MatchPlayer matchPlayer = targetMatch.getPlayers().get(i);
       if (matchPlayer != null) {
-        matchPlayer.setTeamColor(i < arenaSize
-            ? TeamColor.RED
-            : TeamColor.BLUE);
+        matchPlayer.setTeamColor(i < arenaSize ? TeamColor.RED : TeamColor.BLUE);
       }
     }
 
@@ -332,7 +327,7 @@ public class MatchManager {
       if (allNull) {
         endMatch(match);
       } else {
-        if (!data.getOpenMatches().contains(match)) {
+        if (match.getPhase() != MatchPhase.LOBBY && !data.getOpenMatches().contains(match)) {
           data.getOpenMatches().add(match);
         }
         scoreboardManager.updateScoreboard(match);
@@ -392,9 +387,7 @@ public class MatchManager {
       }
     }
 
-    TeamColor teamToJoin = (redTeamCount <= blueTeamCount)
-        ? TeamColor.RED
-        : TeamColor.BLUE;
+    TeamColor teamToJoin = (redTeamCount <= blueTeamCount) ? TeamColor.RED : TeamColor.BLUE;
     int openSlotIndex = -1;
     if (players != null) {
       for (int i = 0; i < players.size(); i++) {
@@ -454,9 +447,7 @@ public class MatchManager {
       }
     }
 
-    String winningTeam = winner == TeamColor.RED
-        ? RED.toString()
-        : BLUE.toString();
+    String winningTeam = winner == TeamColor.RED ? RED.toString() : BLUE.toString();
     boolean shouldCount = match.getArena().getType() != TWO_V_TWO;
 
     for (MatchPlayer matchPlayer : match.getPlayers()) {
@@ -558,12 +549,10 @@ public class MatchManager {
       try {
         system.updateMatch(match);
       } catch (Exception exception) {
-        String arenaId = (match.getArena() != null)
-            ? String.valueOf(match.getArena().getId())
-            : "unknown";
+        String arenaId =
+            (match.getArena() != null) ? String.valueOf(match.getArena().getId()) : "unknown";
         Bukkit.getLogger().log(Level.SEVERE,
-            "Error updating match (arena=" + arenaId + "): " + exception.getMessage(),
-            exception);
+            "Error updating match (arena=" + arenaId + "): " + exception.getMessage(), exception);
       }
     }
 
@@ -639,9 +628,7 @@ public class MatchManager {
         continue;
       }
       List<MatchPlayer> players = match.getPlayers();
-      total += (players == null)
-          ? 0
-          : players.size();
+      total += (players == null) ? 0 : players.size();
     }
     return total;
   }
@@ -808,15 +795,10 @@ public class MatchManager {
       return;
     }
 
-    String prefixedName = utilities.getCachedPrefixedName(
-        sender.getUniqueId(),
-        sender.getName()
-    );
+    String prefixedName = utilities.getCachedPrefixedName(sender.getUniqueId(), sender.getName());
 
-    String formattedMessage = (teamColor == TeamColor.RED
-        ? TEAMCHAT_RED.replace(prefixedName)
-        : TEAMCHAT_BLUE.replace(prefixedName)
-    ) + message;
+    String formattedMessage = (teamColor == TeamColor.RED ? TEAMCHAT_RED.replace(prefixedName)
+        : TEAMCHAT_BLUE.replace(prefixedName)) + message;
 
     List<MatchPlayer> players = match.getPlayers();
     if (players == null) {

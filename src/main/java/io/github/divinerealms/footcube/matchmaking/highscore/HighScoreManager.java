@@ -27,6 +27,7 @@ import org.bukkit.plugin.Plugin;
 
 public class HighScoreManager {
 
+  private final FCManager fcManager;
   private final Plugin plugin;
   private final Logger logger;
   private final Utilities utilities;
@@ -54,6 +55,7 @@ public class HighScoreManager {
   private boolean hasInitialData = false;
 
   public HighScoreManager(FCManager fcManager) {
+    this.fcManager = fcManager;
     this.plugin = fcManager.getPlugin();
     this.logger = fcManager.getLogger();
     this.utilities = fcManager.getUtilities();
@@ -218,17 +220,28 @@ public class HighScoreManager {
         continue;
       }
 
-      CompletableFuture<Void> playerFuture = utilities.getPrefixedName(uuid, playerName)
-          .thenAccept(prefixedName -> {
-            insertTop3(bestRatings, topSkillNames, skillLevel, prefixedName);
-            insertTop3(mostGoals, topGoalsNames, goals, prefixedName);
-            insertTop3(mostAssists, topAssistsNames, assists, prefixedName);
-            insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, prefixedName);
-            insertTop3(mostWins, topWinsNames, wins, prefixedName);
-            insertTop3(longestStreak, topStreakNames, bestWinStreak, prefixedName);
-          });
+      String cachedPrefixedName = fcManager.getPrefixedName(uuid);
 
-      nameFutures.add(playerFuture);
+      if (cachedPrefixedName != null) {
+        insertTop3(bestRatings, topSkillNames, skillLevel, cachedPrefixedName);
+        insertTop3(mostGoals, topGoalsNames, goals, cachedPrefixedName);
+        insertTop3(mostAssists, topAssistsNames, assists, cachedPrefixedName);
+        insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, cachedPrefixedName);
+        insertTop3(mostWins, topWinsNames, wins, cachedPrefixedName);
+        insertTop3(longestStreak, topStreakNames, bestWinStreak, cachedPrefixedName);
+      } else {
+        CompletableFuture<Void> playerFuture = utilities.getPrefixedName(uuid, playerName)
+            .thenAccept(prefixedName -> {
+              insertTop3(bestRatings, topSkillNames, skillLevel, prefixedName);
+              insertTop3(mostGoals, topGoalsNames, goals, prefixedName);
+              insertTop3(mostAssists, topAssistsNames, assists, prefixedName);
+              insertTop3(mostOwnGoals, topOwnGoalsNames, ownGoals, prefixedName);
+              insertTop3(mostWins, topWinsNames, wins, prefixedName);
+              insertTop3(longestStreak, topStreakNames, bestWinStreak, prefixedName);
+            });
+
+        nameFutures.add(playerFuture);
+      }
     }
 
     CompletableFuture.allOf(nameFutures.toArray(new CompletableFuture[0])).join();

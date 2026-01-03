@@ -132,6 +132,7 @@ public enum Lang {
   SETUP_ARENA_SUCCESS("setup-arena.success", "{prefix}&aYou successfully setup the arena"),
 
   CLEAR_ARENAS_SUCCESS("clear-arenas.success", "{prefix}&aYou successfully wiped all arenas"),
+  CLEAR_ARENAS_TYPE_SUCCESS("clear-arenas.type-success", "{prefix-admin}&aUspešno obrisane &e{0} &aarene!"),
   ALREADY_ENOUGH_CUBES("already-enough-cubes", "&cThere already are enough cubes"),
 
   BALANCE("balance", "{prefix}&aYou currently have #{0}"),

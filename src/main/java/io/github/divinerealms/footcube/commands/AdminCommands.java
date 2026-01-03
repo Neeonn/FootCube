@@ -3,6 +3,7 @@ package io.github.divinerealms.footcube.commands;
 import static io.github.divinerealms.footcube.configs.Lang.ADMIN_STATSET;
 import static io.github.divinerealms.footcube.configs.Lang.BAN_REMAINING;
 import static io.github.divinerealms.footcube.configs.Lang.CLEAR_ARENAS_SUCCESS;
+import static io.github.divinerealms.footcube.configs.Lang.CLEAR_ARENAS_TYPE_SUCCESS;
 import static io.github.divinerealms.footcube.configs.Lang.CLEAR_STATS_SUCCESS;
 import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_ALREADY_ADDED;
 import static io.github.divinerealms.footcube.configs.Lang.COMMAND_DISABLER_LIST;
@@ -477,6 +478,29 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
               return true;
             }
 
+            if (args.length >= 3) {
+              switch (args[2].toLowerCase()) {
+                case "2v2":
+                  arenaManager.clearArenaType(2);
+                  logger.send(sender, CLEAR_ARENAS_TYPE_SUCCESS, "2v2");
+                  return true;
+
+                case "3v3":
+                  arenaManager.clearArenaType(3);
+                  logger.send(sender, CLEAR_ARENAS_TYPE_SUCCESS, "3v3");
+                  return true;
+
+                case "4v4":
+                  arenaManager.clearArenaType(4);
+                  logger.send(sender, CLEAR_ARENAS_TYPE_SUCCESS, "4v4");
+                  return true;
+
+                default:
+                  logger.send(sender, USAGE, label + " " + sub + " arenas [2v2|3v3|4v4]");
+                  return true;
+              }
+            }
+
             arenaManager.clearArenas();
             logger.send(sender, CLEAR_ARENAS_SUCCESS);
             return true;
@@ -854,12 +878,12 @@ public class AdminCommands implements CommandExecutor, TabCompleter {
         if (args.length == 3) {
           if (args[0].equalsIgnoreCase("ban")) {
             completions.addAll(Arrays.asList("10s", "30s", "5min", "10min"));
-          } else {
-            if (args[0].equalsIgnoreCase("statset")) {
-              completions.addAll(
-                  Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak",
-                      "bestwinstreak"));
-            }
+          } else if (args[0].equalsIgnoreCase("statset")) {
+            completions.addAll(
+                Arrays.asList("wins", "matches", "goals", "assists", "owngoals", "winstreak",
+                    "bestwinstreak"));
+          } else if (args[0].equalsIgnoreCase("clear") && args[1].equalsIgnoreCase("arenas")) {
+            completions.addAll(Arrays.asList("2v2", "3v3", "4v4"));
           }
         }
       }

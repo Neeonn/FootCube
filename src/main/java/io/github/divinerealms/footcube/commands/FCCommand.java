@@ -87,6 +87,7 @@ import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Difficulty;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -523,11 +524,22 @@ public class FCCommand implements CommandExecutor, TabCompleter {
         Location loc = player.getLocation();
         Vector dir = loc.getDirection().normalize();
         Location spawnLoc;
-        if (player.getGameMode() != GameMode.CREATIVE && !player.isFlying()) {
-          spawnLoc = loc.add(dir.multiply(2.0));
-          spawnLoc.setY(loc.getY() + 2.5);
+
+        if (player.getGameMode() == GameMode.CREATIVE || player.isFlying()) {
+          Location down = loc.clone();
+
+          while (down.getY() > 0 && down.getBlock().getType() == Material.AIR) {
+            down.subtract(0, 1, 0);
+          }
+
+          double x = Math.floor(down.getX()) + 0.5;
+          double y = down.getBlockY() + 1.5;
+          double z = Math.floor(down.getZ()) + 0.5;
+
+          spawnLoc = new Location(down.getWorld(), x, y, z);
         } else {
-          spawnLoc = loc;
+          spawnLoc = loc.clone().add(dir.multiply(2));
+          spawnLoc.setY(loc.getY() + 2.5);
         }
 
         system.spawnCube(spawnLoc);

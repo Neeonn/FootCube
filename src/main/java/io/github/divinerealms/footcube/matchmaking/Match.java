@@ -17,7 +17,7 @@ public class Match {
   private Slime cube;
   private MatchPlayer lastTouch, secondLastTouch;
   private Scoreboard lobbyScoreboard, matchScoreboard;
-  private long startTime, pauseStartTime, totalPausedTime, lastTakePlaceAnnounceTick;
+  private long startTime, lastTakePlaceAnnounceTick;
   private boolean takePlaceNeeded;
 
   public Match(Arena arena, List<MatchPlayer> players) {
@@ -29,8 +29,6 @@ public class Match {
     this.scoreBlue = 0;
     this.startTime = 0;
     this.tick = 0;
-    this.pauseStartTime = 0;
-    this.totalPausedTime = 0;
     this.lastTakePlaceAnnounceTick = 0;
     this.takePlaceNeeded = false;
   }

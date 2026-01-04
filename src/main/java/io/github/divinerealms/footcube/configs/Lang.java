@@ -320,7 +320,6 @@ public enum Lang {
   MATCHES_LIST_NO_MATCHES("matches.list.no-matches", "&cTrenutno nema aktivnih mečeva..."),
   MATCHES_LIST_WAITING("matches.list.waiting", "&8&oČekamo igrače..."),
   MATCHES_LIST_STARTING("matches.list.starting", "&ePočinje za &c{0}s"),
-  MATCHES_LIST_CONTINUING("matches.list.continuing", "&aNastavlja za &c{0}s"),
   MATCHES_LIST_LOBBY("matches.list.lobby", "&6 &l[{0} Lobby {1}]"),
   MATCHES_LIST_MATCH("matches.list.match", "&a &l[{0} Meč {1}]"),
   MATCHES_LIST_STATUS("matches.list.status", "&7 Status: &r{0}"),

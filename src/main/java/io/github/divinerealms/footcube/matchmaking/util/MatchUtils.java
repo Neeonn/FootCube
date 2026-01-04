@@ -167,19 +167,17 @@ public class MatchUtils {
       String timeDisplay;
       if (match.getPhase() == MatchPhase.LOBBY) {
         timeDisplay = MATCHES_LIST_WAITING.toString();
+      } else if (match.getPhase() == MatchPhase.STARTING) {
+        timeDisplay = MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
       } else {
-        if (match.getPhase() == MatchPhase.STARTING || match.getPhase() == MatchPhase.CONTINUING) {
-          timeDisplay = MATCHES_LIST_STARTING.replace(String.valueOf(match.getCountdown()));
-        } else {
-          long matchDuration = match.getArena().getType() == TWO_V_TWO
-              ? 120
-              : 300;
-          long elapsedMillis =
-              (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
-          long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
+        long matchDuration = match.getArena().getType() == TWO_V_TWO
+            ? 120
+            : 300;
+        long elapsedMillis =
+            System.currentTimeMillis() - match.getStartTime();
+        long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
-          timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
-        }
+        timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
       }
 
       if (match.getPhase() == MatchPhase.LOBBY) {
@@ -400,7 +398,6 @@ public class MatchUtils {
     } else {
       match.setScoreBlue(match.getScoreBlue() + 1);
     }
-    match.setPauseStartTime(System.currentTimeMillis());
     if (match.getCube() != null) {
       match.getCube().setHealth(0);
     }

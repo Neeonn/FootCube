@@ -1,7 +1,6 @@
 package io.github.divinerealms.footcube.matchmaking.scoreboard;
 
 import static io.github.divinerealms.footcube.configs.Lang.BLUE;
-import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_CONTINUING;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_LOBBY;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_MATCH;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_STARTING;
@@ -255,19 +254,13 @@ public class ScoreManager {
   }
 
   private String buildMatchScoreboard(Match match) {
-    String timeDisplay;
-    if (match.getPhase() == MatchPhase.CONTINUING) {
-      timeDisplay = MATCHES_LIST_CONTINUING.replace(String.valueOf(match.getCountdown()));
-    } else {
-      long matchDuration = match.getArena().getType() == TWO_V_TWO
-          ? 120
-          : 300;
-      long elapsedMillis =
-          (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
-      long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
+    long matchDuration = match.getArena().getType() == TWO_V_TWO
+        ? 120
+        : 300;
+    long elapsedMillis = System.currentTimeMillis() - match.getStartTime();
+    long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
-      timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
-    }
+    String timeDisplay = Utilities.formatTimePretty((int) remainingSeconds);
 
     return SCOREBOARD_LINES_MATCH.replace(RED.toString(), String.valueOf(match.getScoreRed()),
         String.valueOf(match.getScoreBlue()), BLUE.toString(),

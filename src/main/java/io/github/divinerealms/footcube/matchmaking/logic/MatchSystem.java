@@ -194,8 +194,7 @@ public class MatchSystem {
     long matchDuration = match.getArena().getType() == TWO_V_TWO
         ? 120
         : 300;
-    long totalActiveElapsedMillis = (System.currentTimeMillis() - match.getStartTime()
-        - match.getTotalPausedTime());
+    long totalActiveElapsedMillis = (System.currentTimeMillis() - match.getStartTime());
     long elapsedSeconds = TimeUnit.MILLISECONDS.toSeconds(totalActiveElapsedMillis);
 
     if (elapsedSeconds >= matchDuration) {
@@ -746,8 +745,7 @@ public class MatchSystem {
       long matchDuration = match.getArena().getType() == TWO_V_TWO
           ? 120
           : 300;
-      long elapsedMillis =
-          (System.currentTimeMillis() - match.getStartTime()) - match.getTotalPausedTime();
+      long elapsedMillis = System.currentTimeMillis() - match.getStartTime();
       long remainingSeconds = matchDuration - TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
 
       int matchType = match.getArena().getType();

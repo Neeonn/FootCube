@@ -16,7 +16,7 @@ commands:
 
   fcadmin:
     description: Admin command
-    aliases: [ fca ]
+    aliases: [ afc ]
     permission: footcube.admin
 
   matches:

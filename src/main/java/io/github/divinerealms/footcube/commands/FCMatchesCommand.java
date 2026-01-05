@@ -5,31 +5,32 @@ import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_HEADER;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchUtils.getFormattedMatches;
 
+import co.aikar.commands.BaseCommand;
+import co.aikar.commands.annotation.CatchUnknown;
+import co.aikar.commands.annotation.CommandAlias;
+import co.aikar.commands.annotation.Default;
+import co.aikar.commands.annotation.Description;
 import io.github.divinerealms.footcube.core.FCManager;
 import io.github.divinerealms.footcube.matchmaking.MatchManager;
-import io.github.divinerealms.footcube.physics.utilities.PhysicsSystem;
 import io.github.divinerealms.footcube.utils.Logger;
 import java.util.List;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
-public class MatchesCommand implements CommandExecutor {
+@CommandAlias("matches|queues|q")
+public class FCMatchesCommand extends BaseCommand {
 
-  private final FCManager fcManager;
   private final Logger logger;
-  private final PhysicsSystem system;
+  private final MatchManager matchManager;
 
-  public MatchesCommand(FCManager fcManager) {
-    this.fcManager = fcManager;
+  public FCMatchesCommand(FCManager fcManager) {
     this.logger = fcManager.getLogger();
-    this.system = fcManager.getPhysicsSystem();
+    this.matchManager = fcManager.getMatchManager();
   }
 
-  @Override
-  public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-    MatchManager matchManager = fcManager.getMatchManager();
+  @Default
+  @CatchUnknown
+  @Description("View all active matches")
+  public void onMatches(CommandSender sender) {
     List<String> output = getFormattedMatches(matchManager.getData().getMatches());
 
     if (!output.isEmpty()) {
@@ -39,10 +40,5 @@ public class MatchesCommand implements CommandExecutor {
     } else {
       logger.send(sender, MATCHES_LIST_NO_MATCHES);
     }
-
-    if (sender instanceof Player) {
-      system.recordPlayerAction((Player) sender);
-    }
-    return true;
   }
 }

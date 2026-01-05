@@ -1,13 +1,36 @@
 package io.github.divinerealms.footcube.core;
 
+import static io.github.divinerealms.footcube.configs.Lang.HELP_FOOTER;
+import static io.github.divinerealms.footcube.configs.Lang.HELP_FORMAT;
+import static io.github.divinerealms.footcube.configs.Lang.HELP_HEADER;
+import static io.github.divinerealms.footcube.configs.Lang.HELP_USAGE;
+import static io.github.divinerealms.footcube.configs.Lang.INGAME_ONLY;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM_PARAMETERS;
+import static io.github.divinerealms.footcube.configs.Lang.PLAYER_NOT_FOUND;
+import static io.github.divinerealms.footcube.configs.Lang.UNKNOWN_COMMAND;
 import static io.github.divinerealms.footcube.physics.PhysicsConstants.DEBUG_ON_MS;
 import static io.github.divinerealms.footcube.utils.Permissions.PERM_ADMIN;
 
+import co.aikar.commands.BukkitCommandCompletionContext;
+import co.aikar.commands.CommandCompletions;
+import co.aikar.commands.MessageKeys;
+import co.aikar.commands.PaperCommandManager;
 import io.github.divinerealms.footcube.FootCube;
-import io.github.divinerealms.footcube.commands.AdminCommands;
-import io.github.divinerealms.footcube.commands.BuildCommand;
+import io.github.divinerealms.footcube.commands.FCAdminArenaCommands;
+import io.github.divinerealms.footcube.commands.FCAdminBanCommands;
+import io.github.divinerealms.footcube.commands.FCAdminCommand;
+import io.github.divinerealms.footcube.commands.FCAdminDebugCommands;
+import io.github.divinerealms.footcube.commands.MatchManCommands;
+import io.github.divinerealms.footcube.commands.FCAdminPlayerCommands;
+import io.github.divinerealms.footcube.commands.FCAdminSystemCommands;
+import io.github.divinerealms.footcube.commands.FCBuildCommand;
 import io.github.divinerealms.footcube.commands.FCCommand;
-import io.github.divinerealms.footcube.commands.MatchesCommand;
+import io.github.divinerealms.footcube.commands.FCCubeCommands;
+import io.github.divinerealms.footcube.commands.FCGameCommands;
+import io.github.divinerealms.footcube.commands.FCMatchesCommand;
+import io.github.divinerealms.footcube.commands.FCSettingsCommands;
+import io.github.divinerealms.footcube.commands.FCTeamCommands;
 import io.github.divinerealms.footcube.configs.Lang;
 import io.github.divinerealms.footcube.configs.PlayerData;
 import io.github.divinerealms.footcube.managers.ConfigManager;
@@ -34,6 +57,7 @@ import io.github.divinerealms.footcube.utils.PlayerSettings;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -59,8 +83,10 @@ public class FCManager {
   private static final String CONFIG_SOUNDS_KICK_BASE = "sounds.kick";
   private static final String CONFIG_SOUNDS_GOAL_BASE = "sounds.goal";
   private static final String CONFIG_PARTICLES_BASE = "particles.";
+
   @Getter
   private static FCManager instance;
+
   private final FootCube plugin;
   private final Logger logger;
   private final Utilities utilities;
@@ -85,9 +111,13 @@ public class FCManager {
   private final Set<Player> cachedPlayers = ConcurrentHashMap.newKeySet();
   private final Map<UUID, PlayerSettings> playerSettings = new ConcurrentHashMap<>();
   private final Map<UUID, String> cachedPrefixedNames = new ConcurrentHashMap<>();
+
+  private PaperCommandManager commandManager;
+
   private Economy economy;
   private LuckPerms luckPerms;
   private TabAPI tabAPI;
+
   @Setter
   private boolean enabling = false, disabling = false;
 
@@ -128,7 +158,6 @@ public class FCManager {
     this.taskManager = new TaskManager(this);
 
     new FCPlaceholders(this).register();
-    enabling = false;
     this.reload();
   }
 
@@ -175,22 +204,84 @@ public class FCManager {
   }
 
   public void registerCommands() {
-    FCCommand fcCommand = new FCCommand(this);
-    AdminCommands adminCommands = new AdminCommands(this, new DisableCommands(this));
-    BuildCommand buildCommand = new BuildCommand(this);
+    if (commandManager != null) {
+      try {
+        commandManager.unregisterCommands();
+        logger.info("&e⟳ &6Unregistered old ACF commands.");
+      } catch (Exception exception) {
+        Bukkit.getLogger()
+            .log(Level.SEVERE, "&cFailed to unregister old commands: " + exception.getMessage(),
+                exception);
+      }
+    }
 
-    plugin.getCommand("footcube").setExecutor(fcCommand);
-    plugin.getCommand("footcube").setTabCompleter(fcCommand);
+    commandManager = new PaperCommandManager(plugin);
+    configureACF();
+    registerCustomCompletions();
+    registerPlayerCommands();
+    registerAdminCommands();
 
-    plugin.getCommand("matches").setExecutor(new MatchesCommand(this));
+    logger.info("&a✔ &2Registered commands via &eACF &2successfully.");
+  }
 
-    plugin.getCommand("fcadmin").setExecutor(adminCommands);
-    plugin.getCommand("fcadmin").setTabCompleter(adminCommands);
+  private void configureACF() {
+    commandManager.enableUnstableAPI("help");
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.PERMISSION_DENIED,
+        NO_PERM.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.PERMISSION_DENIED_PARAMETER,
+        NO_PERM_PARAMETERS.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.INVALID_SYNTAX,
+        HELP_USAGE.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.COULD_NOT_FIND_PLAYER,
+        PLAYER_NOT_FOUND.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.NOT_ALLOWED_ON_CONSOLE,
+        INGAME_ONLY.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.UNKNOWN_COMMAND,
+        UNKNOWN_COMMAND.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.HELP_FORMAT,
+        HELP_FORMAT.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.HELP_HEADER,
+        HELP_HEADER.toString());
+    commandManager.getLocales().addMessage(Locale.ENGLISH,
+        MessageKeys.HELP_PAGE_INFORMATION,
+        HELP_FOOTER.toString());
+  }
 
-    plugin.getCommand("build").setExecutor(buildCommand);
-    plugin.getCommand("build").setTabCompleter(buildCommand);
+  private void registerCustomCompletions() {
+    CommandCompletions<BukkitCommandCompletionContext> completions =
+        commandManager.getCommandCompletions();
+    completions.registerStaticCompletion("particles",
+        PlayerSettings.getAllowedParticles());
+    completions.registerStaticCompletion("colors",
+        PlayerSettings.getAllowedColorNames());
+  }
 
-    logger.info("&a✔ &2Registered commands via &eplugin.yml &2successfully.");
+  private void registerPlayerCommands() {
+    commandManager.registerCommand(new FCCommand(this));
+    commandManager.registerCommand(new FCGameCommands(this));
+    commandManager.registerCommand(new FCTeamCommands(this));
+    commandManager.registerCommand(new FCCubeCommands(this));
+    commandManager.registerCommand(new FCSettingsCommands(this));
+    commandManager.registerCommand(new FCBuildCommand(this));
+    commandManager.registerCommand(new FCMatchesCommand(this));
+  }
+
+  private void registerAdminCommands() {
+    commandManager.registerCommand(new FCAdminCommand());
+    commandManager.registerCommand(new FCAdminSystemCommands(this));
+    commandManager.registerCommand(new FCAdminBanCommands(this));
+    commandManager.registerCommand(new FCAdminArenaCommands(this));
+    commandManager.registerCommand(new FCAdminPlayerCommands(this));
+    commandManager.registerCommand(new MatchManCommands(this));
+    commandManager.registerCommand(new FCAdminDebugCommands(this));
   }
 
   private void setupConfig() {
@@ -366,10 +457,26 @@ public class FCManager {
   public void cleanup() {
     long start = System.nanoTime();
     try {
-      physicsData.cleanup();
+      if (commandManager != null) {
+        try {
+          commandManager.unregisterCommands();
+          logger.info("&e⟳ &6Unregistered ACF commands during cleanup.");
+        } catch (Exception exception) {
+          Bukkit.getLogger().log(Level.SEVERE,
+              "&cFailed to unregister commands during cleanup: " + exception.getMessage(),
+              exception);
+        }
+      }
+      if (listenerManager != null) {
+        listenerManager.unregisterAll();
+      }
+      if (physicsData != null) {
+        physicsData.cleanup();
+      }
       playerSettings.clear();
       cachedPrefixedNames.clear();
       cachedPlayers.clear();
+      instance = null;
     } catch (Exception exception) {
       Bukkit.getLogger()
           .log(Level.SEVERE, "Error in cleanup: " + exception.getMessage(), exception);

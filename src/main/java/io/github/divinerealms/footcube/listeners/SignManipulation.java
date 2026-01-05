@@ -10,7 +10,7 @@ import static io.github.divinerealms.footcube.configs.Lang.JOIN_ALREADYINGAME;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_FOOTER;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_HEADER;
 import static io.github.divinerealms.footcube.configs.Lang.MATCHES_LIST_NO_MATCHES;
-import static io.github.divinerealms.footcube.configs.Lang.NO_PERM;
+import static io.github.divinerealms.footcube.configs.Lang.NO_PERM_PARAMETERS;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.FOUR_V_FOUR;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.THREE_V_THREE;
 import static io.github.divinerealms.footcube.matchmaking.util.MatchConstants.TWO_V_TWO;
@@ -227,7 +227,7 @@ public class SignManipulation implements Listener {
       switch (line1.toLowerCase()) {
         case "join":
           if (!player.hasPermission(PERM_PLAY)) {
-            logger.send(player, NO_PERM, PERM_PLAY, "fc join");
+            logger.send(player, NO_PERM_PARAMETERS, PERM_PLAY, "fc join");
             return;
           }
 

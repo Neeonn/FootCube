@@ -1,8 +1,18 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.io.ByteArrayOutputStream
 import java.util.Properties
 
 plugins {
     id("java")
+    id("com.gradleup.shadow") version "8.3.0"
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 group = "io.github.divinerealms.footcube"
@@ -54,24 +64,6 @@ else "$versionBase-$commit"
 val jarLabel = if (dirty) "FootCube-$versionBase-$commit-DEV.jar"
 else "FootCube-$versionBase-$commit.jar"
 
-tasks.named("build") {
-    doFirst {
-        println("Building FootCube version: $version")
-        println("Repository state: ${if (dirty) "UNCOMMITTED CHANGES" else "CLEAN"}")
-        println("Output JAR: $jarLabel")
-    }
-}
-
-tasks.processResources {
-    filesMatching("plugin.yml") {
-        expand("version" to project.version.toString())
-    }
-}
-
-tasks.jar {
-    archiveFileName.set(jarLabel)
-}
-
 repositories {
     mavenCentral()
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
@@ -80,6 +72,7 @@ repositories {
     maven("https://repo.codemc.io/repository/nms")
     maven("https://jitpack.io")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+    maven("https://repo.aikar.co/content/groups/aikar/")
 }
 
 dependencies {
@@ -90,12 +83,40 @@ dependencies {
     compileOnly("net.luckperms:api:5.4")
     compileOnly("com.github.NEZNAMY:TAB-API:5.3.2")
 
+    implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
+
     annotationProcessor("org.projectlombok:lombok:1.18.38")
 
     testCompileOnly("org.projectlombok:lombok:1.18.38")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+}
+
+tasks.compileJava {
+    options.compilerArgs.add("-parameters")
+}
+
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("version" to project.version.toString())
+    }
+}
+
+tasks.withType<ShadowJar> {
+    archiveFileName.set(jarLabel)
+    relocate("co.aikar.commands", "io.github.divinerealms.footcube.libs.acf")
+    relocate("co.aikar.locales", "io.github.divinerealms.footcube.libs.locales")
+    minimize()
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
+    doFirst {
+        println("Building FootCube version: $version")
+        println("Repository state: ${if (dirty) "UNCOMMITTED CHANGES" else "CLEAN"}")
+        println("Output JAR: $jarLabel")
+    }
 }
 
 tasks.test {

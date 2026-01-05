@@ -29,16 +29,14 @@ public class FootCube extends JavaPlugin {
 
     try {
       fcManager.setDisabling(true);
-      fcManager.getPhysicsSystem().removeCubes();
-      fcManager.getTaskManager().stopAll();
       if (fcManager.getMatchManager() != null) {
         fcManager.getMatchManager().forceLeaveAllPlayers();
       }
+      fcManager.getPhysicsSystem().removeCubes();
+      fcManager.getTaskManager().stopAll();
       fcManager.saveAll();
       fcManager.cleanup();
       getServer().getScheduler().cancelTasks(this);
-      fcManager.getListenerManager().unregisterAll();
-      fcManager.getCachedPlayers().clear();
       fcManager.getLogger().info("&c✘ &4Successfully disabled.");
     } catch (Exception exception) {
       getLogger().log(Level.SEVERE, "Error during plugin shutdown: " + exception.getMessage(),

@@ -19,7 +19,8 @@ public enum Lang {
       "&r &r",
       "{prefix}&aKucajte &e/fc help &aza listu dostupnih komandi.")),
 
-  NO_PERM("no-perm", "{prefix}&cNemate dozvolu (&4{0}&c) za komandu &6/&e{1}&c!"),
+  NO_PERM("no-perm.single", "{prefix}&cNedovoljno dozvola."),
+  NO_PERM_PARAMETERS("no-perm.parameters", "{prefix}&cNemate dozvolu za komandu &6/&e{1}&c!"),
   UNKNOWN_COMMAND("unknown-command", "{prefix}&cNepoznata komanda."),
   USAGE("usage", "{prefix}Usage: /{0}"),
   PLAYER_NOT_FOUND("player-not-found", "&cPlayer not found."),
@@ -132,7 +133,8 @@ public enum Lang {
   SETUP_ARENA_SUCCESS("setup-arena.success", "{prefix}&aYou successfully setup the arena"),
 
   CLEAR_ARENAS_SUCCESS("clear-arenas.success", "{prefix}&aYou successfully wiped all arenas"),
-  CLEAR_ARENAS_TYPE_SUCCESS("clear-arenas.type-success", "{prefix-admin}&aUspešno obrisane &e{0} &aarene!"),
+  CLEAR_ARENAS_TYPE_SUCCESS("clear-arenas.type-success",
+      "{prefix-admin}&aUspešno obrisane &e{0} &aarene!"),
   ALREADY_ENOUGH_CUBES("already-enough-cubes", "&cThere already are enough cubes"),
 
   BALANCE("balance", "{prefix}&aYou currently have #{0}"),
@@ -224,6 +226,19 @@ public enum Lang {
   HELP_ADMIN("help-admin",
       String.join(System.lineSeparator(), "{prefix-admin}&b/fc setuparena [3v3{0}4v4]",
           "{prefix-admin}&b/fc cleararenas")),
+
+  HELP_HEADER("help.header", String.join(System.lineSeparator(),
+      "&e---------------------------------------------",
+      "  {prefix}&aLista dostupnih &e{command} &akomandi:",
+      "&r &r"
+  )),
+  HELP_FORMAT("help.format", "&e  {commandprefix}{command} {parameters}&7: &f{description}"),
+  HELP_FOOTER("help.footer", String.join(System.lineSeparator(),
+      "&r &r",
+      "&f  Strana {page}/{totalpages} &7({results})",
+      "&e---------------------------------------------"
+  )),
+  HELP_USAGE("help.usage", "{prefix}&cUsage: &e{command} &a{syntax}"),
 
   SCOREBOARD_LINES_LOBBY("scoreboard.lines.lobby", String.join(System.lineSeparator(),
       "&r &r",
